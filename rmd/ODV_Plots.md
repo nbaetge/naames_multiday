@@ -1,11 +1,13 @@
-Plots
+ODV Plots
 ================
 Nicholas Baetge
 8/6/2020
 
 # Intro
 
-Here, data are are plotted for two multiday stations, N2S4 and N3S6
+Here, ODV-style section plots are made from data. Data are first
+transformed to represent z-scores (i.e. plots display anomalies for each
+depth)
 
 ``` r
 library(tidyverse) 
@@ -80,13 +82,11 @@ s6_ctd_mark <- ctd %>%
 s4_data_mark <- data %>% 
   filter(between(z, 0, 300)) %>% 
   filter(Cruise == "AT34", Station == 4) %>% 
-  select(lat, z) %>% 
   distinct()
 
 s6_data_mark <- data %>% 
   filter(between(z, 0, 300)) %>% 
   filter(Cruise == "AT38", Station == 6) %>% 
-  select(lat, z) %>% 
   distinct()
 ```
 
@@ -134,6 +134,34 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
   filter(z > 0) 
 ```
 
+## Phytoplankton Abundance
+
+``` r
+subset <- data %>% 
+  filter(between(z, 0, 300)) %>% 
+  select(lat, z, phyto) %>% 
+  group_by(z) %>% 
+  mutate(mean = mean(phyto, na.rm = T),
+         sd = sd(phyto, na.rm = T),
+         zscore = (phyto - mean)/sd) %>% 
+  ungroup() %>% 
+  select(lat, z, zscore) %>% 
+  mutate(zscore = round(zscore, 2)) %>% 
+  filter(z >= 0) %>% 
+  drop_na(zscore)
+
+s4_mark <- s4_data_mark %>% 
+  drop_na(phyto)
+
+s6_mark <- s6_data_mark %>% 
+  drop_na(phyto)
+
+mba <- mba.surf(subset, no.X = 300, no.Y = 300, extend = F)
+dimnames(mba$xyz.est$z) <- list(mba$xyz.est$x, mba$xyz.est$y)
+mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
+  filter(z >= 0) 
+```
+
 ## Bacterial Abundance
 
 ``` r
@@ -149,6 +177,12 @@ subset <- data %>%
   mutate(zscore = round(zscore, 2)) %>% 
   filter(z >= 0) %>% 
   drop_na(zscore)
+
+s4_mark <- s4_data_mark %>% 
+  drop_na(ba)
+
+s6_mark <- s6_data_mark %>% 
+  drop_na(ba)
 
 mba <- mba.surf(subset, no.X = 300, no.Y = 300, extend = F)
 dimnames(mba$xyz.est$z) <- list(mba$xyz.est$x, mba$xyz.est$y)
@@ -172,10 +206,106 @@ subset <- data %>%
   filter(z >= 0) %>% 
   drop_na(zscore)
 
+s4_mark <- s4_data_mark %>% 
+  drop_na(bcd)
+
+s6_mark <- s6_data_mark %>% 
+  drop_na(bcd)
+
 mba <- mba.surf(subset, no.X = 300, no.Y = 300, extend = F)
 dimnames(mba$xyz.est$z) <- list(mba$xyz.est$x, mba$xyz.est$y)
 mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
   filter(z >= 0) 
 ```
 
-<img src="Plots_files/figure-gfm/unnamed-chunk-11-1.png" style="display: block; margin: auto;" />
+### Set 1
+
+<img src="ODV_Plots_files/figure-gfm/unnamed-chunk-13-1.png" style="display: block; margin: auto;" />
+
+## N + N
+
+``` r
+subset <- data %>% 
+  filter(between(z, 0, 300)) %>% 
+  select(lat, z, n) %>% 
+  group_by(z) %>% 
+  mutate(mean = mean(n, na.rm = T),
+         sd = sd(n, na.rm = T),
+         zscore = (n - mean)/sd) %>% 
+  ungroup() %>% 
+  select(lat, z, zscore) %>% 
+  mutate(zscore = round(zscore, 2)) %>% 
+  filter(z >= 0) %>% 
+  drop_na(zscore)
+
+s4_mark <- s4_data_mark %>% 
+  drop_na(n)
+
+s6_mark <- s6_data_mark %>% 
+  drop_na(n)
+
+mba <- mba.surf(subset, no.X = 300, no.Y = 300, extend = F)
+dimnames(mba$xyz.est$z) <- list(mba$xyz.est$x, mba$xyz.est$y)
+mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
+  filter(z >= 0) 
+```
+
+## DOC
+
+``` r
+subset <- data %>% 
+  filter(between(z, 0, 300)) %>% 
+  select(lat, z, doc) %>% 
+  group_by(z) %>% 
+  mutate(mean = mean(doc, na.rm = T),
+         sd = sd(doc, na.rm = T),
+         zscore = (doc - mean)/sd) %>% 
+  ungroup() %>% 
+  select(lat, z, zscore) %>% 
+  mutate(zscore = round(zscore, 2)) %>% 
+  filter(z >= 0) %>% 
+  drop_na(zscore)
+
+s4_mark <- s4_data_mark %>% 
+  drop_na(doc)
+
+s6_mark <- s6_data_mark %>% 
+  drop_na(doc)
+
+mba <- mba.surf(subset, no.X = 300, no.Y = 300, extend = F)
+dimnames(mba$xyz.est$z) <- list(mba$xyz.est$x, mba$xyz.est$y)
+mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
+  filter(z >= 0) 
+```
+
+## O2
+
+``` r
+subset <- data %>% 
+  filter(between(z, 0, 300)) %>% 
+  select(lat, z, o2) %>% 
+  group_by(z) %>% 
+  mutate(mean = mean(o2, na.rm = T),
+         sd = sd(o2, na.rm = T),
+         zscore = (o2 - mean)/sd) %>% 
+  ungroup() %>% 
+  select(lat, z, zscore) %>% 
+  mutate(zscore = round(zscore, 2)) %>% 
+  filter(z >= 0) %>% 
+  drop_na(zscore)
+
+s4_mark <- s4_data_mark %>% 
+  drop_na(o2)
+
+s6_mark <- s6_data_mark %>% 
+  drop_na(o2)
+
+mba <- mba.surf(subset, no.X = 300, no.Y = 300, extend = F)
+dimnames(mba$xyz.est$z) <- list(mba$xyz.est$x, mba$xyz.est$y)
+mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
+  filter(z >= 0) 
+```
+
+### Set 2
+
+<img src="ODV_Plots_files/figure-gfm/unnamed-chunk-20-1.png" style="display: block; margin: auto;" />
