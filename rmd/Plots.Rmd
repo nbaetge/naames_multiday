@@ -2,7 +2,7 @@
 title: "Plots"
 author: "Nicholas Baetge"
 date: "8/6/2020"
-output: html_document
+output: github_document
 ---
 # Intro
 
@@ -57,12 +57,39 @@ odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe"
 # Import Data
 
 ```{r}
-data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.df")
+data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.df") %>% 
+  rename(lat = Latitude)
 
 ctd <- read_rds("~/GITHUB/naames_multiday/Input/ctd/deriv_naames_ctd.rds") %>% 
   rename(lat = "Latitude [degrees_north]",
          z = bin_depth) %>% 
   mutate(bin = round(lat, 1))
+
+
+#markers for multiday stations
+s4_ctd_mark <- ctd %>% 
+  filter(between(z, 0, 300)) %>% 
+  filter(Cruise == "AT34", Station == 4) %>% 
+  select(lat, z) %>% 
+  distinct()
+
+s6_ctd_mark <- ctd %>% 
+  filter(between(z, 0, 300)) %>% 
+  filter(Cruise == "AT38", Station == 6) %>% 
+  select(lat, z) %>% 
+  distinct()
+
+s4_data_mark <- data %>% 
+  filter(between(z, 0, 300)) %>% 
+  filter(Cruise == "AT34", Station == 4) %>% 
+  select(lat, z) %>% 
+  distinct()
+
+s6_data_mark <- data %>% 
+  filter(between(z, 0, 300)) %>% 
+  filter(Cruise == "AT38", Station == 6) %>% 
+  select(lat, z) %>% 
+  distinct()
 ```
 
 # Plot ODV-style composites
@@ -86,7 +113,7 @@ subset <- ctd %>%
 mba <- mba.surf(subset, no.X = 300, no.Y = 300, extend = F)
 dimnames(mba$xyz.est$z) <- list(mba$xyz.est$x, mba$xyz.est$y)
 mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
-  filter(z > 0) 
+  filter(z >= 0) 
 
 ```
 
@@ -95,20 +122,19 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 
 beamt.plot <-  mba %>% 
   ggplot(aes(x = lat, y = z)) + 
-   
   geom_raster(aes(fill = zscore)) +
- geom_point(data = subset, aes(x = lat, y = z), colour = "Black", size = 0.05, shape = 3, alpha = 0.1) +
+  geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 0.05, shape = 3, alpha = 0.1) +
+  geom_point(data = s4_ctd_mark, aes(x = lat, y = z), colour = "Black", size = 0.1, shape = 3, alpha = 0.15) +
+  geom_point(data = s6_ctd_mark, aes(x = lat, y = z), colour = "Black", size = 0.1, shape = 3, alpha = 0.15) +
   #geom_line(data = mld.odv, aes(x = decimaldate, y = MLD), colour = "White", linetype = 2, size = 1 ) +
    # geom_point(data = mld.odv, aes(x = decimaldate, y = MLD), colour = "White", shape = 19, size = 3, alpha = 0.8) +
   scale_fill_gradientn(colors = odv.colors) +
   scale_y_reverse(breaks = pretty_breaks()) +
   scale_x_continuous(breaks = pretty_breaks()) +
-  labs(y = expression(italic("Depth, m")), x = expression(italic("Latitude, ˚N")), fill = expression(italic(paste("Beam T., \n z-score")))) +
+  labs(y = expression(italic("Depth, m")), x = expression(italic("")), fill = expression(italic(paste("z-score")))) +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2)) +
-  custom_theme() 
-
-beamt.plot
-
+  custom_theme() +
+  ggtitle("Beam Transmission")
 
 ```
 
@@ -139,21 +165,20 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 12, fig.align = "center", warning = FALSE}
 
 fl.plot <-  mba %>% 
-  ggplot(aes(x = lat, y = z)) + 
-   
+  ggplot(aes(x = lat, y = z)) +
   geom_raster(aes(fill = zscore)) +
- geom_point(data = subset, aes(x = lat, y = z), colour = "Black", size = 0.05, shape = 3, alpha = 0.1) +
+  geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 0.05, shape = 3, alpha = 0.1) +
+  geom_point(data = s4_ctd_mark, aes(x = lat, y = z), colour = "Black", size = 0.1, shape = 3, alpha = 0.15) +
+  geom_point(data = s6_ctd_mark, aes(x = lat, y = z), colour = "Black", size = 0.1, shape = 3, alpha = 0.15) +
   #geom_line(data = mld.odv, aes(x = decimaldate, y = MLD), colour = "White", linetype = 2, size = 1 ) +
    # geom_point(data = mld.odv, aes(x = decimaldate, y = MLD), colour = "White", shape = 19, size = 3, alpha = 0.8) +
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse(breaks = pretty_breaks()) +
   scale_x_continuous(breaks = pretty_breaks()) +
-  labs(y = expression(italic("Depth, m")), x = expression(italic("Latitude, ˚N")), fill = expression(italic(paste("Fluor., \n z-score")))) +
+  labs(y = expression(italic("Depth, m")), x = expression(italic("")), fill = expression(italic(paste("")))) +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2)) +
-  custom_theme() 
-
-fl.plot
-
+  custom_theme() +
+  ggtitle("Fluorescence")
 
 ```
 
@@ -162,7 +187,6 @@ fl.plot
 ```{r}
 
 subset <- data %>% 
-  rename(lat = Latitude) %>% 
   filter(between(z, 0, 300)) %>% 
   select(lat, z, ba) %>% 
   group_by(z) %>% 
@@ -172,7 +196,7 @@ subset <- data %>%
   ungroup() %>% 
   select(lat, z, zscore) %>% 
   mutate(zscore = round(zscore, 2)) %>% 
-  filter(z > 0) %>% 
+  filter(z >= 0) %>% 
   drop_na(zscore)
 
 mba <- mba.surf(subset, no.X = 300, no.Y = 300, extend = F)
@@ -187,20 +211,19 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 
 ba.plot <-  mba %>% 
   ggplot(aes(x = lat, y = z)) + 
-   
   geom_raster(aes(fill = zscore)) +
- geom_point(data = subset, aes(x = lat, y = z), colour = "Black", size = 0.5, shape = 3, alpha = 0.5) +
+ geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 0.5, shape = 3, alpha = 0.3) +
+  geom_point(data = s4_data_mark, aes(x = lat, y = z), colour = "Black", size = 0.5, shape = 3, alpha = 0.4) +
+  geom_point(data = s6_data_mark, aes(x = lat, y = z), colour = "Black", size = 0.5, shape = 3, alpha = 0.4) +
   #geom_line(data = mld.odv, aes(x = decimaldate, y = MLD), colour = "White", linetype = 2, size = 1 ) +
    # geom_point(data = mld.odv, aes(x = decimaldate, y = MLD), colour = "White", shape = 19, size = 3, alpha = 0.8) +
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse(breaks = pretty_breaks()) +
   scale_x_continuous(breaks = pretty_breaks()) +
-  labs(y = expression(italic("Depth, m")), x = expression(italic("Latitude, ˚N")), fill = expression(italic(paste("BA, \n z-score")))) +
+  labs(y = expression(italic("Depth, m")), x = expression(italic("")), fill = expression(italic(paste("")))) +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2)) +
-  custom_theme() 
-
-ba.plot
-
+  custom_theme() +
+  ggtitle("Bacterioplankton Abundance")
 
 ```
 
@@ -209,7 +232,6 @@ ba.plot
 ```{r}
 
 subset <- data %>% 
-  rename(lat = Latitude) %>% 
   filter(between(z, 0, 300)) %>% 
   select(lat, z, bcd) %>% 
   group_by(z) %>% 
@@ -234,19 +256,52 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 
 bcd.plot <-  mba %>% 
   ggplot(aes(x = lat, y = z)) + 
-   
   geom_raster(aes(fill = zscore)) +
- geom_point(data = subset, aes(x = lat, y = z), colour = "Black", size = 0.5, shape = 3, alpha = 0.5) +
+  geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 0.5, shape = 3, alpha = 0.3) +
+  geom_point(data = s4_data_mark, aes(x = lat, y = z), colour = "Black", size = 0.5, shape = 3, alpha = 0.4) +
+  geom_point(data = s6_data_mark, aes(x = lat, y = z), colour = "Black", size = 0.5, shape = 3, alpha = 0.4) +
   #geom_line(data = mld.odv, aes(x = decimaldate, y = MLD), colour = "White", linetype = 2, size = 1 ) +
    # geom_point(data = mld.odv, aes(x = decimaldate, y = MLD), colour = "White", shape = 19, size = 3, alpha = 0.8) +
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse(breaks = pretty_breaks()) +
   scale_x_continuous(breaks = pretty_breaks()) +
-  labs(y = expression(italic("Depth, m")), x = expression(italic("Latitude, ˚N")), fill = expression(italic(paste("BCD, \n z-score")))) +
+  labs(y = expression(italic("Depth, m")), x = expression(italic("Latitude, ˚N")), fill = expression(italic(paste("")))) +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2)) +
-  custom_theme() 
-
-bcd.plot
-
+  custom_theme() +
+  ggtitle("Bacterioplankton Carbon Demand")
 
 ```
+
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 24, fig.width = 16, fig.align = "center", warning = FALSE}
+
+patchwork <- beamt.plot / fl.plot / ba.plot / bcd.plot 
+
+patchwork +  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 14))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
