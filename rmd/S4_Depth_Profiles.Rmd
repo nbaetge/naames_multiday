@@ -7,7 +7,7 @@ output: github_document
 
 # Intro
 
-Here, we plot the profiles from the two multiday NAAMES stations, N2S4.
+Here, we plot the profiles from the two multiday NAAMES stations, N2S4 and N3S8.
 
 ```{r message = F, warning = F}
 library(tidyverse) 

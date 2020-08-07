@@ -1,8 +1,8 @@
 ---
-title: "Depth_Profiles"
+title: "S6_Depth_Profiles"
 author: "Nicholas Baetge"
-date: "8/6/2020"
-output: github_document
+date: "8/7/2020"
+output: html_document
 ---
 
 # Intro
@@ -45,9 +45,9 @@ custom_theme <- function() {
           plot.background = element_rect(fill = "transparent",colour = NA)) 
 }
 
-custom.colors <- c("AT39" = "#377EB8", "AT34" = "#4DAF4A", "AT38" = "#E41A1C", "AT32" = "#FF7F00", "Temperate" = "#A6CEE3", "Subpolar" = "#377EB8", "Subtropical" = "#FB9A99", "GS/Sargasso" = "#E41A1C", "Early Spring" = "#377EB8", "Late Spring" = "#4DAF4A","Early Autumn" = "#E41A1C", "Summer" = "#E41A1C", "Late Autumn" = "#FF7F00", "Gv2_2019" = "#377EB8", "WOA18_MN" = "#4DAF4A", "WOA18_AN" = "#E41A1C")
+custom.colors <- c("AT39" = "#377EB8", "AT38" = "#4DAF4A", "AT38" = "#E41A1C", "AT32" = "#FF7F00", "Temperate" = "#A6CEE3", "Subpolar" = "#377EB8", "Subtropical" = "#FB9A99", "GS/Sargasso" = "#E41A1C", "Early Spring" = "#377EB8", "Late Spring" = "#4DAF4A","Early Autumn" = "#E41A1C", "Summer" = "#E41A1C", "Late Autumn" = "#FF7F00", "Gv2_2019" = "#377EB8", "WOA18_MN" = "#4DAF4A", "WOA18_AN" = "#E41A1C")
 
-levels = c("GS/Sargasso", "Subtropical", "Temperate", "Subpolar",  "AT39-6", "AT34", "AT38", "AT32","South", "North", "Early Spring", "Late Spring","Early Autumn",  "Summer", "Late Autumn", "Gv2_2019", "WOA18_MN", "WOA18_AN","Nov", "Nov sd", "Dec", "Dec sd", "Jan", "Jan sd", "Feb", "Feb sd", "Mar", "Mar sd", "Apr", "Apr sd",  "Cruise", "ARGO")
+levels = c("GS/Sargasso", "Subtropical", "Temperate", "Subpolar",  "AT39-6", "AT38", "AT38", "AT32","South", "North", "Early Spring", "Late Spring","Early Autumn",  "Summer", "Late Autumn", "Gv2_2019", "WOA18_MN", "WOA18_AN","Nov", "Nov sd", "Dec", "Dec sd", "Jan", "Jan sd", "Feb", "Feb sd", "Mar", "Mar sd", "Apr", "Apr sd",  "Cruise", "ARGO")
 
 bar.colors <- c("100 m" = "white", "CM" = "#4DAF4A",  "PAM" = "#377EB8")
 
@@ -62,13 +62,13 @@ data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.df") %>%
 
 ```
 
-# Station 4
+# Station 6
 
 ## Plot MLDs
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
 mld.plot <-  data %>% 
-  filter(Cruise == "AT34") %>% 
+  filter(Cruise == "AT38") %>% 
   drop_na(mld) %>% 
   # group_by(Date) %>% 
   # mutate(mean_mld = mean(mld, na.rm = T),
@@ -97,7 +97,7 @@ mld.plot <-  data %>%
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
 chl.plot <-  data %>% 
-  filter(Cruise == "AT34") %>% 
+  filter(Cruise == "AT38") %>% 
   drop_na(chl) %>% 
   # µg / L = mg / m3
   filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
@@ -123,7 +123,7 @@ chl.plot <-  data %>%
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
 phyto.plot <-  data %>% 
-  filter(Cruise == "AT34") %>% 
+  filter(Cruise == "AT38") %>% 
   drop_na(phyto) %>% 
   mutate(phyto = phyto * 10^3) %>% 
   group_by(Date, z) %>% 
@@ -152,7 +152,7 @@ phyto.plot <-  data %>%
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
 phyc.plot <-  data %>% 
-  filter(Cruise == "AT34") %>% 
+  filter(Cruise == "AT38") %>% 
   drop_na(phyc) %>% 
   mutate(phyc = phyc / 10^3) %>% 
   filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
@@ -191,7 +191,7 @@ patchwork +
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
 n.plot <-  data %>% 
-  filter(Cruise == "AT34") %>% 
+  filter(Cruise == "AT38") %>% 
   drop_na(n) %>% 
   filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
   ggplot(aes(x = z, y = n, group = interaction(Date, CampCN))) +
@@ -218,7 +218,7 @@ n.plot <-  data %>%
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
 doc.plot <-  data %>% 
-  filter(Cruise == "AT34") %>% 
+  filter(Cruise == "AT38") %>% 
   drop_na(doc) %>% 
   filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
   ggplot(aes(x = z, y = doc, group = interaction(Date, CampCN))) +
@@ -245,7 +245,7 @@ doc.plot <-  data %>%
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
 o2.plot <-  data %>% 
-  filter(Cruise == "AT34") %>% 
+  filter(Cruise == "AT38") %>% 
   drop_na(o2) %>% 
   filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
   ggplot(aes(x = z, y = o2, group = interaction(Date, CampCN))) +
@@ -284,7 +284,7 @@ patchwork +
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
 bc.plot <-  data %>% 
-  filter(Cruise == "AT34") %>% 
+  filter(Cruise == "AT38") %>% 
   drop_na(bc) %>% 
   mutate(bc = bc / 10^3,
          sd_bc = sd_bc/10^3) %>% 
@@ -312,7 +312,7 @@ bc.plot <-  data %>%
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
 bcd.plot <-  data %>% 
-  filter(Cruise == "AT34") %>% 
+  filter(Cruise == "AT38") %>% 
   drop_na(bcd) %>% 
   filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
   ggplot(aes(x = z, y = bcd, group = interaction(Date, CampCN))) +
@@ -337,7 +337,7 @@ bcd.plot <-  data %>%
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
 mew.plot <-  data %>% 
-  filter(Cruise == "AT34") %>% 
+  filter(Cruise == "AT38") %>% 
   drop_na(mew) %>% 
   filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
   ggplot(aes(x = z, y = mew, group = interaction(Date, CampCN))) +

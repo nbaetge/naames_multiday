@@ -5,8 +5,7 @@ Nicholas Baetge
 
 # Intro
 
-Here, we plot the profiles from the two multiday NAAMES stations, N2S4
-and N3S8.
+Here, we plot the profiles from the two multiday NAAMES stations, N2S4.
 
 ``` r
 library(tidyverse) 
@@ -60,38 +59,40 @@ data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.df") %>%
   filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station == 6) 
 ```
 
-# Plot MLDs
+# Station 4
+
+## Plot MLDs
 
 <img src="Depth_Profiles_files/figure-gfm/unnamed-chunk-3-1.png" style="display: block; margin: auto;" />
 
-# Plot Profiles
+## Plot Profiles
 
-## Chl
+### Chl
 
-## Phyto Cells
+### Phyto Cells
 
-## PhytoC
+### PhytoC
 
-### Set 1
+#### Set 1
 
 <img src="Depth_Profiles_files/figure-gfm/unnamed-chunk-7-1.png" style="display: block; margin: auto;" />
 
-## N
+### N
 
-## DOC
+### DOC
 
-## O2
+### O2
 
-### Set 2
+#### Set 2
 
 <img src="Depth_Profiles_files/figure-gfm/unnamed-chunk-11-1.png" style="display: block; margin: auto;" />
 
-## BactC
+### BactC
 
-## BCD
+### BCD
 
-## µ
+### µ
 
-### Set 3
+#### Set 3
 
 <img src="Depth_Profiles_files/figure-gfm/unnamed-chunk-15-1.png" style="display: block; margin: auto;" />
