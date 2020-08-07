@@ -1,0 +1,372 @@
+---
+title: "Depth_Profiles"
+author: "Nicholas Baetge"
+date: "8/6/2020"
+output: github_document
+---
+
+# Intro
+
+Here, we plot the profiles from the two multiday NAAMES stations, N2S4 and N3S8.
+
+```{r message = F, warning = F}
+library(tidyverse) 
+library(rmarkdown)
+library(knitr)
+library(readxl)
+library(data.table) 
+library(scales)
+library(zoo)
+library(oce)
+library(patchwork)
+#rmarkdown tables
+library(stargazer)
+library(pander)
+#stat tests
+library(lmtest)
+library(lmodel2)
+library(rstatix)
+library(ggpubr)
+#for odv type plots
+library(lubridate)
+library(reshape2)
+library(MBA)
+library(mgcv)
+
+custom_theme <- function() {
+  theme_test(base_size = 30) %+replace%
+    theme(legend.position = "right",
+          legend.spacing.x = unit(0.5,"cm"),
+          legend.title = element_text(size = 14),
+          legend.text = element_text(size = 14),
+          legend.background = element_rect(fill = "transparent",colour = NA),
+          legend.key = element_rect(fill = "transparent",colour = NA),
+          panel.background = element_rect(fill = "transparent",colour = NA),
+          plot.background = element_rect(fill = "transparent",colour = NA)) 
+}
+
+custom.colors <- c("AT39" = "#377EB8", "AT34" = "#4DAF4A", "AT38" = "#E41A1C", "AT32" = "#FF7F00", "Temperate" = "#A6CEE3", "Subpolar" = "#377EB8", "Subtropical" = "#FB9A99", "GS/Sargasso" = "#E41A1C", "Early Spring" = "#377EB8", "Late Spring" = "#4DAF4A","Early Autumn" = "#E41A1C", "Summer" = "#E41A1C", "Late Autumn" = "#FF7F00", "Gv2_2019" = "#377EB8", "WOA18_MN" = "#4DAF4A", "WOA18_AN" = "#E41A1C")
+
+levels = c("GS/Sargasso", "Subtropical", "Temperate", "Subpolar",  "AT39-6", "AT34", "AT38", "AT32","South", "North", "Early Spring", "Late Spring","Early Autumn",  "Summer", "Late Autumn", "Gv2_2019", "WOA18_MN", "WOA18_AN","Nov", "Nov sd", "Dec", "Dec sd", "Jan", "Jan sd", "Feb", "Feb sd", "Mar", "Mar sd", "Apr", "Apr sd",  "Cruise", "ARGO")
+
+bar.colors <- c("100 m" = "white", "CM" = "#4DAF4A",  "PAM" = "#377EB8")
+
+odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe", "#d16cfa")
+```
+
+# Import Data
+
+```{r}
+data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.df") %>% 
+  filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station == 6) 
+
+```
+
+# Plot MLDs
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+mld.plot <-  data %>% 
+  filter(Cruise == "AT34") %>% 
+  drop_na(mld) %>% 
+  # group_by(Date) %>% 
+  # mutate(mean_mld = mean(mld, na.rm = T),
+  #        sd_mld = sd(mld, na.rm = T)) %>% 
+  # µg / L = mg / m3
+  ggplot(aes(x = datetime, y = mld)) +
+  geom_line( size = 0.7) +
+ 
+  geom_point( size = 6, shape = 21, fill = "white", color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste(""))), y = expression(italic(paste("MLD, m"))), colour = "") +
+  scale_y_reverse(breaks = pretty_breaks()) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_blank())
+  
+  mld.plot
+
+```
+
+
+
+# Plot Profiles 
+
+## Chl
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+chl.plot <-  data %>% 
+  filter(Cruise == "AT34") %>% 
+  drop_na(chl) %>% 
+  # µg / L = mg / m3
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  ggplot(aes(x = z, y = chl, group = interaction(Date, CampCN))) +
+  geom_line(aes(color = Date), size = 0.7) +
+  geom_point(aes(fill = Date), size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Chl, mg m"^"-3"))), colour = "") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  guides(fill = guide_colourbar(barheight = 20, barwidth = 2),
+         color = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_blank())
+
+```
+
+## Phyto Cells
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+phyto.plot <-  data %>% 
+  filter(Cruise == "AT34") %>% 
+  drop_na(phyto) %>% 
+  mutate(phyto = phyto * 10^3) %>% 
+  group_by(Date, z) %>% 
+  mutate_at(vars(pro:nano, phyto:rel.nano), mean) %>% 
+  select(Date,  z, phyto) %>% 
+  distinct() %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  ggplot(aes(x = z, y = phyto, group = interaction(Date))) +
+  geom_line(aes(colour = Date), size = 0.7) +
+  geom_point(aes(fill = Date), size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Phytoplankton Cells, m"^"-3"))), colour = "") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  guides(colour = F) +
+  guides(fill = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0))
+```
+
+
+## PhytoC
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+phyc.plot <-  data %>% 
+  filter(Cruise == "AT34") %>% 
+  drop_na(phyc) %>% 
+  mutate(phyc = phyc / 10^3) %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  ggplot(aes(x = z, y = phyc, group = interaction(Date, CampCN))) +
+  geom_line(aes(colour = Date), size = 0.7) +
+  geom_point(aes(fill = Date), size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Phytoplankton Carbon, mmol m"^"-3"))), colour = "") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  guides(colour = F) +
+  guides(fill = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0))
+
+```
+
+### Set 1
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 23, fig.width = 10, fig.align = "center", warning = FALSE}
+
+patchwork <- mld.plot / (chl.plot / phyto.plot / phyc.plot)
+
+patchwork +  
+  plot_layout(widths = 1, heights = c(0.3,2)) +
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 14))
+
+```
+
+
+## N
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+n.plot <-  data %>% 
+  filter(Cruise == "AT34") %>% 
+  drop_na(n) %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  ggplot(aes(x = z, y = n, group = interaction(Date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = n - sd_n, ymax = n + sd_n)) +
+  geom_line(aes(color = Date), size = 0.7) +
+  geom_point(aes(fill = Date), size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("N + N, mmol m"^"-3"))), colour = "") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  guides(fill = guide_colourbar(barheight = 20, barwidth = 2),
+         color = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_blank())
+
+```
+
+
+## DOC
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+doc.plot <-  data %>% 
+  filter(Cruise == "AT34") %>% 
+  drop_na(doc) %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  ggplot(aes(x = z, y = doc, group = interaction(Date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = doc - sd_doc, ymax = doc + sd_doc)) +
+  geom_line(aes(color = Date), size = 0.7) +
+  geom_point(aes(fill = Date), size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("DOC, mmol m"^"-3"))), colour = "") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  guides(fill = F,
+         color = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_blank())
+
+```
+
+
+## O2
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+o2.plot <-  data %>% 
+  filter(Cruise == "AT34") %>% 
+  drop_na(o2) %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  ggplot(aes(x = z, y = o2, group = interaction(Date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = o2 - sd_o2, ymax = o2 + sd_o2)) +
+  geom_line(aes(color = Date), size = 0.7) +
+  geom_point(aes(fill = Date), size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("O"[2],", mmol m"^"-3"))), colour = "") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  guides(fill = F,
+         color = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_blank())
+
+```
+
+### Set 2
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 23, fig.width = 10, fig.align = "center", warning = FALSE}
+
+patchwork <- mld.plot / (n.plot / doc.plot / o2.plot)
+
+patchwork +  
+  plot_layout(widths = 1, heights = c(0.3,2)) +
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 14)) 
+
+```
+
+## BactC
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+bc.plot <-  data %>% 
+  filter(Cruise == "AT34") %>% 
+  drop_na(bc) %>% 
+  mutate(bc = bc / 10^3,
+         sd_bc = sd_bc/10^3) %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  ggplot(aes(x = z, y = bc, group = interaction(Date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = bc - sd_bc, ymax = bc + sd_bc)) +
+  geom_line(aes(color = Date), size = 0.7) +
+  geom_point(aes(fill = Date), size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("BC, mmol C m"^"-3"))), colour = "") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  guides(fill = guide_colourbar(barheight = 20, barwidth = 2),
+         color = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_blank())
+
+```
+
+## BCD
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+bcd.plot <-  data %>% 
+  filter(Cruise == "AT34") %>% 
+  drop_na(bcd) %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  ggplot(aes(x = z, y = bcd, group = interaction(Date, CampCN))) +
+  geom_line(aes(color = Date), size = 0.7) +
+  geom_point(aes(fill = Date), size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("BCD, µmol C m"^"-3","d"^-1))), colour = "") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  guides(fill = F,
+         color = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_blank())
+
+```
+
+## µ
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+mew.plot <-  data %>% 
+  filter(Cruise == "AT34") %>% 
+  drop_na(mew) %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  ggplot(aes(x = z, y = mew, group = interaction(Date, CampCN))) +
+  geom_line(aes(color = Date), size = 0.7) +
+  geom_point(aes(fill = Date), size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("µ, d"^-1))), colour = "") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  guides(fill = F,
+         color = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_blank())
+
+```
+
+### Set 3
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 23, fig.width = 10, fig.align = "center", warning = FALSE}
+
+patchwork <- mld.plot / (bc.plot / mew.plot / bcd.plot)
+
+patchwork +  
+  plot_layout(widths = 1, heights = c(0.3,2)) +
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 14)) 
+
+```
+
+
