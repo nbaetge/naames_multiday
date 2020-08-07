@@ -7,7 +7,7 @@ output: html_document
 
 # Intro
 
-Here, we plot the profiles from the two multiday NAAMES stations, N2S4.
+Here, we plot the profiles from the multiday NAAMES station, N3S6.
 
 ```{r message = F, warning = F}
 library(tidyverse) 

@@ -5,7 +5,7 @@ Nicholas Baetge
 
 # Intro
 
-Here, we plot the profiles from the two multiday NAAMES stations, N2S4.
+Here, we plot the profiles from the multiday NAAMES station, N2S4.
 
 ``` r
 library(tidyverse) 
@@ -63,7 +63,7 @@ data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.df") %>%
 
 ## Plot MLDs
 
-<img src="Depth_Profiles_files/figure-gfm/unnamed-chunk-3-1.png" style="display: block; margin: auto;" />
+<img src="S4_Depth_Profiles_files/figure-gfm/unnamed-chunk-3-1.png" style="display: block; margin: auto;" />
 
 ## Plot Profiles
 
@@ -75,7 +75,7 @@ data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.df") %>%
 
 #### Set 1
 
-<img src="Depth_Profiles_files/figure-gfm/unnamed-chunk-7-1.png" style="display: block; margin: auto;" />
+<img src="S4_Depth_Profiles_files/figure-gfm/unnamed-chunk-7-1.png" style="display: block; margin: auto;" />
 
 ### N
 
@@ -85,7 +85,7 @@ data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.df") %>%
 
 #### Set 2
 
-<img src="Depth_Profiles_files/figure-gfm/unnamed-chunk-11-1.png" style="display: block; margin: auto;" />
+<img src="S4_Depth_Profiles_files/figure-gfm/unnamed-chunk-11-1.png" style="display: block; margin: auto;" />
 
 ### BactC
 
@@ -95,4 +95,4 @@ data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.df") %>%
 
 #### Set 3
 
-<img src="Depth_Profiles_files/figure-gfm/unnamed-chunk-15-1.png" style="display: block; margin: auto;" />
+<img src="S4_Depth_Profiles_files/figure-gfm/unnamed-chunk-15-1.png" style="display: block; margin: auto;" />
