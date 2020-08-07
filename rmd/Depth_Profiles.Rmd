@@ -175,10 +175,10 @@ phyc.plot <-  data %>%
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 23, fig.width = 10, fig.align = "center", warning = FALSE}
 
-patchwork <- mld.plot / (chl.plot / phyto.plot / phyc.plot)
+patchwork <- chl.plot / phyto.plot / phyc.plot
 
 patchwork +  
-  plot_layout(widths = 1, heights = c(0.3,2)) +
+  plot_layout(guides = 'collect') +
   plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 14))
 
@@ -269,10 +269,10 @@ o2.plot <-  data %>%
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 23, fig.width = 10, fig.align = "center", warning = FALSE}
 
-patchwork <- mld.plot / (n.plot / doc.plot / o2.plot)
+patchwork <- n.plot / doc.plot / o2.plot
 
 patchwork +  
-  plot_layout(widths = 1, heights = c(0.3,2)) +
+  plot_layout(guides = 'collect') +
   plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 14)) 
 
@@ -360,10 +360,10 @@ mew.plot <-  data %>%
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 23, fig.width = 10, fig.align = "center", warning = FALSE}
 
-patchwork <- mld.plot / (bc.plot / mew.plot / bcd.plot)
+patchwork <- bc.plot / mew.plot / bcd.plot
 
 patchwork +  
-  plot_layout(widths = 1, heights = c(0.3,2)) +
+  plot_layout(guides = 'collect') +
   plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 14)) 
 
