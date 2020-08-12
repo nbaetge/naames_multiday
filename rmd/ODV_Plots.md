@@ -57,7 +57,7 @@ odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe"
 # Import Data
 
 ``` r
-data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.df") %>% 
+data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
   rename(lat = Latitude)
 
 ctd <- read_rds("~/GITHUB/naames_multiday/Input/ctd/deriv_naames_ctd.rds") %>% 
@@ -66,6 +66,25 @@ ctd <- read_rds("~/GITHUB/naames_multiday/Input/ctd/deriv_naames_ctd.rds") %>%
   mutate(bin = round(lat, 1))
 
 
+#units for npp are mg C / d, we'll convert to µmol C / d
+npp <- read_rds("~/GITHUB/naames_multiday/Input/Z_resolved_model_NPP.rds") %>% 
+  rename(z = depth,
+         npp = NPP) %>% 
+  mutate(npp = round((npp * 10^3)/12)) %>% 
+  left_join(., data %>% 
+              select(Cruise, Station, Date, lat) %>% 
+              distinct() %>% 
+              group_by(Cruise, Station, Date) %>% 
+              mutate(mean_lat = mean(lat)) %>% 
+              ungroup() %>% 
+              select(Cruise, Station, Date, mean_lat) %>% 
+              distinct() %>% 
+              rename(lat = mean_lat)) 
+```
+
+    ## Joining, by = c("Cruise", "Station", "Date")
+
+``` r
 #markers for multiday stations
 s4_ctd_mark <- ctd %>% 
   filter(between(z, 0, 300)) %>% 
@@ -162,6 +181,40 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
   filter(z >= 0) 
 ```
 
+## NPP
+
+``` r
+subset <- npp %>% 
+  filter(between(z, 0, 300)) %>% 
+  select(lat, z, npp) %>% 
+  group_by(z) %>% 
+  mutate(mean = mean(npp, na.rm = T),
+         sd = sd(npp, na.rm = T),
+         zscore = (npp - mean)/sd) %>% 
+  ungroup() %>% 
+  select(lat, z, zscore) %>% 
+  mutate(zscore = round(zscore, 2)) %>% 
+  filter(z >= 0) %>% 
+  drop_na(zscore)
+
+s4_mark <- npp %>% 
+  filter(between(z, 0, 300)) %>% 
+  filter(Cruise == "AT34", Station == 4) %>% 
+  select(lat, z) %>% 
+  distinct() 
+
+s6_mark <- npp %>% 
+  filter(between(z, 0, 300)) %>% 
+  filter(Cruise == "AT38", Station == 6) %>% 
+  select(lat, z) %>% 
+  distinct() 
+
+mba <- mba.surf(subset, no.X = 300, no.Y = 300, extend = F)
+dimnames(mba$xyz.est$z) <- list(mba$xyz.est$x, mba$xyz.est$y)
+mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
+  filter(z >= 0) 
+```
+
 ## Bacterial Abundance
 
 ``` r
@@ -220,7 +273,7 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 
 ### Set 1
 
-<img src="ODV_Plots_files/figure-gfm/unnamed-chunk-13-1.png" style="display: block; margin: auto;" />
+<img src="ODV_Plots_files/figure-gfm/unnamed-chunk-15-1.png" style="display: block; margin: auto;" />
 
 ## N + N
 
@@ -308,4 +361,4 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 
 ### Set 2
 
-<img src="ODV_Plots_files/figure-gfm/unnamed-chunk-20-1.png" style="display: block; margin: auto;" />
+<img src="ODV_Plots_files/figure-gfm/unnamed-chunk-22-1.png" style="display: block; margin: auto;" />

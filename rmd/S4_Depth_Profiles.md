@@ -55,8 +55,14 @@ odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe"
 # Import Data
 
 ``` r
-data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.df") %>% 
+data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
   filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station == 6) 
+
+npp <- read_rds("~/GITHUB/naames_multiday/Input/Z_resolved_model_NPP.rds") %>% 
+  rename(z = depth,
+         npp = NPP) %>% 
+  mutate(npp = round((npp * 10^3)/12)) %>% 
+  filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station == 6)  
 ```
 
 # Station 4
@@ -73,9 +79,11 @@ data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.df") %>%
 
 ### PhytoC
 
+### NPP
+
 #### Set 1
 
-<img src="S4_Depth_Profiles_files/figure-gfm/unnamed-chunk-7-1.png" style="display: block; margin: auto;" />
+<img src="S4_Depth_Profiles_files/figure-gfm/unnamed-chunk-8-1.png" style="display: block; margin: auto;" />
 
 ### N
 
@@ -85,7 +93,7 @@ data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.df") %>%
 
 #### Set 2
 
-<img src="S4_Depth_Profiles_files/figure-gfm/unnamed-chunk-11-1.png" style="display: block; margin: auto;" />
+<img src="S4_Depth_Profiles_files/figure-gfm/unnamed-chunk-12-1.png" style="display: block; margin: auto;" />
 
 ### BactC
 
@@ -95,4 +103,4 @@ data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.df") %>%
 
 #### Set 3
 
-<img src="S4_Depth_Profiles_files/figure-gfm/unnamed-chunk-15-1.png" style="display: block; margin: auto;" />
+<img src="S4_Depth_Profiles_files/figure-gfm/unnamed-chunk-16-1.png" style="display: block; margin: auto;" />
