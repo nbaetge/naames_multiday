@@ -345,10 +345,13 @@ bcd.plot <-  data %>%
   filter(Cruise == "AT34") %>% 
   drop_na(bcd) %>% 
   filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  mutate(bcd = bcd/10^3,
+         sd_bcd = sd_bp/10^3) %>% 
   ggplot(aes(x = z, y = bcd, group = interaction(Date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = bcd - sd_bcd, ymax = bcd + sd_bcd)) +
   geom_line(aes(color = Date), size = 0.7) +
   geom_point(aes(fill = Date), size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("BCD, µmol C m"^"-3","d"^-1))), colour = "") +
+  labs(x = expression(italic(paste(""))), y = expression(italic(paste("BCD, mmol C m"^"-3","d"^-1))), colour = "") +
   scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
   coord_flip() +
   scale_y_continuous(expand = c(0,0)) +
@@ -371,6 +374,7 @@ mew.plot <-  data %>%
   drop_na(mew) %>% 
   filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
   ggplot(aes(x = z, y = mew, group = interaction(Date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = mew - mew.error, ymax = mew + mew.error)) +
   geom_line(aes(color = Date), size = 0.7) +
   geom_point(aes(fill = Date), size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = expression(italic(paste(""))), y = expression(italic(paste("µ, d"^-1))), colour = "") +
@@ -390,9 +394,9 @@ mew.plot <-  data %>%
 
 #### Set 3
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 18, fig.align = "center", warning = FALSE}
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 12, fig.align = "center", warning = FALSE}
 
-patchwork <- bc.plot + mew.plot + bcd.plot
+patchwork <- bc.plot + bcd.plot
 
 patchwork +  
   plot_layout(guides = 'collect') +

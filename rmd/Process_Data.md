@@ -54,7 +54,7 @@ bar.colors <- c("100 m" = "white", "CM" = "#4DAF4A",  "PAM" = "#377EB8")
 
 ``` r
 bf <- read_rds("~/GITHUB/naames_multiday/Input/export_ms/processed_bf.2.2020.rds") %>%  
-  select(Cruise:degree_bin, CampCN, Z_MLD, Target_Z, interp_DOC, DOC_sd, interp_O2_Winkler, O2_Winkler_sd, interp_N_N, N_N_sd, interp_Chl_a_Fluor,interp_Pro_Influx:interp_Nano_Influx, interp_BactProd_C, BactProd_C_sd, interp_BactAbund, BactAbund_sd) %>% 
+  select(Cruise:degree_bin, CampCN, Z_MLD, Target_Z, interp_DOC, DOC_sd, interp_O2_Winkler, O2_Winkler_sd, interp_N_N, N_N_sd, interp_Chl_a_Fluor,interp_Pro_Influx:interp_Nano_Influx, interp_BactProd_C, BactProd_C_sd, interp_BactAbund, BactAbund_sd) %>%
   rename(bp = interp_BactProd_C, 
          sd_bp = BactProd_C_sd, 
          ba = interp_BactAbund,
@@ -86,6 +86,12 @@ bf <- read_rds("~/GITHUB/naames_multiday/Input/export_ms/processed_bf.2.2020.rds
 ctd <- read_rds("~/GITHUB/naames_multiday/Input/ctd/deriv_naames_ctd.rds")
 
 bge <- read_rds("~/GITHUB/naames_multiday/Input/bioav_ms/processed_bge.rds")
+
+#units for npp are mg C / d, we'll convert to µmol C / d
+npp <- read_rds("~/GITHUB/naames_multiday/Input/Z_resolved_model_NPP.rds") %>% 
+  rename(z = depth,
+         npp = NPP) %>% 
+  mutate(npp = round((npp * 10^3)/12))
 ```
 
 # Interpolate Phytoplankton Carbon
@@ -164,7 +170,7 @@ bcd <- interpolated.df %>%
         
           ##########Specific growth rates###########
          mew = bp/bc,
-         mew.error = sqrt((sd_bp/bp)^2/(sd_bc/bc)^2)
+         mew.error = sqrt((sd_bp/bp)^2 + (sd_bc/bc)^2)
          ) %>% 
   rename(z = Target_Z,
          mld = Z_MLD)
@@ -183,7 +189,7 @@ integ_100 <- bcd %>%
   mutate_at(vars(contains(".100")), round) %>% 
   # depth normalize 
   mutate_at(vars(contains(".100")), funs(./100)) %>% 
-  select(Cruise, Station, CampCN, z, contains(".100")) %>% 
+  select(Cruise, Station, CampCN, contains(".100")) %>% 
   # mutate(
   # ######### Estimate BCD:NPP #########
   #        bcd.npp = int.bcd/int.NPP * 100) %>%
@@ -215,7 +221,7 @@ integ_200 <- bcd %>%
   mutate_at(vars(contains(".200")), round) %>% 
   # depth normalize 
   mutate_at(vars(contains(".200")), funs(./100)) %>% 
-  select(Cruise, Station, CampCN, z, contains(".200")) %>% 
+  select(Cruise, Station, CampCN, contains(".200")) %>% 
   # mutate(
   # ######### Estimate BCD:NPP #########
   #        bcd.npp = int.bcd/int.NPP * 100) %>% 
@@ -232,20 +238,58 @@ integ_300 <- bcd %>%
   mutate_at(vars(contains(".300")), round) %>% 
   # depth normalize 
   mutate_at(vars(contains(".300")), funs(./100)) %>% 
-  select(Cruise, Station, CampCN, z, contains(".300")) %>% 
+  select(Cruise, Station, CampCN, contains(".300")) %>% 
   # mutate(
   # ######### Estimate BCD:NPP #########
   #        bcd.npp = int.bcd/int.NPP * 100) %>% 
   distinct() %>% 
   ungroup()
 
+npp_100 <- npp %>% 
+  group_by(Cruise, Station, Date) %>% 
+  filter(z <= 100) %>% 
+  mutate(npp.100 = integrateTrapezoid(z, npp, type = "A")) %>% 
+  mutate_at(vars(contains(".100")), round) %>% 
+  # depth normalize 
+  mutate_at(vars(contains(".100")), funs(./100)) %>% 
+  select(Cruise, Station, Date, contains(".100"))  %>%
+  distinct() %>% 
+  ungroup()
+
+npp_200 <- npp %>% 
+  group_by(Cruise, Station, Date) %>% 
+  filter(between(z, 100, 200)) %>% 
+  mutate(npp.200 = integrateTrapezoid(z, npp, type = "A")) %>% 
+  mutate_at(vars(contains(".200")), round) %>% 
+  # depth normalize 
+  mutate_at(vars(contains(".200")), funs(./100)) %>% 
+  select(Cruise, Station, Date, contains(".200"))  %>%
+  distinct() %>% 
+  ungroup()
+
+npp_300 <- npp %>% 
+  group_by(Cruise, Station, Date) %>% 
+  filter(between(z, 200, 300)) %>% 
+  mutate(npp.300 = integrateTrapezoid(z, npp, type = "A")) %>% 
+  mutate_at(vars(contains(".300")), round) %>% 
+  # depth normalize 
+  mutate_at(vars(contains(".300")), funs(./100)) %>% 
+  select(Cruise, Station, Date, contains(".300"))  %>%
+  distinct() %>% 
+  ungroup()
+
+
+
 integrated.df <- left_join(bcd, integ_100) %>% 
   left_join(., integ_200) %>% 
-  left_join(., integ_300)
+  left_join(., integ_300) %>% 
+  left_join(., npp_100) %>% 
+  left_join(., npp_200) %>% 
+  left_join(., npp_300)
 ```
 
 # Save Data
 
 ``` r
-saveRDS(integrated.df, "~/GITHUB/naames_multiday/Output/processed_data.df")
+saveRDS(integrated.df, "~/GITHUB/naames_multiday/Output/processed_data.rds")
 ```

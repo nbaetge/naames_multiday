@@ -166,7 +166,7 @@ bcd <- interpolated.df %>%
         
           ##########Specific growth rates###########
          mew = bp/bc,
-         mew.error = sqrt((sd_bp/bp)^2/(sd_bc/bc)^2)
+         mew.error = sqrt(  ((sd_bp/bp)^2) + ((sd_bc/bc)^2)  )
          ) %>% 
   rename(z = Target_Z,
          mld = Z_MLD)
