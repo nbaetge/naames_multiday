@@ -1,0 +1,263 @@
+---
+title: "S6_Integration_Plots"
+author: "Nicholas Baetge"
+date: "8/12/2020"
+output: github_document
+---
+
+# Intro
+
+Here, we plot the integrated from the multiday NAAMES station, N3S6.
+
+```{r message = F, warning = F}
+library(tidyverse) 
+library(rmarkdown)
+library(knitr)
+library(readxl)
+library(data.table) 
+library(scales)
+library(zoo)
+library(oce)
+library(patchwork)
+#rmarkdown tables
+library(stargazer)
+library(pander)
+#stat tests
+library(lmtest)
+library(lmodel2)
+library(rstatix)
+library(ggpubr)
+#for odv type plots
+library(lubridate)
+library(reshape2)
+library(MBA)
+library(mgcv)
+
+custom_theme <- function() {
+  theme_test(base_size = 30) %+replace%
+    theme(legend.position = "right",
+          legend.spacing.x = unit(0.5,"cm"),
+          legend.title = element_text(size = 14),
+          legend.text = element_text(size = 14),
+          legend.background = element_rect(fill = "transparent",colour = NA),
+          legend.key = element_rect(fill = "transparent",colour = NA),
+          panel.background = element_rect(fill = "transparent",colour = NA),
+          plot.background = element_rect(fill = "transparent",colour = NA)) 
+}
+
+custom.colors <- c("AT39" = "#377EB8", "AT34" = "#4DAF4A", "AT38" = "#E41A1C", "AT32" = "#FF7F00", "Temperate" = "#A6CEE3", "Subpolar" = "#377EB8", "Subtropical" = "#FB9A99", "GS/Sargasso" = "#E41A1C", "Early Spring" = "#377EB8", "Late Spring" = "#4DAF4A","Early Autumn" = "#E41A1C", "Summer" = "#E41A1C", "Late Autumn" = "#FF7F00", "0 - 100 m" = "#377EB8", "100 - 200 m" = "#4DAF4A", "200 - 300 m" = "#E41A1C")
+
+levels = c("GS/Sargasso", "Subtropical", "Temperate", "Subpolar",  "AT39-6", "AT34", "AT38", "AT32","South", "North", "Early Spring", "Late Spring","Early Autumn",  "Summer", "Late Autumn", "Gv2_2019", "WOA18_MN", "WOA18_AN","Nov", "Nov sd", "Dec", "Dec sd", "Jan", "Jan sd", "Feb", "Feb sd", "Mar", "Mar sd", "Apr", "Apr sd",  "Cruise", "ARGO")
+
+bar.colors <- c("100 m" = "white", "CM" = "#4DAF4A",  "PAM" = "#377EB8")
+
+odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe", "#d16cfa")
+```
+
+# Import Data
+
+```{r}
+data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
+  filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station == 6) %>% 
+  filter(Cruise == "AT38") %>% 
+  mutate(time = ymd_hms(datetime),
+         interv = interval(first(time), time),
+         dur = as.duration(interv),
+         days = as.numeric(dur, "days")) %>% 
+  select(Cruise, Station, Date, time:days, bcd.100:npp.300) %>% 
+  distinct() %>% 
+  mutate_at(vars(contains(c("phyc", "npp", "bc"))), function(x) (x / 1000)) 
+
+```
+
+# Pivot data
+
+```{r message = F}
+pivot_phyc_data <- data %>% 
+  select(Cruise:days, contains("phyc")) %>% 
+  pivot_longer(phyc.100:phyc.300, names_to = "depth_interval", names_prefix = "phyc.", values_to = "phyc") %>% 
+  mutate(depth_interval = ifelse(depth_interval == 100, "0 - 100 m", depth_interval),
+         depth_interval = ifelse(depth_interval == 200, "100 - 200 m", depth_interval),
+         depth_interval = ifelse(depth_interval == 300, "200 - 300 m", depth_interval))
+
+
+pivot_npp_data <- data %>% 
+  select(Cruise:days, contains("npp")) %>% 
+  pivot_longer(npp.100:npp.300, names_to = "depth_interval", names_prefix = "npp.", values_to = "npp") %>% 
+  mutate(depth_interval = ifelse(depth_interval == 100, "0 - 100 m", depth_interval),
+         depth_interval = ifelse(depth_interval == 200, "100 - 200 m", depth_interval),
+         depth_interval = ifelse(depth_interval == 300, "200 - 300 m", depth_interval))
+
+
+pivot_bc_data <- data %>% 
+  select(Cruise:days, contains("bc.")) %>% 
+  pivot_longer(bc.100:bc.300, names_to = "depth_interval", names_prefix = "bc.", values_to = "bc") %>% 
+  mutate(depth_interval = ifelse(depth_interval == 100, "0 - 100 m", depth_interval),
+         depth_interval = ifelse(depth_interval == 200, "100 - 200 m", depth_interval),
+         depth_interval = ifelse(depth_interval == 300, "200 - 300 m", depth_interval))
+
+
+pivot_bcd_data <- data %>% 
+  select(Cruise:days, contains("bcd")) %>% 
+  pivot_longer(bcd.100:bcd.300, names_to = "depth_interval", names_prefix = "bcd.", values_to = "bcd") %>% 
+  mutate(depth_interval = ifelse(depth_interval == 100, "0 - 100 m", depth_interval),
+         depth_interval = ifelse(depth_interval == 200, "100 - 200 m", depth_interval),
+         depth_interval = ifelse(depth_interval == 300, "200 - 300 m", depth_interval))
+
+pivoted <- left_join(pivot_phyc_data, pivot_npp_data) %>% 
+  left_join(., pivot_bc_data) %>% 
+  left_join(., pivot_bcd_data) %>% 
+  rename(`Depth Interval` = depth_interval)
+  
+
+```
+
+# Plot Data
+
+### Phyto Carbon
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center", warning = FALSE}
+phyc.plot <-  pivoted %>% 
+  drop_na(phyc) %>% 
+  ggplot(aes(x = days, y = phyc)) +
+  geom_rect( aes(xmin = 0.5, xmax = 1, ymin = -Inf, ymax = Inf),
+            fill = "grey", alpha = 0.2) +
+  geom_rect( aes(xmin = 1.5, xmax = 2, ymin = -Inf, ymax = Inf),
+            fill = "grey", alpha = 0.2) +
+  geom_rect( aes(xmin = 2.5, xmax = 3, ymin = -Inf, ymax = Inf),
+            fill = "grey", alpha = 0.2) +
+  geom_line(aes(color = `Depth Interval`), size = 0.7) +
+  geom_point(aes(fill = `Depth Interval`), size = 6, shape = 21, color = "black", stroke = 1) + 
+  labs(x = expression(italic(paste(""))), y = expression(italic(paste("Phytoplankton Carbon, mmol m"^"-3"))), colour = "") +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_manual(values = custom.colors) +
+  scale_color_manual(values = custom.colors) +
+  guides(color = F, fill = F) +
+  custom_theme() 
+ # facet_grid(rows = vars(depth_interval), scales = "free_y")
+
+```
+
+### NPP
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center", warning = FALSE}
+npp.plot <-  pivoted %>% 
+  drop_na(npp) %>% 
+  ggplot(aes(x = days, y = npp)) +
+  geom_rect( aes(xmin = 0.5, xmax = 1, ymin = -Inf, ymax = Inf),
+            fill = "grey", alpha = 0.2) +
+  geom_rect( aes(xmin = 1.5, xmax = 2, ymin = -Inf, ymax = Inf),
+            fill = "grey", alpha = 0.2) +
+  geom_rect( aes(xmin = 2.5, xmax = 3, ymin = -Inf, ymax = Inf),
+            fill = "grey", alpha = 0.2) +
+  geom_line(aes(color = `Depth Interval`), size = 0.7) +
+  geom_point(aes(fill = `Depth Interval`), size = 6, shape = 21, color = "black", stroke = 1) + 
+  labs(x = expression(italic(paste("Days on Station"))), y = expression(italic(paste("Modeled NPP, mmol m"^"-3", "d"^-1))), colour = "") +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_manual(values = custom.colors) +
+  scale_color_manual(values = custom.colors) +
+  guides(color = F, fill = F) +
+  custom_theme() 
+ # facet_grid(rows = vars(depth_interval), scales = "free_y")
+```
+
+### Bact Carbon
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center", warning = FALSE}
+bc.plot <-  pivoted %>% 
+  drop_na(bc) %>% 
+  ggplot(aes(x = days, y = bc)) +
+   geom_rect( aes(xmin = 0.5, xmax = 1, ymin = -Inf, ymax = Inf),
+            fill = "grey", alpha = 0.2) +
+  geom_rect( aes(xmin = 1.5, xmax = 2, ymin = -Inf, ymax = Inf),
+            fill = "grey", alpha = 0.2) +
+  geom_rect( aes(xmin = 2.5, xmax = 3, ymin = -Inf, ymax = Inf),
+            fill = "grey", alpha = 0.2) +
+  geom_line(aes(color = `Depth Interval`), size = 0.7) +
+  geom_point(aes(fill = `Depth Interval`), size = 6, shape = 21, color = "black", stroke = 1) + 
+  labs(x = expression(italic(paste(""))), y = expression(italic(paste("Bacterioplankton Carbon, mmol m"^"-3"))), colour = "") +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_manual(values = custom.colors) +
+  scale_color_manual(values = custom.colors) +
+  guides(color = F, fill = F) +
+  custom_theme() 
+ # facet_grid(rows = vars(depth_interval), scales = "free_y")
+
+```
+
+
+### BCD
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center", warning = FALSE}
+bcd.plot <-  pivoted %>% 
+  drop_na(bcd) %>% 
+  ggplot(aes(x = days, y = bcd, group = `Depth Interval`)) +
+  geom_rect( aes(xmin = 0.5, xmax = 1, ymin = -Inf, ymax = Inf),
+            fill = "grey", alpha = 0.2) +
+  geom_rect( aes(xmin = 1.5, xmax = 2, ymin = -Inf, ymax = Inf),
+            fill = "grey", alpha = 0.2) +
+  geom_rect( aes(xmin = 2.5, xmax = 3, ymin = -Inf, ymax = Inf),
+            fill = "grey", alpha = 0.2) +
+  geom_line(aes(color = `Depth Interval`), size = 0.7) +
+  geom_point(aes(fill = `Depth Interval`), size = 6, shape = 21, color = "black", stroke = 1) + 
+  labs(x = expression(italic(paste("Days on Station"))), y = expression(italic(paste("BCD, mmol m"^"-3", "d"^-1))), colour = "") +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_manual(values = custom.colors) +
+  scale_color_manual(values = custom.colors) +
+  guides(color = F) +
+  custom_theme() 
+ # facet_grid(rows = vars(depth_interval), scales = "free_y")
+
+```
+
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 18, fig.width = 20, fig.align = "center", warning = FALSE}
+
+patchwork <- phyc.plot + bc.plot + npp.plot + bcd.plot
+
+patchwork +  
+  plot_layout(guides = 'collect') +
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 22),
+        plot.title = element_text(size = 36)) 
+
+```
+
+
+# BCD:NPP
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 10, fig.align = "center", warning = FALSE}
+pivoted %>% 
+  select(Cruise:`Depth Interval`, bcd, npp) %>% 
+  group_by(`Depth Interval`, days) %>% 
+  drop_na(bcd) %>% 
+  mutate(bcd_npp = bcd/npp) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = days, y = bcd_npp, group = `Depth Interval`)) +
+  geom_rect( aes(xmin = 0.5, xmax = 1, ymin = -Inf, ymax = Inf),
+            fill = "grey", alpha = 0.2) +
+  geom_rect( aes(xmin = 1.5, xmax = 2, ymin = -Inf, ymax = Inf),
+            fill = "grey", alpha = 0.2) +
+  geom_rect( aes(xmin = 2.5, xmax = 3, ymin = -Inf, ymax = Inf),
+            fill = "grey", alpha = 0.2) +
+  geom_line(aes(color = `Depth Interval`), size = 0.7) +
+  geom_point(aes(fill = `Depth Interval`), size = 6, shape = 21, color = "black", stroke = 1) + 
+  labs(x = expression(italic(paste("Days on Station"))), y = expression(italic(paste("BCD:NPP"))), colour = "") +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_manual(values = custom.colors) +
+  scale_color_manual(values = custom.colors) +
+  guides(color = F) +
+  custom_theme() 
+  
+```
+
+
+
+
+
+
+
+
+
+
+

@@ -1,11 +1,11 @@
-Integration\_Plots
+S6\_Integration\_Plots
 ================
 Nicholas Baetge
 8/12/2020
 
 # Intro
 
-Here, we plot the integrated from the multiday NAAMES station, N2S4.
+Here, we plot the integrated from the multiday NAAMES station, N3S6.
 
 ``` r
 library(tidyverse) 
@@ -57,7 +57,7 @@ odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe"
 ``` r
 data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
   filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station == 6) %>% 
-  filter(Cruise == "AT34") %>% 
+  filter(Cruise == "AT38") %>% 
   mutate(time = ymd_hms(datetime),
          interv = interval(first(time), time),
          dur = as.duration(interv),
@@ -117,8 +117,8 @@ pivoted <- left_join(pivot_phyc_data, pivot_npp_data) %>%
 
 ### BCD
 
-<img src="Integration_Plots_files/figure-gfm/unnamed-chunk-8-1.png" style="display: block; margin: auto;" />
+<img src="S6_Integration_Plots_files/figure-gfm/unnamed-chunk-8-1.png" style="display: block; margin: auto;" />
 
 # BCD:NPP
 
-<img src="Integration_Plots_files/figure-gfm/unnamed-chunk-9-1.png" style="display: block; margin: auto;" />
+<img src="S6_Integration_Plots_files/figure-gfm/unnamed-chunk-9-1.png" style="display: block; margin: auto;" />

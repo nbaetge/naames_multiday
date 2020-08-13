@@ -1,4 +1,4 @@
-Integration\_Plots
+S4 Integration Plots
 ================
 Nicholas Baetge
 8/12/2020
@@ -117,8 +117,8 @@ pivoted <- left_join(pivot_phyc_data, pivot_npp_data) %>%
 
 ### BCD
 
-<img src="Integration_Plots_files/figure-gfm/unnamed-chunk-8-1.png" style="display: block; margin: auto;" />
+<img src="S4_Integration_Plots_files/figure-gfm/unnamed-chunk-8-1.png" style="display: block; margin: auto;" />
 
 # BCD:NPP
 
-<img src="Integration_Plots_files/figure-gfm/unnamed-chunk-9-1.png" style="display: block; margin: auto;" />
+<img src="S4_Integration_Plots_files/figure-gfm/unnamed-chunk-9-1.png" style="display: block; margin: auto;" />
