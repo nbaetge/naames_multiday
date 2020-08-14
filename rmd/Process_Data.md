@@ -170,7 +170,7 @@ bcd <- interpolated.df %>%
         
           ##########Specific growth rates###########
          mew = bp/bc,
-         mew.error = sqrt((sd_bp/bp)^2 + (sd_bc/bc)^2)
+         mew.error = sqrt(  ((sd_bp/bp)^2) + ((sd_bc/bc)^2)  )
          ) %>% 
   rename(z = Target_Z,
          mld = Z_MLD)
@@ -269,7 +269,7 @@ npp_200 <- npp %>%
 
 npp_300 <- npp %>% 
   group_by(Cruise, Station, Date) %>% 
-  filter(between(z, 200, 300)) %>% 
+  filter(between(z, 201, 300)) %>% 
   mutate(npp.300 = integrateTrapezoid(z, npp, type = "A")) %>% 
   mutate_at(vars(contains(".300")), round) %>% 
   # depth normalize 
