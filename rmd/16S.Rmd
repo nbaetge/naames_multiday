@@ -65,18 +65,35 @@ count.tab <- read.table("~/GITHUB/naames_multiday/Input/16s/HetV1OTU.txt", heade
 
 tax.tab <- as.matrix(read.table("~/GITHUB/naames_multiday/Input/16s/HetV1TUtax.txt", header = T, row.names = 1, check.names = F, na.strings = "", sep = "\t"))
 
+
+ctd <-  readRDS("~/GITHUB/naames_multiday/Input/ctd/deriv_naames_ctd.rds") %>%
+              select(Cruise, Station, CampCN,  bin_depth, deriv_o2_umol_l, fl_mg_m3, ave_temp_c, ave_sal_psu) %>% 
+              mutate(Cruise = ifelse(Cruise == "AT39", "AT39-6", Cruise)) %>% 
+              rename(z = bin_depth,
+                     o2 = deriv_o2_umol_l,
+                     fl = fl_mg_m3,
+                     temp = ave_temp_c,
+                     sal = ave_sal_psu) 
+
+
+npp <- read_rds("~/GITHUB/naames_multiday/Input/Z_resolved_model_NPP.rds") %>% 
+  rename(z = depth)
+
 sample.tab <- read_rds("~/GITHUB/naames_multiday/Input/export_ms/processed_bf.2.2020.rds") %>% 
   select(Cruise:CampCN, Target_Z, DNA_ID) %>% 
   drop_na(DNA_ID) %>% 
   rename(z = Target_Z) %>% 
   left_join(., read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>%
-              select(Cruise, Station, Date,  CampCN, mld, z, chl, doc, o2, n, phyc, bc, bcd ) %>% 
+              select(Cruise, Station, Date,  CampCN, mld, z,  doc, n, phyc, bc, bcd ) %>% 
               distinct() %>% 
               mutate_at(vars(phyc:bcd), function(x)(x/10^3))) %>% 
   mutate(`Depth Interval` = ifelse(z <= 75, "5-75 m", "100-200 m"),
-         `Depth Interval` = ifelse(z == 300, "300 m", `Depth Interval`)) %>% 
+         `Depth Interval` = ifelse(z == 300, "300 m", `Depth Interval`),
+         `Depth Interval` = ifelse(z > 300, "> 300 m", `Depth Interval`)) %>% 
   select(Cruise:z, `Depth Interval`, everything()) %>% 
-  column_to_rownames(var = "DNA_ID")
+  left_join(., ctd) %>% 
+  left_join(., npp) %>% 
+  column_to_rownames(var = "DNA_ID") 
 
 ```
 
@@ -94,16 +111,332 @@ sample_data(ps)$`Depth.Interval` <- factor(sample_data(ps)$`Depth.Interval`, lev
 sample_data(ps)$Season <- factor(sample_data(ps)$Season, levels = levels)
 ```
 
-We can rarefy our data at this point, though there is debate over this. 
+# Filter sequences
+
+We will filter out Eukaryotes, Archaea, chloroplasts and mitochondria, because we only intended to amplify bacterial sequences. It's good to check you don’t have anything lurking in the taxonomy table. 
 
 ```{r}
-rarefy_ps = rarefy_even_depth(ps, sample.size = min(sample_sums(ps)), rngseed = 42398403)
+sub_ps <- ps %>%
+  subset_samples(z %in% c(5, 25, 50, 75, 100, 150, 200, 300)) %>%
+  subset_taxa(
+    Kingdom == "Bacteria" &
+    Family  != "mitochondria" &
+    Class   != "Chloroplast"
+  )
+
 ```
+
+# Sample Summary
+
+As a first analysis, we will look at the distribution of read counts from our samples
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 12, fig.align = "center"}
+# Make a data frame with a column for the read counts of each sample
+sample_sum_df <- data.frame(sum = sample_sums(sub_ps))
+
+# Histogram of sample read counts
+ggplot(sample_sum_df, aes(x = sum)) + 
+  geom_histogram(color = "black", fill = "#377EB8", binwidth = 2500) +
+  ggtitle("Distribution of sample sequencing depth") + 
+  xlab("Read counts") +
+  theme(axis.title.y = element_blank()) +
+  custom_theme()
+```
+
+```{r}
+# mean, max and min of sample read counts
+smin <- min(sample_sums(sub_ps)) #3944
+smean <- mean(sample_sums(sub_ps)) #85824.59
+smax <- max(sample_sums(sub_ps)) #251468
+```
+
+# Stacked Barplots
+
+Let’s make a stacked barplot of Phyla to get a sense of the community composition in these samples.
+
+Since this is not a quantitative analysis, and since we have more Phyla in this dataset than we can reasonably distinguish colors, we will prune out low abundance taxa and only include Phyla that contribute more than 2% of the relative abundance of each sample. Depending on your dataset and the taxonomic level you are depicting, you can adjust this prune parameter. In later analyses, we will of course included these taxa, but for now they will just clutter our plot.
+
+
+```{r}
+# melt to long format (for ggploting) 
+# prune out phyla below 2% in each sample
+
+sub_ps_phylum <- sub_ps %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt() %>%                                         # Melt to long format
+  filter(Abundance > 0.02) %>%                         # Filter out low abundance taxa
+  arrange(Phylum)                                      # Sort data frame alphabetically by phylum
+```
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 16, fig.width = 18, fig.align = "center"}
+
+phylum.colors <- c(
+  "#CBD588", "#5F7FC7", "orange","#DA5724", "#508578", "#CD9BCD",
+   "#AD6F3B", "#673770","#D14285", "#652926", "#C84248", 
+  "#8569D5", "#5E738F","#D1A33D", "#8A7C64", "#599861"
+)
+
+# Plot 
+ggplot(sub_ps_phylum, aes(x = Latitude, y = Abundance, fill = Phylum)) + 
+  facet_grid(z~Season) +
+  geom_bar(stat = "identity", position = "stack", width = 1, alpha = 0.7) +
+  scale_fill_manual(values = phylum.colors) +
+  labs(x = "Latitude, ˚N") +
+  custom_theme() +
+  guides(fill = guide_legend(reverse = TRUE, keywidth = 1, keyheight = 1)) +
+  ylab("Relative Abundance (Phyla > 2%) \n") +
+  ggtitle("Phylum Composition of Bacterial Communities")
+```
+
+# Unconstrained Ordination
+
+One of the best exploratory analyses for amplicon data is unconstrained ordinations. Here we will look at ordinations of our full community samples. We will rarfy the samples first (scale to the smallest library size).
+
+## Rarefy
+
+```{r}
+rarefy_ps = rarefy_even_depth(sub_ps, sample.size = min(sample_sums(sub_ps)), rngseed = 42398403)
+
+sample_data(rarefy_ps)$`Depth.Interval` <- factor(sample_data(rarefy_ps)$`Depth.Interval`, levels = levels)
+sample_data(rarefy_ps)$Season <- factor(sample_data(rarefy_ps)$Season, levels = levels)
+```
+
+## PCoA
+
+```{r}
+pcoa <- ordinate(rarefy_ps, method = "PCoA", distance = "bray")
+```
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 22, fig.align = "center"}
+
+pcoa.plot <- plot_ordination(rarefy_ps, pcoa,  title = "Bray Curtis PCoA", shape = "Depth.Interval", color = "Latitude") +
+  geom_hline(yintercept = 0, linetype = 2) +
+  geom_point(alpha = 0.6, stroke = 2, size = 4) +
+  geom_point(colour = "grey90", size = 1.5) +
+  #geom_text(aes(label = Station), hjust = 0, vjust = 0, color = "black", alpha = 0.7, size = 3, position = position_jitter(), fontface = "bold") +
+  scale_color_gradientn(colors = odv.colors) +
+  custom_theme()  
+#removing one of the plotting layers (there are points within points)
+pcoa.plot$layers <- pcoa.plot$layers[-1]
+
+pcoa.plot + 
+  facet_grid(~Season) +
+   guides(color = guide_colorbar(title = "Latitude, ˚N"), shape = guide_legend(title = "Depth Interval"))
+```
+
+## NMDS
+
+Let’s try an NMDS instead. For NMDS plots it’s important to set a seed since the starting positions of samples in the alogrithm is random.
+
+Important: if you calculate your bray-curtis distance metric “in-line” it will perform a square root transformation and Wisconsin double standardization. If you don’t want this, you can calculate your bray-curtis distance separately
+
+
+```{r}
+set.seed(1)
+
+# Ordinate
+nmds <- ordinate(rarefy_ps,, method = "NMDS",  distance = "bray") # stress = 0.09
+```
+
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 22, fig.align = "center"}
+
+nmds.plot <- plot_ordination(rarefy_ps, nmds,  title = "NMDS", shape = "Depth.Interval", color = "Latitude") +
+  geom_hline(yintercept = 0, linetype = 2) +
+  geom_point(alpha = 0.6, stroke = 2, size = 4) +
+  geom_point(colour = "grey90", size = 1.5) +
+  #geom_text(aes(label = Station), hjust = 0, vjust = 0, color = "black", alpha = 0.7, size = 3, position = position_jitter(), fontface = "bold") +
+  scale_color_gradientn(colors = odv.colors) +
+  custom_theme()  
+#removing one of the plotting layers (there are points within points)
+nmds.plot$layers <- nmds.plot$layers[-1]
+
+nmds.plot + 
+  facet_grid(~Season) +
+   guides(color = guide_colorbar(title = "Latitude, ˚N"), shape = guide_legend(title = "Depth Interval"))
+```
+
+NMDS plots attempt to show ordinal distances between samples as accurately as possible in two dimensions. It is important to report the stress of these plots, because a high stress value means that the algorithm had a hard time representing the distances between samples in 2 dimensions. The stress of this plot was good - it was .09 (generally anything below .2 is considered acceptable). The PCoA for this data was able to show ~46% variation in just two dimensions, so we may want to stick with that plot.
+
+# Constrained Ordination
+
+Above we used unconstrained ordinations (PCoA, NMDS) to show relationships between samples in low dimensions. We can use a constrained ordination to see how environmental variables are associated with these changes in community composition. We constrain the ordination axes to linear combinations of environmental variables. We then plot the environmental scores onto the ordination
+
+```{r}
+# Remove data points with missing metadata
+ps_not_na <- rarefy_ps %>%
+  subset_samples(
+    !is.na(mld) &
+      !is.na(NPP) & 
+      !is.na(doc) &
+      !is.na(n) & 
+      !is.na(bc) & 
+      !is.na(bcd) & 
+      !is.na(o2) & 
+      !is.na(fl) & 
+      !is.na(sal)
+  )
+
+bray <- phyloseq::distance(ps_not_na, method = "bray")
+
+# CAP ordinate
+cap_ord <- ordinate(ps_not_na, method = "CAP", distance = bray, formula = ~ mld + doc + n  + bcd + o2 + fl + sal + bc + z + Latitude + NPP
+)
+```
+
+
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 22, fig.align = "center"}
+
+# CAP plot
+cap.plot <- plot_ordination(ps_not_na, ordination = cap_ord,  shape = "Depth.Interval", color = "Latitude", axes = c(1,2)) + 
+  geom_point(alpha = 0.6, stroke = 2, size = 4) +
+  geom_point(colour = "grey90", size = 1.5) +
+  scale_color_gradientn(colors = odv.colors) +
+  custom_theme()  +
+  facet_grid(~Season) +
+  guides(color = guide_colorbar(title = "Latitude, ˚N"), shape = guide_legend(title = "Depth Interval"))
+#removing one of the plotting layers (there are points within points)
+
+cap.plot$layers <- cap.plot$layers[-1]
+
+
+
+# Now add the environmental variables as arrows
+arrowmat <- vegan::scores(cap_ord, display = "bp")
+
+# Add labels, make a data.frame
+arrowdf <- data.frame(labels = rownames(arrowmat), arrowmat)
+
+# Define the arrow aesthetic mapping
+arrow_map <- aes(xend = CAP1, 
+    yend = CAP2, 
+    x = 0, 
+    y = 0, 
+    shape = NULL, 
+    color = NULL, 
+    label = labels)
+
+label_map <- aes(x = 1.3 * CAP1, 
+    y = 1.3 * CAP2, 
+    shape = NULL, 
+    color = NULL, 
+    label = labels)
+
+arrowhead = arrow(length = unit(0.02, "npc"))
+
+# Make a new graphic
+cap.plot + 
+  geom_segment(
+    mapping = arrow_map, 
+    size = .5, 
+    data = arrowdf, 
+    color = "gray", 
+    arrow = arrowhead
+  ) + 
+  geom_text(
+    mapping = label_map, 
+    size = 4,  
+    data = arrowdf, 
+    show.legend = FALSE
+  )
+
+```
+
+Do a permutational ANOVA on constrained axes used in ordination
+
+```{r}
+anova(cap_ord)
+```
+
+
+# Alpha Diversity
+
+Estimating alpha diversity of microbial communities is [problematic](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC93182/) no matter what you do. We will use the rarefied library, which retains estimates of the species abundance of the real population while standardizing sampling effort.
+
+```{r}
+# Initialize matrices to store richness and evenness estimates
+nsamp = nsamples(rarefy_ps)
+trials = 100
+
+richness <- matrix(nrow = nsamp, ncol = trials)
+row.names(richness) <- sample_names(rarefy_ps)
+
+evenness <- matrix(nrow = nsamp, ncol = trials)
+row.names(evenness) <- sample_names(rarefy_ps)
+
+# It is always important to set a seed when you subsample so your result is replicable 
+set.seed(3)
+
+for (i in 1:100) {
+  # Subsample
+  r <- rarefy_ps
+  
+  # Calculate richness
+  rich <- as.numeric(as.matrix(estimate_richness(r, measures = "Observed")))
+  richness[ ,i] <- rich
+  
+  # Calculate evenness
+  even <- as.numeric(as.matrix(estimate_richness(r, measures = "InvSimpson")))
+  evenness[ ,i] <- even
+}
+```
+
+Let’s calculate the mean and standard deviation per sample for observed richness and inverse simpson’s index and store those values in a dataframe.
+
+```{r}
+# Create a new dataframe to hold the means and standard deviations of richness estimates
+DNA_ID <- row.names(richness)
+mean <- apply(richness, 1, mean)
+sd <- apply(richness, 1, sd)
+measure <- rep("Richness", nsamp)
+rich_stats <- data.frame(DNA_ID, mean, sd, measure)
+
+# Create a new dataframe to hold the means and standard deviations of evenness estimates
+DNA_ID <- row.names(evenness)
+mean <- apply(evenness, 1, mean)
+sd <- apply(evenness, 1, sd)
+measure <- rep("Inverse Simpson", nsamp)
+even_stats <- data.frame(DNA_ID, mean, sd, measure)
+```
+
+Now we will combine our estimates for richness and evenness into one dataframe
+
+```{r}
+alpha <- rbind(rich_stats, even_stats)
+```
+
+Let’s add the sample metadata into this dataframe 
+
+```{r}
+alphadiv <- left_join(alpha, sample.tab %>% rownames_to_column(., var = "DNA_ID")) %>% 
+  arrange(CampCN, z)
+
+alphadiv$Season <- factor(alphadiv$Season, levels = levels)
+alphadiv$`Depth Interval` <- factor(alphadiv$`Depth Interval`, levels = levels)
+```
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 10, fig.width = 22, fig.align = "center"}
+ggplot(alphadiv, aes(x = `Depth Interval`, y = mean, group = `Depth Interval`)) +
+  facet_grid(measure~ Season, scales = "free") +
+  geom_boxplot(size = 0.5) +
+  custom_theme()
+```
+
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 10, fig.width = 22, fig.align = "center"}
+ggplot(alphadiv, aes(x = Season, y = mean, group = Season)) +
+  facet_grid(`Depth Interval` ~ measure, scales = "free") +
+  geom_boxplot(size = 0.5) +
+  custom_theme()
+```
+
 
 
 # Custom Table
 
-phyloseq objects can sometimes be hard to handle when you have a particular plot in mind that you want to make to make it easier for us: we'll extract the relative abundance data from the object and merge them with the taxa and sample info data as a new dataframe
+phyloseq objects can sometimes be hard to handle when you have a particular plot in mind that you want to make. to make it easier for us: we'll extract the relative abundance data from the object and merge them with the taxa and sample info data as a new dataframe
 
 
 ## Generate relative abundances
@@ -111,7 +444,7 @@ phyloseq objects can sometimes be hard to handle when you have a particular plot
 Our data currently shows the relative proportion of different sequences to the total number of gene copies recovered, so we'll normalize the gene copy number
 
 ```{r}
-ps_std <- transform_sample_counts(ps, function(x) x/sum(x))
+ps_std <- transform_sample_counts(sub_ps, function(x) x/sum(x))
 #extract the relative abundance table and coerce into dataframe
 ps_std.tab <- as(otu_table(ps_std), "matrix")
 ps_std.df = as.data.frame(ps_std.tab) 
@@ -155,26 +488,7 @@ saveRDS(sweet.tab, "~/GITHUB/naames_multiday/Output/Custom_ASV_Table.rds")
 ```
 
 
-# Ordinate Samples
 
-```{r}
-ord <- ordinate(ps, method = "PCoA", distance = "bray")
-```
-
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 10, fig.width = 14, fig.align = "center"}
-
-ord.plot <- plot_ordination(ps, ord,  title = "Bray Curtis PCoA", shape = "Depth.Interval", color = "Latitude") +
-  geom_hline(yintercept = 0, linetype = 2) +
-  geom_point(alpha = 0.6, stroke = 2, size = 4) +
-  geom_text(aes(label = Station), hjust = 0, vjust = 0, color = "black", alpha = 0.7, size = 3, position = position_jitter(), fontface = "bold") +
-  scale_color_gradientn(colors = odv.colors) +
-  custom_theme()  
-#removing one of the plotting layers (there are points within points)
-ord.plot$layers <- ord.plot$layers[-1]
-
-ord.plot + facet_wrap(~Season) +
-   guides(color = guide_colorbar(title = "Latitude, ˚N"), shape = guide_legend(title = "Depth Interval"))
-```
 
 
 
