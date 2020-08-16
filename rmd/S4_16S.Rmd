@@ -1,0 +1,338 @@
+---
+title: "S4_16S"
+author: "Nicholas Baetge"
+date: "8/14/2020"
+output: html_document
+---
+
+# Intro
+
+Here, the NAAMES cast 16S sequences from N2S4 are analyzed
+
+```{r message = F, warning = F}
+library(tidyverse) 
+library(rmarkdown)
+library(knitr)
+library(readxl)
+library(data.table) 
+library(scales)
+library(zoo)
+library(oce)
+library(patchwork)
+#rmarkdown tables
+library(stargazer)
+library(pander)
+#stat tests
+library(lmtest)
+library(lmodel2)
+library(rstatix)
+library(ggpubr)
+#for odv type plots
+library(lubridate)
+library(reshape2)
+library(MBA)
+library(mgcv)
+#phyloseq
+library(phyloseq)
+library(RColorBrewer)
+
+custom_theme <- function() {
+  theme_test(base_size = 30) %+replace%
+    theme(legend.position = "right",
+          legend.spacing.x = unit(0.5,"cm"),
+          legend.title = element_text(size = 14),
+          legend.text = element_text(size = 14),
+          legend.background = element_rect(fill = "transparent",colour = NA),
+          legend.key = element_rect(fill = "transparent",colour = NA),
+          panel.background = element_rect(fill = "transparent",colour = NA),
+          plot.background = element_rect(fill = "transparent",colour = NA)) 
+}
+
+custom.colors <- c("AT39" = "#377EB8", "AT34" = "#4DAF4A", "AT38" = "#E41A1C", "AT32" = "#FF7F00", "Temperate" = "#A6CEE3", "Subpolar" = "#377EB8", "Subtropical" = "#FB9A99", "GS/Sargasso" = "#E41A1C", "Early Spring" = "#377EB8", "Late Spring" = "#4DAF4A","Early Autumn" = "#E41A1C", "Summer" = "#E41A1C", "Late Autumn" = "#FF7F00", "Gv2_2019" = "#377EB8", "WOA18_MN" = "#4DAF4A", "WOA18_AN" = "#E41A1C")
+
+levels = c("GS/Sargasso", "Subtropical", "Temperate", "Subpolar",  "AT39-6", "AT34", "AT38", "AT32","South", "North", "Early Spring", "Late Spring","Early Autumn",  "Summer", "Late Autumn", "Gv2_2019", "WOA18_MN", "WOA18_AN","Nov", "Nov sd", "Dec", "Dec sd", "Jan", "Jan sd", "Feb", "Feb sd", "Mar", "Mar sd", "Apr", "Apr sd",  "Cruise", "ARGO", "5-100 m", "150-200 m", "300 m", "> 300 m")
+
+
+bar.colors <- c("100 m" = "white", "CM" = "#4DAF4A",  "PAM" = "#377EB8")
+
+odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe", "#d16cfa")
+
+```
+
+# Import Data 
+
+```{r}
+custom.tab <- readRDS("~/GITHUB/naames_multiday/Output/Custom_ASV_Table.rds") %>% 
+  filter(Cruise == "AT34" & Station == 4 & z <= 200) %>% 
+  mutate(time = ymd_hms(datetime),
+         interv = interval(first(time), time),
+         dur = as.duration(interv),
+         days = as.numeric(dur, "days")) %>% 
+  select(Cruise:bcd, time:days)
+
+sub_ps <- readRDS("~/GITHUB/naames_multiday/Output/phyloseq_obj.rds") %>% 
+  subset_samples(Cruise == "AT34" & Station == 4 & z <= 200)
+
+
+alphadiv <- readRDS("~/GITHUB/naames_multiday/Output/alphadiv.rds") %>% 
+  filter(Cruise == "AT34" & Station == 4 & z <= 200) %>% 
+  mutate(time = ymd_hms(datetime),
+         interv = interval(first(time), time),
+         dur = as.duration(interv),
+         days = as.numeric(dur, "days"))
+```
+
+
+## Add new sample data to phyloseq object
+
+```{r}
+ctd <-  readRDS("~/GITHUB/naames_multiday/Input/ctd/deriv_naames_ctd.rds") %>%
+              select(Cruise, Station, CampCN,  bin_depth, deriv_o2_umol_l, fl_mg_m3, ave_temp_c, ave_sal_psu) %>% 
+              mutate(Cruise = ifelse(Cruise == "AT39", "AT39-6", Cruise)) %>% 
+              rename(z = bin_depth,
+                     o2 = deriv_o2_umol_l,
+                     fl = fl_mg_m3,
+                     temp = ave_temp_c,
+                     sal = ave_sal_psu) 
+
+
+npp <- read_rds("~/GITHUB/naames_multiday/Input/Z_resolved_model_NPP.rds") %>% 
+  rename(z = depth,
+         npp = NPP)
+
+new.sample.tab <- read_rds("~/GITHUB/naames_multiday/Input/export_ms/processed_bf.2.2020.rds") %>% 
+  select(Cruise:CampCN, Target_Z, DNA_ID) %>% 
+  drop_na(DNA_ID) %>% 
+  rename(z = Target_Z) %>% 
+  left_join(., read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>%
+              select(Cruise, Station, Date,  CampCN, mld, z,  doc, n, phyc, bc, bcd ) %>% 
+              distinct() %>% 
+              mutate_at(vars(phyc:bcd), function(x)(x/10^3))) %>% 
+  mutate(`Depth Interval` = ifelse(z <= 100, "5-100 m", "150-200 m"),
+         `Depth Interval` = ifelse(z == 300, "300 m", `Depth Interval`),
+         `Depth Interval` = ifelse(z > 300, "> 300 m", `Depth Interval`)) %>% 
+  select(Cruise:z, `Depth Interval`, everything()) %>% 
+  left_join(., ctd) %>% 
+  left_join(., npp) %>% 
+  filter(Cruise == "AT34" & Station == 4 & z <= 200) %>% 
+  mutate(time = ymd_hms(datetime),
+         interv = interval(first(time), time),
+         dur = as.duration(interv),
+         days = as.numeric(dur, "days")) %>% 
+  select(Cruise:npp, time:days) %>% 
+  column_to_rownames(var = "DNA_ID") 
+
+sample_data(sub_ps) <- new.sample.tab
+
+```
+
+
+
+# Stacked Barplots
+
+Let’s make a stacked barplot of Phyla to get a sense of the community composition in these samples.
+
+Since this is not a quantitative analysis, and since we have more Phyla in this dataset than we can reasonably distinguish colors, we will prune out low abundance taxa and only include Families that contribute more than 1% of the relative abundance of each sample. Depending on your dataset and the taxonomic level you are depicting, you can adjust this prune parameter. In later analyses, we will of course included these taxa, but for now they will just clutter our plot.
+
+
+```{r}
+# melt to long format (for ggploting) 
+# prune out phyla below 1% in each sample
+
+sub_ps_family <- sub_ps %>%
+  tax_glom(taxrank = "Family") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt() %>%                                         # Melt to long format
+  filter(Abundance > 0.01) %>%                         # Filter out low abundance taxa
+  arrange(Family)                                      # Sort data frame alphabetically by family
+```
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 14, fig.width = 8, fig.align = "center"}
+
+family.colors <- colorRampPalette(brewer.pal(10, "Accent"))(length(unique(sub_ps_family$Family)))
+
+# Plot 
+ggplot(sub_ps_family, aes(x = days, y = Abundance, fill = Family)) + 
+  facet_grid(rows = "z") +
+  geom_bar(stat = "identity", position = "stack", width = 0.25) +
+  scale_fill_manual(values = rev(family.colors)) +
+  labs(x = "Days") +
+  custom_theme() +
+  guides(fill = guide_legend(reverse = TRUE, keywidth = 1, keyheight = 1)) +
+  ylab("Relative Abundance (Family > 1%) \n") +
+  ggtitle("Phylum Composition of Bacterial Communities")
+```
+
+# Unconstrained Ordination
+
+One of the best exploratory analyses for amplicon data is unconstrained ordinations. Here we will look at ordinations of our full community samples. We will rarefy the samples first (scale to the smallest library size).
+
+## Rarefy
+
+```{r}
+rarefy_ps = rarefy_even_depth(sub_ps, sample.size = min(sample_sums(sub_ps)), rngseed = 532898)
+
+sample_data(rarefy_ps)$`Depth.Interval` <- factor(sample_data(rarefy_ps)$`Depth.Interval`, levels = levels)
+sample_data(rarefy_ps)$Season <- factor(sample_data(rarefy_ps)$Season, levels = levels)
+```
+
+## PCoA
+
+```{r}
+pcoa <- ordinate(rarefy_ps, method = "PCoA", distance = "bray")
+```
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center"}
+
+pcoa.plot <- plot_ordination(rarefy_ps, pcoa,  title = "Bray Curtis PCoA") +
+  geom_point(aes(fill = days, shape = Depth.Interval), alpha = 0.6, stroke = 2, size = 4) +
+  scale_shape_manual(values = c(21, 22, 23)) +
+  scale_fill_gradientn(colors = rev(odv.colors)) +
+  custom_theme()  
+#removing one of the plotting layers (there are points within points)
+pcoa.plot$layers <- pcoa.plot$layers[-1]
+
+pcoa.plot + 
+  #facet_grid(rows = "Depth.Interval") +
+   guides(fill = guide_colorbar(title = "Days"), shape = guide_legend(title = "Depth Interval"))
+```
+
+## NMDS
+
+Let’s try an NMDS instead. For NMDS plots it’s important to set a seed since the starting positions of samples in the alogrithm is random.
+
+Important: if you calculate your bray-curtis distance metric “in-line” it will perform a square root transformation and Wisconsin double standardization. If you don’t want this, you can calculate your bray-curtis distance separately
+
+
+```{r}
+set.seed(1)
+
+# Ordinate
+nmds <- ordinate(rarefy_ps, method = "NMDS",  distance = "bray") # stress = 0.08
+```
+
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center"}
+
+nmds.plot <- plot_ordination(rarefy_ps, nmds,  title = "NMDS") +
+  geom_point(aes(fill = days, shape = Depth.Interval), alpha = 0.6, stroke = 2, size = 4) +
+  scale_shape_manual(values = c(21, 22, 23)) +
+  scale_fill_gradientn(colors = rev(odv.colors)) +
+  custom_theme()  
+#removing one of the plotting layers (there are points within points)
+nmds.plot$layers <- nmds.plot$layers[-1]
+
+nmds.plot + 
+   guides(fill = guide_colorbar(title = "Days"), shape = guide_legend(title = "Depth Interval"))
+```
+
+NMDS plots attempt to show ordinal distances between samples as accurately as possible in two dimensions. It is important to report the stress of these plots, because a high stress value means that the algorithm had a hard time representing the distances between samples in 2 dimensions. The stress of this plot was good - it was .09 (generally anything below .2 is considered acceptable). The PCoA for this data was able to show ~36.2% variation in just two dimensions, so we may want to stick with that plot.
+
+# Constrained Ordination
+
+Above we used unconstrained ordinations (PCoA, NMDS) to show relationships between samples in low dimensions. We can use a constrained ordination to see how environmental variables are associated with these changes in community composition. We constrain the ordination axes to linear combinations of environmental variables. We then plot the environmental scores onto the ordination
+
+```{r}
+# Remove data points with missing metadata
+ps_not_na <- rarefy_ps %>%
+  subset_samples(
+    !is.na(mld) &
+      !is.na(npp) & 
+      !is.na(doc) &
+      !is.na(n) & 
+      !is.na(bc) & 
+      !is.na(bcd) & 
+      !is.na(o2) & 
+      !is.na(fl) & 
+      !is.na(sal) & 
+      !is.na(temp)
+  )
+
+bray <- phyloseq::distance(ps_not_na, method = "bray")
+
+# CAP ordinate
+cap_ord <- ordinate(ps_not_na, method = "CAP", distance = bray, formula = ~ mld + doc + n  + bcd + o2 + fl + sal + bc + z +  npp + temp + days
+)
+```
+
+
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center"}
+
+# CAP plot
+cap.plot <- plot_ordination(ps_not_na, ordination = cap_ord, axes = c(1,2)) +
+  geom_point(aes(fill = days, shape = Depth.Interval), alpha = 0.6, stroke = 2, size = 4) +
+  scale_shape_manual(values = c(21, 22, 23)) +
+  scale_fill_gradientn(colors = rev(odv.colors)) +
+  custom_theme()  +
+  guides(fill = guide_colorbar(title = "Days"), shape = guide_legend(title = "Depth Interval"))
+#removing one of the plotting layers (there are points within points)
+
+cap.plot$layers <- cap.plot$layers[-1]
+
+
+
+# Now add the environmental variables as arrows
+arrowmat <- vegan::scores(cap_ord, display = "bp")
+
+# Add labels, make a data.frame
+arrowdf <- data.frame(labels = rownames(arrowmat), arrowmat)
+
+# Define the arrow aesthetic mapping
+arrow_map <- aes(xend = CAP1, 
+    yend = CAP2, 
+    x = 0, 
+    y = 0, 
+    shape = NULL, 
+    color = NULL, 
+    label = labels)
+
+label_map <- aes(x = 1.3 * CAP1, 
+    y = 1.3 * CAP2, 
+    shape = NULL, 
+    color = NULL, 
+    label = labels)
+
+arrowhead = arrow(length = unit(0.02, "npc"))
+
+# Make a new graphic
+cap.plot + 
+  geom_segment(
+    mapping = arrow_map, 
+    size = .5, 
+    data = arrowdf, 
+    color = "gray", 
+    arrow = arrowhead
+  ) + 
+  geom_text(
+    mapping = label_map, 
+    size = 4,  
+    data = arrowdf, 
+    show.legend = FALSE
+  )
+
+```
+
+Do a permutational ANOVA on constrained axes used in ordination
+
+```{r}
+anova(cap_ord) 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

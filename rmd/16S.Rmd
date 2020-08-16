@@ -34,6 +34,7 @@ library(MBA)
 library(mgcv)
 #phyloseq
 library(phyloseq)
+library(RColorBrewer)
 
 custom_theme <- function() {
   theme_test(base_size = 30) %+replace%
@@ -49,7 +50,7 @@ custom_theme <- function() {
 
 custom.colors <- c("AT39" = "#377EB8", "AT34" = "#4DAF4A", "AT38" = "#E41A1C", "AT32" = "#FF7F00", "Temperate" = "#A6CEE3", "Subpolar" = "#377EB8", "Subtropical" = "#FB9A99", "GS/Sargasso" = "#E41A1C", "Early Spring" = "#377EB8", "Late Spring" = "#4DAF4A","Early Autumn" = "#E41A1C", "Summer" = "#E41A1C", "Late Autumn" = "#FF7F00", "Gv2_2019" = "#377EB8", "WOA18_MN" = "#4DAF4A", "WOA18_AN" = "#E41A1C")
 
-levels = c("GS/Sargasso", "Subtropical", "Temperate", "Subpolar",  "AT39-6", "AT34", "AT38", "AT32","South", "North", "Early Spring", "Late Spring","Early Autumn",  "Summer", "Late Autumn", "Gv2_2019", "WOA18_MN", "WOA18_AN","Nov", "Nov sd", "Dec", "Dec sd", "Jan", "Jan sd", "Feb", "Feb sd", "Mar", "Mar sd", "Apr", "Apr sd",  "Cruise", "ARGO", "5-75 m", "100-200 m", "300 m")
+levels = c("GS/Sargasso", "Subtropical", "Temperate", "Subpolar",  "AT39-6", "AT34", "AT38", "AT32","South", "North", "Early Spring", "Late Spring","Early Autumn",  "Summer", "Late Autumn", "Gv2_2019", "WOA18_MN", "WOA18_AN","Nov", "Nov sd", "Dec", "Dec sd", "Jan", "Jan sd", "Feb", "Feb sd", "Mar", "Mar sd", "Apr", "Apr sd",  "Cruise", "ARGO", "5-100 m", "150-200 m", "300 m")
 
 
 bar.colors <- c("100 m" = "white", "CM" = "#4DAF4A",  "PAM" = "#377EB8")
@@ -77,7 +78,8 @@ ctd <-  readRDS("~/GITHUB/naames_multiday/Input/ctd/deriv_naames_ctd.rds") %>%
 
 
 npp <- read_rds("~/GITHUB/naames_multiday/Input/Z_resolved_model_NPP.rds") %>% 
-  rename(z = depth)
+  rename(z = depth,
+         npp = NPP)
 
 sample.tab <- read_rds("~/GITHUB/naames_multiday/Input/export_ms/processed_bf.2.2020.rds") %>% 
   select(Cruise:CampCN, Target_Z, DNA_ID) %>% 
@@ -87,12 +89,13 @@ sample.tab <- read_rds("~/GITHUB/naames_multiday/Input/export_ms/processed_bf.2.
               select(Cruise, Station, Date,  CampCN, mld, z,  doc, n, phyc, bc, bcd ) %>% 
               distinct() %>% 
               mutate_at(vars(phyc:bcd), function(x)(x/10^3))) %>% 
-  mutate(`Depth Interval` = ifelse(z <= 75, "5-75 m", "100-200 m"),
+  mutate(`Depth Interval` = ifelse(z <= 100, "5-100 m", "150-200 m"),
          `Depth Interval` = ifelse(z == 300, "300 m", `Depth Interval`),
          `Depth Interval` = ifelse(z > 300, "> 300 m", `Depth Interval`)) %>% 
   select(Cruise:z, `Depth Interval`, everything()) %>% 
   left_join(., ctd) %>% 
   left_join(., npp) %>% 
+  rename(latitude = Latitude) %>% 
   column_to_rownames(var = "DNA_ID") 
 
 ```
@@ -109,6 +112,7 @@ ps = phyloseq(OTU,TAX,SAM)
 
 sample_data(ps)$`Depth.Interval` <- factor(sample_data(ps)$`Depth.Interval`, levels = levels)
 sample_data(ps)$Season <- factor(sample_data(ps)$Season, levels = levels)
+
 ```
 
 # Filter sequences
@@ -123,6 +127,7 @@ sub_ps <- ps %>%
     Family  != "mitochondria" &
     Class   != "Chloroplast"
   )
+
 
 ```
 
@@ -165,27 +170,23 @@ sub_ps_phylum <- sub_ps %>%
   tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
   transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
   psmelt() %>%                                         # Melt to long format
-  filter(Abundance > 0.02) %>%                         # Filter out low abundance taxa
+  filter(Abundance > 0.01) %>%                         # Filter out low abundance taxa
   arrange(Phylum)                                      # Sort data frame alphabetically by phylum
 ```
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 16, fig.width = 18, fig.align = "center"}
 
-phylum.colors <- c(
-  "#CBD588", "#5F7FC7", "orange","#DA5724", "#508578", "#CD9BCD",
-   "#AD6F3B", "#673770","#D14285", "#652926", "#C84248", 
-  "#8569D5", "#5E738F","#D1A33D", "#8A7C64", "#599861"
-)
+phylum.colors <- colorRampPalette(brewer.pal(10, "Accent"))(length(unique(sub_ps_phylum$Phylum)))
 
 # Plot 
-ggplot(sub_ps_phylum, aes(x = Latitude, y = Abundance, fill = Phylum)) + 
+ggplot(sub_ps_phylum, aes(x = latitude, y = Abundance, fill = Phylum)) + 
   facet_grid(z~Season) +
-  geom_bar(stat = "identity", position = "stack", width = 1, alpha = 0.7) +
+  geom_bar(stat = "identity", position = "stack", width = 0.5, alpha = 0.7) +
   scale_fill_manual(values = phylum.colors) +
   labs(x = "Latitude, ˚N") +
   custom_theme() +
   guides(fill = guide_legend(reverse = TRUE, keywidth = 1, keyheight = 1)) +
-  ylab("Relative Abundance (Phyla > 2%) \n") +
+  ylab("Relative Abundance (Phyla > 1%) \n") +
   ggtitle("Phylum Composition of Bacterial Communities")
 ```
 
@@ -210,19 +211,18 @@ pcoa <- ordinate(rarefy_ps, method = "PCoA", distance = "bray")
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 22, fig.align = "center"}
 
-pcoa.plot <- plot_ordination(rarefy_ps, pcoa,  title = "Bray Curtis PCoA", shape = "Depth.Interval", color = "Latitude") +
+pcoa.plot <- plot_ordination(rarefy_ps, pcoa,  title = "Bray Curtis PCoA") +
   geom_hline(yintercept = 0, linetype = 2) +
-  geom_point(alpha = 0.6, stroke = 2, size = 4) +
-  geom_point(colour = "grey90", size = 1.5) +
-  #geom_text(aes(label = Station), hjust = 0, vjust = 0, color = "black", alpha = 0.7, size = 3, position = position_jitter(), fontface = "bold") +
-  scale_color_gradientn(colors = odv.colors) +
+  geom_point(aes(fill = latitude, shape = Depth.Interval), alpha = 0.6, stroke = 2, size = 4) +
+  scale_shape_manual(values = c(21, 22, 23)) +
+  scale_fill_gradientn(colors = odv.colors) +
   custom_theme()  
 #removing one of the plotting layers (there are points within points)
 pcoa.plot$layers <- pcoa.plot$layers[-1]
 
 pcoa.plot + 
   facet_grid(~Season) +
-   guides(color = guide_colorbar(title = "Latitude, ˚N"), shape = guide_legend(title = "Depth Interval"))
+   guides(fill = guide_colorbar(title = "Latitude, ˚N"), shape = guide_legend(title = "Depth Interval"))
 ```
 
 ## NMDS
@@ -242,19 +242,18 @@ nmds <- ordinate(rarefy_ps,, method = "NMDS",  distance = "bray") # stress = 0.0
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 22, fig.align = "center"}
 
-nmds.plot <- plot_ordination(rarefy_ps, nmds,  title = "NMDS", shape = "Depth.Interval", color = "Latitude") +
+nmds.plot <- plot_ordination(rarefy_ps, nmds,  title = "NMDS") +
   geom_hline(yintercept = 0, linetype = 2) +
-  geom_point(alpha = 0.6, stroke = 2, size = 4) +
-  geom_point(colour = "grey90", size = 1.5) +
-  #geom_text(aes(label = Station), hjust = 0, vjust = 0, color = "black", alpha = 0.7, size = 3, position = position_jitter(), fontface = "bold") +
-  scale_color_gradientn(colors = odv.colors) +
+  geom_point(aes(fill = latitude, shape = Depth.Interval), alpha = 0.6, stroke = 2, size = 4) +
+  scale_shape_manual(values = c(21, 22, 23)) +
+  scale_fill_gradientn(colors = odv.colors) +
   custom_theme()  
 #removing one of the plotting layers (there are points within points)
 nmds.plot$layers <- nmds.plot$layers[-1]
 
 nmds.plot + 
   facet_grid(~Season) +
-   guides(color = guide_colorbar(title = "Latitude, ˚N"), shape = guide_legend(title = "Depth Interval"))
+   guides(fill = guide_colorbar(title = "Latitude, ˚N"), shape = guide_legend(title = "Depth Interval"))
 ```
 
 NMDS plots attempt to show ordinal distances between samples as accurately as possible in two dimensions. It is important to report the stress of these plots, because a high stress value means that the algorithm had a hard time representing the distances between samples in 2 dimensions. The stress of this plot was good - it was .09 (generally anything below .2 is considered acceptable). The PCoA for this data was able to show ~46% variation in just two dimensions, so we may want to stick with that plot.
@@ -268,20 +267,21 @@ Above we used unconstrained ordinations (PCoA, NMDS) to show relationships betwe
 ps_not_na <- rarefy_ps %>%
   subset_samples(
     !is.na(mld) &
-      !is.na(NPP) & 
+      !is.na(npp) & 
       !is.na(doc) &
       !is.na(n) & 
       !is.na(bc) & 
       !is.na(bcd) & 
       !is.na(o2) & 
       !is.na(fl) & 
-      !is.na(sal)
+      !is.na(sal) & 
+      !is.na(temp)
   )
 
 bray <- phyloseq::distance(ps_not_na, method = "bray")
 
 # CAP ordinate
-cap_ord <- ordinate(ps_not_na, method = "CAP", distance = bray, formula = ~ mld + doc + n  + bcd + o2 + fl + sal + bc + z + Latitude + NPP
+cap_ord <- ordinate(ps_not_na, method = "CAP", distance = bray, formula = ~ mld + doc + n  + bcd + o2 + fl + sal + bc + z + latitude + npp + temp
 )
 ```
 
@@ -290,13 +290,14 @@ cap_ord <- ordinate(ps_not_na, method = "CAP", distance = bray, formula = ~ mld 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 22, fig.align = "center"}
 
 # CAP plot
-cap.plot <- plot_ordination(ps_not_na, ordination = cap_ord,  shape = "Depth.Interval", color = "Latitude", axes = c(1,2)) + 
-  geom_point(alpha = 0.6, stroke = 2, size = 4) +
-  geom_point(colour = "grey90", size = 1.5) +
-  scale_color_gradientn(colors = odv.colors) +
+cap.plot <- plot_ordination(ps_not_na, ordination = cap_ord,  axes = c(1,2)) + 
+  geom_hline(yintercept = 0, linetype = 2) +
+  geom_point(aes(fill = latitude, shape = Depth.Interval), alpha = 0.6, stroke = 2, size = 4) +
+  scale_shape_manual(values = c(21, 22, 23)) +
+  scale_fill_gradientn(colors = odv.colors) +
   custom_theme()  +
   facet_grid(~Season) +
-  guides(color = guide_colorbar(title = "Latitude, ˚N"), shape = guide_legend(title = "Depth Interval"))
+  guides(fill = guide_colorbar(title = "Latitude, ˚N"), shape = guide_legend(title = "Depth Interval"))
 #removing one of the plotting layers (there are points within points)
 
 cap.plot$layers <- cap.plot$layers[-1]
@@ -485,7 +486,13 @@ sweet.tab <- t_custom.tab %>%
 
 ```{r}
 saveRDS(sweet.tab, "~/GITHUB/naames_multiday/Output/Custom_ASV_Table.rds")
+saveRDS(sub_ps, "~/GITHUB/naames_multiday/Output/phyloseq_obj.rds")
+saveRDS(rarefy_ps, "~/GITHUB/naames_multiday/Output/rarefied_phyloseq_obj.rds")
+saveRDS(alphadiv, "~/GITHUB/naames_multiday/Output/alphadiv.rds")
+
 ```
+
+
 
 
 
