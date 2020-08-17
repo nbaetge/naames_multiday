@@ -159,8 +159,7 @@ ggplot(sub_ps_family, aes(x = days, y = Abundance, fill = Family)) +
   labs(x = "Days") +
   custom_theme() +
   guides(fill = guide_legend(reverse = TRUE, keywidth = 1, keyheight = 1)) +
-  ylab("Relative Abundance (Family > 1%) \n") +
-  ggtitle("Phylum Composition of Bacterial Communities")
+  ylab("Relative Abundance (Family > 1%) \n") 
 ```
 
 # Unconstrained Ordination
