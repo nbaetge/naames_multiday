@@ -30,7 +30,9 @@ library(lubridate)
 library(reshape2)
 library(MBA)
 library(mgcv)
+```
 
+``` r
 custom_theme <- function() {
   theme_test(base_size = 30) %+replace%
     theme(legend.position = "right",
@@ -64,14 +66,35 @@ data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>%
          days = as.numeric(dur, "days")) %>% 
   select(Cruise, Station, Date, time:days, bcd.100:npp.300) %>% 
   distinct() %>% 
-  mutate_at(vars(contains(c("phyc", "npp", "bc"))), function(x) (x / 1000)) 
+  mutate_at(vars(contains(c("phyc", "npp", "bc"))), function(x) (x / 1000)) %>%
+  mutate(bc_phyc.100 = bc.100/phyc.100,
+         bc_phyc.200 = bc.100/phyc.200,
+         bc_phyc.300 = bc.100/phyc.300,
+         bcd_phyc.100 = bcd.100/phyc.100,
+         bcd_phyc.200 = bcd.100/phyc.200,
+         bcd_phyc.300 = bcd.100/phyc.300
+         ) %>% 
+   mutate_at(vars(contains("tdaa")), funs(. / 10^3)) #nM to mmol/m3
 ```
+
+    ## Warning: funs() is soft deprecated as of dplyr 0.8.0
+    ## Please use a list of either functions or lambdas: 
+    ## 
+    ##   # Simple named list: 
+    ##   list(mean = mean, median = median)
+    ## 
+    ##   # Auto named with `tibble::lst()`: 
+    ##   tibble::lst(mean, median)
+    ## 
+    ##   # Using lambdas
+    ##   list(~ mean(., trim = .2), ~ median(., na.rm = TRUE))
+    ## This warning is displayed once per session.
 
 # Pivot data
 
 ``` r
 pivot_phyc_data <- data %>% 
-  select(Cruise:days, contains("phyc")) %>% 
+  select(Cruise:days,  phyc.100, phyc.200, phyc.300) %>% 
   pivot_longer(phyc.100:phyc.300, names_to = "depth_interval", names_prefix = "phyc.", values_to = "phyc") %>% 
   mutate(depth_interval = ifelse(depth_interval == 100, "0 - 100 m", depth_interval),
          depth_interval = ifelse(depth_interval == 200, "100 - 200 m", depth_interval),
@@ -95,8 +118,30 @@ pivot_bc_data <- data %>%
 
 
 pivot_bcd_data <- data %>% 
-  select(Cruise:days, contains("bcd")) %>% 
+  select(Cruise:days, bcd.100, bcd.200, bcd.300) %>% 
   pivot_longer(bcd.100:bcd.300, names_to = "depth_interval", names_prefix = "bcd.", values_to = "bcd") %>% 
+  mutate(depth_interval = ifelse(depth_interval == 100, "0 - 100 m", depth_interval),
+         depth_interval = ifelse(depth_interval == 200, "100 - 200 m", depth_interval),
+         depth_interval = ifelse(depth_interval == 300, "200 - 300 m", depth_interval))
+
+
+pivot_bc_phyc_data <- data %>% 
+  select(Cruise:days, contains("bc_phyc")) %>% 
+  pivot_longer(bc_phyc.100:bc_phyc.300, names_to = "depth_interval", names_prefix = "bc_phyc.", values_to = "bc.phyc") %>% 
+  mutate(depth_interval = ifelse(depth_interval == 100, "0 - 100 m", depth_interval),
+         depth_interval = ifelse(depth_interval == 200, "100 - 200 m", depth_interval),
+         depth_interval = ifelse(depth_interval == 300, "200 - 300 m", depth_interval))
+
+pivot_doc_data <- data %>% 
+  select(Cruise:days, contains("doc")) %>% 
+  pivot_longer(doc.100:doc.300, names_to = "depth_interval", names_prefix = "doc.", values_to = "doc") %>% 
+  mutate(depth_interval = ifelse(depth_interval == 100, "0 - 100 m", depth_interval),
+         depth_interval = ifelse(depth_interval == 200, "100 - 200 m", depth_interval),
+         depth_interval = ifelse(depth_interval == 300, "200 - 300 m", depth_interval))
+
+pivot_tdaa_data <- data %>% 
+  select(Cruise:days, contains("tdaa")) %>% 
+  pivot_longer(tdaa.100:tdaa.300, names_to = "depth_interval", names_prefix = "tdaa.", values_to = "tdaa") %>% 
   mutate(depth_interval = ifelse(depth_interval == 100, "0 - 100 m", depth_interval),
          depth_interval = ifelse(depth_interval == 200, "100 - 200 m", depth_interval),
          depth_interval = ifelse(depth_interval == 300, "200 - 300 m", depth_interval))
@@ -104,6 +149,9 @@ pivot_bcd_data <- data %>%
 pivoted <- left_join(pivot_phyc_data, pivot_npp_data) %>% 
   left_join(., pivot_bc_data) %>% 
   left_join(., pivot_bcd_data) %>% 
+  left_join(., pivot_bc_phyc_data) %>% 
+  left_join(., pivot_doc_data) %>% 
+  left_join(., pivot_tdaa_data) %>% 
   rename(`Depth Interval` = depth_interval)
 ```
 
@@ -111,14 +159,14 @@ pivoted <- left_join(pivot_phyc_data, pivot_npp_data) %>%
 
 ### Phyto Carbon
 
-### NPP
-
 ### Bact Carbon
 
 ### BCD
 
-<img src="S4_Integration_Plots_files/figure-gfm/unnamed-chunk-8-1.png" style="display: block; margin: auto;" />
+### BC : PhyC
 
-# BCD:NPP
+### DOC
 
-<img src="S4_Integration_Plots_files/figure-gfm/unnamed-chunk-9-1.png" style="display: block; margin: auto;" />
+### TDAA
+
+<img src="S4_Integration_Plots_files/figure-gfm/unnamed-chunk-11-1.png" style="display: block; margin: auto;" />

@@ -510,28 +510,23 @@ doc.plot <-  mba %>%
 ```
 
 
-## O2
+## AOU
 
 ```{r}
 
-subset <- data %>% 
+subset <- ctd %>% 
   filter(between(z, 0, 300)) %>% 
-  select(lat, z, o2) %>% 
+  select(lat, z, deriv_aou_umol_kg) %>% 
+  rename(aou = deriv_aou_umol_kg) %>% 
   group_by(z) %>% 
-  mutate(mean = mean(o2, na.rm = T),
-         sd = sd(o2, na.rm = T),
-         zscore = (o2 - mean)/sd) %>% 
+  mutate(mean = mean(aou, na.rm = T),
+         sd = sd(aou, na.rm = T),
+         zscore = (aou - mean)/sd) %>% 
   ungroup() %>% 
   select(lat, z, zscore) %>% 
   mutate(zscore = round(zscore, 2)) %>% 
   filter(z >= 0) %>% 
   drop_na(zscore)
-
-s4_mark <- s4_data_mark %>% 
-  drop_na(o2)
-
-s6_mark <- s6_data_mark %>% 
-  drop_na(o2)
 
 mba <- mba.surf(subset, no.X = 300, no.Y = 300, extend = F)
 dimnames(mba$xyz.est$z) <- list(mba$xyz.est$x, mba$xyz.est$y)
@@ -543,21 +538,19 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 12, fig.align = "center", warning = FALSE}
 
-o2.plot <-  mba %>% 
+aou.plot <-  mba %>% 
   ggplot(aes(x = lat, y = z)) + 
   geom_raster(aes(fill = zscore)) +
-  geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 2, shape = 3, alpha = 0.6) +
-  geom_point(data = s4_mark, aes(x = lat, y = z), colour = "Black", size = 2, shape = 3, alpha = 0.6) +
-  geom_point(data = s6_mark, aes(x = lat, y = z), colour = "Black", size = 2, shape = 3, alpha = 0.6) +
-  #geom_line(data = mld.odv, aes(x = decimaldate, y = MLD), colour = "White", linetype = 2, size = 1 ) +
-   # geom_point(data = mld.odv, aes(x = decimaldate, y = MLD), colour = "White", shape = 19, size = 3, alpha = 0.8) +
+  geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 0.4, shape = 3, alpha = 0.1) +
+  geom_point(data = s4_ctd_mark, aes(x = lat, y = z), colour = "Black", size = 0.4, shape = 3, alpha = 0.1) +
+  geom_point(data = s6_ctd_mark, aes(x = lat, y = z), colour = "Black", size = 0.4, shape = 3, alpha = 0.1) +
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse(breaks = pretty_breaks()) +
   scale_x_continuous(breaks = pretty_breaks()) +
   labs(y = expression(italic("Depth, m")), x = expression(italic("Latitude, ˚N")), fill = expression(italic(paste("")))) +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2)) +
   custom_theme() +
-  ggtitle("Dissolved Oxygen")
+  ggtitle("AOU")
 
 ```
 
@@ -565,7 +558,7 @@ o2.plot <-  mba %>%
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 20, fig.width = 16, fig.align = "center", warning = FALSE}
 
-patchwork <- n.plot / doc.plot / o2.plot 
+patchwork <- n.plot / doc.plot / aou.plot 
 
 patchwork +  plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 22))

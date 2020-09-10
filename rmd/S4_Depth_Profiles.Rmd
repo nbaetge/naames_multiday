@@ -33,6 +33,9 @@ library(reshape2)
 library(MBA)
 library(mgcv)
 
+```
+
+```{r}
 custom_theme <- function() {
   theme_test(base_size = 30) %+replace%
     theme(legend.position = "right",
@@ -56,9 +59,11 @@ odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe"
 
 # Import Data
 
-```{r}
+```{r message = F, warning = F}
 data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
-  filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station == 6) 
+  filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station == 6) %>% 
+  mutate_at(vars(contains("tdaa"), Asp:Lys), funs(. / 10^3)) %>% #nM to mmol/m3
+  mutate(tdaa_yield = round((tdaa_c/doc)*100, 2)) 
 
 npp <- read_rds("~/GITHUB/naames_multiday/Input/Z_resolved_model_NPP.rds") %>% 
   rename(z = depth,
@@ -66,13 +71,26 @@ npp <- read_rds("~/GITHUB/naames_multiday/Input/Z_resolved_model_NPP.rds") %>%
   mutate(npp = round((npp * 10^3)/12)) %>% 
   filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station == 6)  
 
+ctd <-  read_rds("~/GITHUB/naames_multiday/Input/ctd/deriv_naames_ctd.rds") %>% 
+  rename(lat = "Latitude [degrees_north]",
+         z = bin_depth) %>% 
+  mutate(bin = round(lat, 1),
+         Date = ymd_hm(`yyyy-mm-ddThh:mm:ss.sss`),
+         Date = as_date(round_date(Date, unit = "day"))) %>% 
+  filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station == 6)
+
+casts <- data %>% 
+  filter(Cruise == "AT34") %>% 
+  distinct(CampCN) %>% 
+  as_vector()
+
 ```
 
 # Station 4
 
 ## Plot MLDs
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center"}
 mld.plot <-  data %>% 
   filter(Cruise == "AT34") %>% 
   drop_na(mld) %>% 
@@ -95,6 +113,52 @@ mld.plot <-  data %>%
 
 ```
 
+## Plot T/S
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 7, fig.width = 18, fig.align = "center"}
+
+ts.data <- ctd %>% 
+  filter(Cruise == "AT34" & CampCN <= 66) %>% 
+  select(Date, CampCN, z, deriv_potT_c, ave_sal_psu) %>% 
+  arrange(CampCN, z) %>% 
+  filter(z <= 300) %>% 
+  rename(sal = ave_sal_psu,
+         pot.temp = deriv_potT_c)
+
+# make TS long table
+TS <- expand.grid(sal = seq(floor(min(ts.data$sal, na.rm = TRUE)), ceiling(max(ts.data$sal, na.rm = TRUE)), length.out = 100),
+                   pot.temp = seq(floor(min(ts.data$pot.temp, na.rm = TRUE)), ceiling(max(ts.data$pot.temp, na.rm = TRUE)), length.out = 100)
+  )
+TS$density <- gsw_rho_t_exact(SA = TS$sal, t = TS$pot.temp, p = 0) - 1000 # the function calculates in-situ density, but because potential temperature and a single reference pressure is used the result equals potential density at reference pressure
+
+# vertical isopycnal labels
+v.isopycnals <- subset(TS, # make a df for labeling vertical isopycnals
+                       pot.temp == ceiling(max(TS$pot.temp)) & # selects all rows where "sal" is the max limit of the x axis
+                         round(density,1) %in% seq(min(round(TS$density*2)/2),
+                                                   max(round(TS$density*2)/2),
+                                                   by = .5)) # selects any line where the rounded denisty is equal to density represented by any isopycnal in the plot
+v.isopycnals$density <- round(v.isopycnals$density, 1) # rounds the density
+v.isopycnals <- aggregate(sal~density, v.isopycnals, mean) # reduces number of "pot.temp" values to 1 per each unique "density" value
+
+ 
+ts.plot <- ggplot() +
+  geom_contour(data = TS, aes(x = sal, y = pot.temp, z = density), col = "grey", linetype = "dashed", breaks = seq(min(round(TS$density*2)/2, na.rm = TRUE), # taking density times 2, rounding and dividing by 2 rounds it to the neares 0.5
+max(round(TS$density*2)/2, na.rm = TRUE),  by = .25)) +
+  geom_point(data = ts.data, # plot only the points that have a z value in color according to z 
+             aes(sal, pot.temp, color = z)) +
+  annotate(geom = "text", x = floor(min(TS$sal, na.rm = TRUE)), y = ceiling(max(TS$pot.temp, na.rm = TRUE)), hjust = "inward", vjust = "inward", color = "grey60", size = 14, label = paste0('sigma',"[",0,"]"), parse = T) +
+  scale_x_continuous(expand = c(0,0), limits = c(floor(min(TS$sal, na.rm = TRUE)), ceiling(max(TS$sal, na.rm = TRUE)))) + # use range of "sal" for x axis
+  scale_y_continuous(limits = c(floor(min(TS$pot.temp, na.rm = TRUE)), ceiling(max(TS$pot.temp, na.rm = TRUE)))) + # use range of "pot.temp" for y axis
+  scale_color_gradientn(colors = odv.colors) +
+  labs(x = expression(italic(paste("Salinity, psu"))), y = expression(italic(paste("Potential Temperature, ˚C"))), color = "Depth, m") +
+  custom_theme() + 
+  facet_grid(~Date) +
+  theme(panel.spacing = unit(4, "lines"))
+
+
+ts.plot + geom_text(data = v.isopycnals, aes(x = sal, y = ceiling(max(TS$pot.temp)), label = density), vjust = "inward", hjust = 0, col = "grey")
+  
+```
 
 
 ## Plot Profiles 
@@ -270,19 +334,18 @@ doc.plot <-  data %>%
 
 ```
 
-
-### O2
+### TDAA
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
-o2.plot <-  data %>% 
+tdaa.plot <-  data %>% 
   filter(Cruise == "AT34") %>% 
-  drop_na(o2) %>% 
+  drop_na(tdaa_c) %>% 
   filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
-  ggplot(aes(x = z, y = o2, group = interaction(Date, CampCN))) +
-  geom_errorbar(aes(x = z, ymin = o2 - sd_o2, ymax = o2 + sd_o2)) +
+  ggplot(aes(x = z, y = tdaa_c, group = interaction(Date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = tdaa_c - sd_tdaa, ymax = tdaa_c + sd_tdaa)) +
   geom_line(aes(color = Date), size = 0.7) +
   geom_point(aes(fill = Date), size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("O"[2],", mmol m"^"-3"))), colour = "") +
+  labs(x = expression(italic(paste(""))), y = expression(italic(paste("TDAA, mmol C m"^-3))), colour = "") +
   scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
   coord_flip() +
   scale_y_continuous(expand = c(0,0)) +
@@ -297,11 +360,61 @@ o2.plot <-  data %>%
 
 ```
 
+
+### TDAA Yield
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+tdaaY.plot <-  data %>% 
+  filter(Cruise == "AT34") %>% 
+  drop_na(tdaa_yield) %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  ggplot(aes(x = z, y = tdaa_yield, group = interaction(Date, CampCN))) +
+  geom_line(aes(color = Date), size = 0.7) +
+  geom_point(aes(fill = Date), size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste(""))), y = expression(italic(paste("TDAA Yield, %"))), colour = "") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  guides(fill = F,
+         color = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_blank())
+
+```
+
+
+
+
+### AOU
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+aou.plot <-  ctd %>% 
+  filter(Cruise == "AT34") %>% 
+  filter(z <= 300) %>% 
+  ggplot(aes(x = z, y = deriv_aou_umol_l, group = interaction(Date, CampCN))) +
+  geom_line(aes(color = Date), size = 0.7) +
+  labs(x = expression(italic(paste(""))), y = expression(italic(paste("AOU, mmol m"^"-3"))), colour = "") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  guides(color = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_blank())
+
+```
+
 #### Set 2
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 18, fig.align = "center", warning = FALSE}
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 12, fig.width = 18, fig.align = "center", warning = FALSE}
 
-patchwork <- n.plot + doc.plot + o2.plot
+patchwork <- (n.plot +  aou.plot) / (doc.plot + tdaa.plot + tdaaY.plot)
 
 patchwork +  
   plot_layout(guides = 'collect') +
@@ -404,5 +517,7 @@ patchwork +
   theme(plot.tag = element_text(size = 22)) 
 
 ```
+
+
 
 

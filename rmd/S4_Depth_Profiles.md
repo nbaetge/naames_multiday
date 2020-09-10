@@ -30,7 +30,9 @@ library(lubridate)
 library(reshape2)
 library(MBA)
 library(mgcv)
+```
 
+``` r
 custom_theme <- function() {
   theme_test(base_size = 30) %+replace%
     theme(legend.position = "right",
@@ -56,20 +58,39 @@ odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe"
 
 ``` r
 data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
-  filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station == 6) 
+  filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station == 6) %>% 
+  mutate_at(vars(contains("tdaa"), Asp:Lys), funs(. / 10^3)) %>% #nM to mmol/m3
+  mutate(tdaa_yield = round((tdaa_c/doc)*100, 2)) 
 
 npp <- read_rds("~/GITHUB/naames_multiday/Input/Z_resolved_model_NPP.rds") %>% 
   rename(z = depth,
          npp = NPP) %>% 
   mutate(npp = round((npp * 10^3)/12)) %>% 
   filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station == 6)  
+
+ctd <-  read_rds("~/GITHUB/naames_multiday/Input/ctd/deriv_naames_ctd.rds") %>% 
+  rename(lat = "Latitude [degrees_north]",
+         z = bin_depth) %>% 
+  mutate(bin = round(lat, 1),
+         Date = ymd_hm(`yyyy-mm-ddThh:mm:ss.sss`),
+         Date = as_date(round_date(Date, unit = "day"))) %>% 
+  filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station == 6)
+
+casts <- data %>% 
+  filter(Cruise == "AT34") %>% 
+  distinct(CampCN) %>% 
+  as_vector()
 ```
 
 # Station 4
 
 ## Plot MLDs
 
-<img src="S4_Depth_Profiles_files/figure-gfm/unnamed-chunk-3-1.png" style="display: block; margin: auto;" />
+<img src="S4_Depth_Profiles_files/figure-gfm/unnamed-chunk-4-1.png" style="display: block; margin: auto;" />
+
+## Plot T/S
+
+<img src="S4_Depth_Profiles_files/figure-gfm/unnamed-chunk-5-1.png" style="display: block; margin: auto;" />
 
 ## Plot Profiles
 
@@ -83,17 +104,21 @@ npp <- read_rds("~/GITHUB/naames_multiday/Input/Z_resolved_model_NPP.rds") %>%
 
 #### Set 1
 
-<img src="S4_Depth_Profiles_files/figure-gfm/unnamed-chunk-8-1.png" style="display: block; margin: auto;" />
+<img src="S4_Depth_Profiles_files/figure-gfm/unnamed-chunk-10-1.png" style="display: block; margin: auto;" />
 
 ### N
 
 ### DOC
 
-### O2
+### TDAA
+
+### TDAA Yield
+
+### AOU
 
 #### Set 2
 
-<img src="S4_Depth_Profiles_files/figure-gfm/unnamed-chunk-12-1.png" style="display: block; margin: auto;" />
+<img src="S4_Depth_Profiles_files/figure-gfm/unnamed-chunk-16-1.png" style="display: block; margin: auto;" />
 
 ### BactC
 
@@ -103,4 +128,4 @@ npp <- read_rds("~/GITHUB/naames_multiday/Input/Z_resolved_model_NPP.rds") %>%
 
 #### Set 3
 
-<img src="S4_Depth_Profiles_files/figure-gfm/unnamed-chunk-16-1.png" style="display: block; margin: auto;" />
+<img src="S4_Depth_Profiles_files/figure-gfm/unnamed-chunk-20-1.png" style="display: block; margin: auto;" />

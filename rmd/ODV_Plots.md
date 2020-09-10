@@ -331,27 +331,22 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
   filter(z >= 0) 
 ```
 
-## O2
+## AOU
 
 ``` r
-subset <- data %>% 
+subset <- ctd %>% 
   filter(between(z, 0, 300)) %>% 
-  select(lat, z, o2) %>% 
+  select(lat, z, deriv_aou_umol_kg) %>% 
+  rename(aou = deriv_aou_umol_kg) %>% 
   group_by(z) %>% 
-  mutate(mean = mean(o2, na.rm = T),
-         sd = sd(o2, na.rm = T),
-         zscore = (o2 - mean)/sd) %>% 
+  mutate(mean = mean(aou, na.rm = T),
+         sd = sd(aou, na.rm = T),
+         zscore = (aou - mean)/sd) %>% 
   ungroup() %>% 
   select(lat, z, zscore) %>% 
   mutate(zscore = round(zscore, 2)) %>% 
   filter(z >= 0) %>% 
   drop_na(zscore)
-
-s4_mark <- s4_data_mark %>% 
-  drop_na(o2)
-
-s6_mark <- s6_data_mark %>% 
-  drop_na(o2)
 
 mba <- mba.surf(subset, no.X = 300, no.Y = 300, extend = F)
 dimnames(mba$xyz.est$z) <- list(mba$xyz.est$x, mba$xyz.est$y)

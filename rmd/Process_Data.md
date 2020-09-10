@@ -32,7 +32,9 @@ library(lubridate)
 library(reshape2)
 library(MBA)
 library(mgcv)
+```
 
+``` r
 custom_theme <- function() {
   theme_test(base_size = 30) %+replace%
     theme(legend.position = "top",
@@ -53,8 +55,8 @@ bar.colors <- c("100 m" = "white", "CM" = "#4DAF4A",  "PAM" = "#377EB8")
 # Import Data
 
 ``` r
-bf <- read_rds("~/GITHUB/naames_multiday/Input/export_ms/processed_bf.2.2020.rds") %>%  
-  select(Cruise:degree_bin, CampCN, Z_MLD, Target_Z, interp_DOC, DOC_sd, interp_O2_Winkler, O2_Winkler_sd, interp_N_N, N_N_sd, interp_Chl_a_Fluor,interp_Pro_Influx:interp_Nano_Influx, interp_BactProd_C, BactProd_C_sd, interp_BactAbund, BactAbund_sd) %>%
+bf <- read_rds("~/GITHUB/naames_multiday/Input/export_ms/processed_bf.8.2020.rds") %>%  
+  select(Cruise:degree_bin, CampCN, Z_MLD, Target_Z, interp_DOC, DOC_sd, interp_TDAA, interp_tdaa_c, TDAA_sd, Asp:Lys, interp_O2_Winkler, O2_Winkler_sd, interp_N_N, N_N_sd,  interp_Chl_a_Fluor,interp_Pro_Influx:interp_Nano_Influx, interp_BactProd_C, BactProd_C_sd, interp_BactAbund, BactAbund_sd) %>%
   rename(bp = interp_BactProd_C, 
          sd_bp = BactProd_C_sd, 
          ba = interp_BactAbund,
@@ -65,18 +67,23 @@ bf <- read_rds("~/GITHUB/naames_multiday/Input/export_ms/processed_bf.2.2020.rds
          sd_n = N_N_sd,
          doc = interp_DOC,
          sd_doc = DOC_sd, 
+         tdaa = interp_TDAA,
+         tdaa_c = interp_tdaa_c,
+         sd_tdaa = TDAA_sd,
          chl = interp_Chl_a_Fluor,
          pro = interp_Pro_Influx,
          syn = interp_Syn_Influx,
          pico = interp_Pico_Influx,
          nano = interp_Nano_Influx) %>% 
   mutate(degree_bin = ifelse(Cruise == "AT34" & Station == 4, 48, degree_bin),
+         Station = ifelse(Station == "1A", 0, Station),
          phyto = pro + syn + pico + nano,
          rel.pro = pro/phyto,
          rel.syn = syn/phyto,
          rel.pico = pico/phyto,
          rel.nano = nano/phyto) %>% 
   mutate_all(~ replace(., is.nan(.), NA)) %>% 
+  mutate_at(vars(Station), as.numeric) %>% 
   left_join(., read_csv("~/GITHUB/naames_multiday/Input/phytoC.csv") %>% 
               select(Cruise, Station, CampCN, Target_Z, PhytoC, sd_PhytoC)) %>% 
   #convert phytoC from ug C / L to µmol C / m3
@@ -185,7 +192,8 @@ integ_100 <- bcd %>%
   mutate(bcd.100 = integrateTrapezoid(z, bcd, type = "A"),
          bc.100 = integrateTrapezoid(z, bc, type = "A"),
          doc.100 = integrateTrapezoid(z, doc, type = "A"),
-         phyc.100 = integrateTrapezoid(z, phyc, type = "A")) %>% 
+         phyc.100 = integrateTrapezoid(z, phyc, type = "A"),
+         tdaa.100 = integrateTrapezoid(z, tdaa_c, type = "A")) %>% 
   mutate_at(vars(contains(".100")), round) %>% 
   # depth normalize 
   mutate_at(vars(contains(".100")), funs(./100)) %>% 
@@ -217,7 +225,8 @@ integ_200 <- bcd %>%
   mutate(bcd.200 = integrateTrapezoid(z, bcd, type = "A"),
          bc.200 = integrateTrapezoid(z, bc, type = "A"),
          doc.200 = integrateTrapezoid(z, doc, type = "A"),
-         phyc.200 = integrateTrapezoid(z, phyc, type = "A")) %>% 
+         phyc.200 = integrateTrapezoid(z, phyc, type = "A"),
+         tdaa.200 = integrateTrapezoid(z, tdaa_c, type = "A")) %>% 
   mutate_at(vars(contains(".200")), round) %>% 
   # depth normalize 
   mutate_at(vars(contains(".200")), funs(./100)) %>% 
@@ -234,7 +243,8 @@ integ_300 <- bcd %>%
   mutate(bcd.300 = integrateTrapezoid(z, bcd, type = "A"),
          bc.300 = integrateTrapezoid(z, bc, type = "A"),
          doc.300 = integrateTrapezoid(z, doc, type = "A"),
-         phyc.300 = integrateTrapezoid(z, phyc, type = "A")) %>% 
+         phyc.300 = integrateTrapezoid(z, phyc, type = "A"),
+         tdaa.300 = integrateTrapezoid(z, tdaa_c, type = "A")) %>% 
   mutate_at(vars(contains(".300")), round) %>% 
   # depth normalize 
   mutate_at(vars(contains(".300")), funs(./100)) %>% 

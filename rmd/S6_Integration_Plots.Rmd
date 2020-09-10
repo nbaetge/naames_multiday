@@ -9,6 +9,7 @@ output: github_document
 
 Here, we plot the integrated from the multiday NAAMES station, N3S6.
 
+
 ```{r message = F, warning = F}
 library(tidyverse) 
 library(rmarkdown)
@@ -33,6 +34,9 @@ library(reshape2)
 library(MBA)
 library(mgcv)
 
+```
+
+```{r}
 custom_theme <- function() {
   theme_test(base_size = 30) %+replace%
     theme(legend.position = "right",
@@ -60,13 +64,21 @@ odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe"
 data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
   filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station == 6) %>% 
   filter(Cruise == "AT38") %>% 
-  mutate(time = ymd_hms(datetime),
+   mutate(time = ymd_hms(datetime),
          interv = interval(first(time), time),
          dur = as.duration(interv),
          days = as.numeric(dur, "days")) %>% 
   select(Cruise, Station, Date, time:days, bcd.100:npp.300) %>% 
   distinct() %>% 
-  mutate_at(vars(contains(c("phyc", "npp", "bc"))), function(x) (x / 1000)) 
+  mutate_at(vars(contains(c("phyc", "npp", "bc"))), function(x) (x / 1000)) %>%
+  mutate(bc_phyc.100 = bc.100/phyc.100,
+         bc_phyc.200 = bc.100/phyc.200,
+         bc_phyc.300 = bc.100/phyc.300,
+         bcd_phyc.100 = bcd.100/phyc.100,
+         bcd_phyc.200 = bcd.100/phyc.200,
+         bcd_phyc.300 = bcd.100/phyc.300
+         ) %>% 
+   mutate_at(vars(contains("tdaa")), funs(. / 10^3)) #nM to mmol/m3
 
 ```
 
@@ -74,7 +86,7 @@ data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>%
 
 ```{r message = F}
 pivot_phyc_data <- data %>% 
-  select(Cruise:days, contains("phyc")) %>% 
+  select(Cruise:days,  phyc.100, phyc.200, phyc.300) %>% 
   pivot_longer(phyc.100:phyc.300, names_to = "depth_interval", names_prefix = "phyc.", values_to = "phyc") %>% 
   mutate(depth_interval = ifelse(depth_interval == 100, "0 - 100 m", depth_interval),
          depth_interval = ifelse(depth_interval == 200, "100 - 200 m", depth_interval),
@@ -98,8 +110,30 @@ pivot_bc_data <- data %>%
 
 
 pivot_bcd_data <- data %>% 
-  select(Cruise:days, contains("bcd")) %>% 
+  select(Cruise:days, bcd.100, bcd.200, bcd.300) %>% 
   pivot_longer(bcd.100:bcd.300, names_to = "depth_interval", names_prefix = "bcd.", values_to = "bcd") %>% 
+  mutate(depth_interval = ifelse(depth_interval == 100, "0 - 100 m", depth_interval),
+         depth_interval = ifelse(depth_interval == 200, "100 - 200 m", depth_interval),
+         depth_interval = ifelse(depth_interval == 300, "200 - 300 m", depth_interval))
+
+
+pivot_bc_phyc_data <- data %>% 
+  select(Cruise:days, contains("bc_phyc")) %>% 
+  pivot_longer(bc_phyc.100:bc_phyc.300, names_to = "depth_interval", names_prefix = "bc_phyc.", values_to = "bc.phyc") %>% 
+  mutate(depth_interval = ifelse(depth_interval == 100, "0 - 100 m", depth_interval),
+         depth_interval = ifelse(depth_interval == 200, "100 - 200 m", depth_interval),
+         depth_interval = ifelse(depth_interval == 300, "200 - 300 m", depth_interval))
+
+pivot_doc_data <- data %>% 
+  select(Cruise:days, contains("doc")) %>% 
+  pivot_longer(doc.100:doc.300, names_to = "depth_interval", names_prefix = "doc.", values_to = "doc") %>% 
+  mutate(depth_interval = ifelse(depth_interval == 100, "0 - 100 m", depth_interval),
+         depth_interval = ifelse(depth_interval == 200, "100 - 200 m", depth_interval),
+         depth_interval = ifelse(depth_interval == 300, "200 - 300 m", depth_interval))
+
+pivot_tdaa_data <- data %>% 
+  select(Cruise:days, contains("tdaa")) %>% 
+  pivot_longer(tdaa.100:tdaa.300, names_to = "depth_interval", names_prefix = "tdaa.", values_to = "tdaa") %>% 
   mutate(depth_interval = ifelse(depth_interval == 100, "0 - 100 m", depth_interval),
          depth_interval = ifelse(depth_interval == 200, "100 - 200 m", depth_interval),
          depth_interval = ifelse(depth_interval == 300, "200 - 300 m", depth_interval))
@@ -107,10 +141,14 @@ pivot_bcd_data <- data %>%
 pivoted <- left_join(pivot_phyc_data, pivot_npp_data) %>% 
   left_join(., pivot_bc_data) %>% 
   left_join(., pivot_bcd_data) %>% 
+  left_join(., pivot_bc_phyc_data) %>% 
+  left_join(., pivot_doc_data) %>% 
+  left_join(., pivot_tdaa_data) %>% 
   rename(`Depth Interval` = depth_interval)
-  
 
 ```
+
+# Plot Data
 
 # Plot Data
 
@@ -138,28 +176,6 @@ phyc.plot <-  pivoted %>%
 
 ```
 
-### NPP
-
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center", warning = FALSE}
-npp.plot <-  pivoted %>% 
-  drop_na(npp) %>% 
-  ggplot(aes(x = days, y = npp)) +
-  geom_rect( aes(xmin = 0.5, xmax = 1, ymin = -Inf, ymax = Inf),
-            fill = "grey", alpha = 0.2) +
-  geom_rect( aes(xmin = 1.5, xmax = 2, ymin = -Inf, ymax = Inf),
-            fill = "grey", alpha = 0.2) +
-  geom_rect( aes(xmin = 2.5, xmax = 3, ymin = -Inf, ymax = Inf),
-            fill = "grey", alpha = 0.2) +
-  geom_line(aes(color = `Depth Interval`), size = 0.7) +
-  geom_point(aes(fill = `Depth Interval`), size = 6, shape = 21, color = "black", stroke = 1) + 
-  labs(x = expression(italic(paste("Days on Station"))), y = expression(italic(paste("Modeled NPP, mmol m"^"-3", "d"^-1))), colour = "") +
-  scale_y_continuous(expand = c(0,0)) +
-  scale_fill_manual(values = custom.colors) +
-  scale_color_manual(values = custom.colors) +
-  guides(color = F, fill = F) +
-  custom_theme() 
- # facet_grid(rows = vars(depth_interval), scales = "free_y")
-```
 
 ### Bact Carbon
 
@@ -211,29 +227,12 @@ bcd.plot <-  pivoted %>%
 ```
 
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 18, fig.width = 20, fig.align = "center", warning = FALSE}
+### BC : PhyC
 
-patchwork <- phyc.plot + bc.plot + npp.plot + bcd.plot
-
-patchwork +  
-  plot_layout(guides = 'collect') +
-  plot_annotation(tag_levels = "a") &
-  theme(plot.tag = element_text(size = 22),
-        plot.title = element_text(size = 36)) 
-
-```
-
-
-# BCD:NPP
-
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 10, fig.align = "center", warning = FALSE}
-pivoted %>% 
-  select(Cruise:`Depth Interval`, bcd, npp) %>% 
-  group_by(`Depth Interval`, days) %>% 
-  drop_na(bcd) %>% 
-  mutate(bcd_npp = bcd/npp) %>% 
-  ungroup() %>% 
-  ggplot(aes(x = days, y = bcd_npp, group = `Depth Interval`)) +
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center", warning = FALSE}
+bc_phyc.plot <-  pivoted %>% 
+  drop_na(bc.phyc) %>% 
+  ggplot(aes(x = days, y = bc.phyc)) +
   geom_rect( aes(xmin = 0.5, xmax = 1, ymin = -Inf, ymax = Inf),
             fill = "grey", alpha = 0.2) +
   geom_rect( aes(xmin = 1.5, xmax = 2, ymin = -Inf, ymax = Inf),
@@ -242,16 +241,53 @@ pivoted %>%
             fill = "grey", alpha = 0.2) +
   geom_line(aes(color = `Depth Interval`), size = 0.7) +
   geom_point(aes(fill = `Depth Interval`), size = 6, shape = 21, color = "black", stroke = 1) + 
-  labs(x = expression(italic(paste("Days on Station"))), y = expression(italic(paste("BCD:NPP"))), colour = "") +
+  labs(x = expression(italic(paste("Days on Station"))), y = expression(italic(paste("Bacterioplankton: Phytoplankton Carbon"))), colour = "") +
   scale_y_continuous(expand = c(0,0)) +
   scale_fill_manual(values = custom.colors) +
   scale_color_manual(values = custom.colors) +
-  guides(color = F) +
+  guides(color = F, fill = F) +
   custom_theme() 
-  
+ # facet_grid(rows = vars(depth_interval), scales = "free_y")
+```
+
+### DOC
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center", warning = FALSE}
+doc.plot <-  pivoted %>% 
+  drop_na(doc) %>% 
+  ggplot(aes(x = days, y = doc, group = `Depth Interval`)) +
+  geom_rect( aes(xmin = 0.5, xmax = 1, ymin = -Inf, ymax = Inf),
+            fill = "grey", alpha = 0.2) +
+  geom_rect( aes(xmin = 1.5, xmax = 2, ymin = -Inf, ymax = Inf),
+            fill = "grey", alpha = 0.2) +
+  geom_rect( aes(xmin = 2.5, xmax = 3, ymin = -Inf, ymax = Inf),
+            fill = "grey", alpha = 0.2) +
+  geom_line(aes(color = `Depth Interval`), size = 0.7) +
+  geom_point(aes(fill = `Depth Interval`), size = 6, shape = 21, color = "black", stroke = 1) + 
+  labs(x = expression(italic(paste("Days on Station"))), y = expression(italic(paste("DOC, mmol m"^"-3"))), colour = "") +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_manual(values = custom.colors) +
+  scale_color_manual(values = custom.colors) +
+  guides(color = F, fill = F) +
+  custom_theme() 
+ # facet_grid(rows = vars(depth_interval), scales = "free_y")
+
 ```
 
 
+
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 20, fig.width = 22, fig.align = "center", warning = FALSE}
+
+patchwork <- (phyc.plot + bc.plot + bc_phyc.plot) / (bcd.plot + doc.plot )
+
+patchwork +  
+  plot_layout(guides = 'collect') +
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 22),
+        plot.title = element_text(size = 36)) 
+
+```
 
 
 

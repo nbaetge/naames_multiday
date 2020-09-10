@@ -36,6 +36,10 @@ library(mgcv)
 library(phyloseq)
 library(RColorBrewer)
 
+
+```
+
+```{r}
 custom_theme <- function() {
   theme_test(base_size = 30) %+replace%
     theme(legend.position = "right",
@@ -50,14 +54,14 @@ custom_theme <- function() {
 
 custom.colors <- c("AT39" = "#377EB8", "AT34" = "#4DAF4A", "AT38" = "#E41A1C", "AT32" = "#FF7F00", "Temperate" = "#A6CEE3", "Subpolar" = "#377EB8", "Subtropical" = "#FB9A99", "GS/Sargasso" = "#E41A1C", "Early Spring" = "#377EB8", "Late Spring" = "#4DAF4A","Early Autumn" = "#E41A1C", "Summer" = "#E41A1C", "Late Autumn" = "#FF7F00", "Gv2_2019" = "#377EB8", "WOA18_MN" = "#4DAF4A", "WOA18_AN" = "#E41A1C")
 
-levels = c("GS/Sargasso", "Subtropical", "Temperate", "Subpolar",  "AT39-6", "AT34", "AT38", "AT32","South", "North", "Early Spring", "Late Spring","Early Autumn",  "Summer", "Late Autumn", "Gv2_2019", "WOA18_MN", "WOA18_AN","Nov", "Nov sd", "Dec", "Dec sd", "Jan", "Jan sd", "Feb", "Feb sd", "Mar", "Mar sd", "Apr", "Apr sd",  "Cruise", "ARGO", "5-100 m", "150-200 m", "300 m", "> 300 m")
+levels = c("GS/Sargasso", "Subtropical", "Temperate", "Subpolar",  "AT39-6", "AT34", "AT38", "AT32","South", "North", "Early Spring", "Late Spring","Early Autumn",  "Summer", "Late Autumn", "Gv2_2019", "WOA18_MN", "WOA18_AN","Nov", "Nov sd", "Dec", "Dec sd", "Jan", "Jan sd", "Feb", "Feb sd", "Mar", "Mar sd", "Apr", "Apr sd",  "Cruise", "ARGO", "5-100 m", "150-200 m", "300 m", "> 300 m", "0", "1", "2", "3")
 
 
 bar.colors <- c("100 m" = "white", "CM" = "#4DAF4A",  "PAM" = "#377EB8")
 
 odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe", "#d16cfa")
-
 ```
+
 
 # Import Data 
 
@@ -68,7 +72,7 @@ custom.tab <- readRDS("~/GITHUB/naames_multiday/Output/Custom_ASV_Table.rds") %>
          interv = interval(first(time), time),
          dur = as.duration(interv),
          days = as.numeric(dur, "days")) %>% 
-  select(Cruise:bcd, time:days)
+  select(Cruise:bcd, time:days, everything())
 
 sub_ps <- readRDS("~/GITHUB/naames_multiday/Output/phyloseq_obj.rds") %>% 
   subset_samples(Cruise == "AT34" & Station == 4 & z <= 200)
@@ -87,27 +91,31 @@ alphadiv <- readRDS("~/GITHUB/naames_multiday/Output/alphadiv.rds") %>%
 
 ```{r}
 ctd <-  readRDS("~/GITHUB/naames_multiday/Input/ctd/deriv_naames_ctd.rds") %>%
-              select(Cruise, Station, CampCN,  bin_depth, deriv_o2_umol_l, fl_mg_m3, ave_temp_c, ave_sal_psu) %>% 
+              select(Cruise, Station, CampCN,  bin_depth, deriv_aou_umol_l, fl_mg_m3, ave_temp_c, ave_sal_psu, beamT_perc, ave_dens_kg_m3) %>% 
               mutate(Cruise = ifelse(Cruise == "AT39", "AT39-6", Cruise)) %>% 
               rename(z = bin_depth,
-                     o2 = deriv_o2_umol_l,
+                     aou = deriv_aou_umol_l,
                      fl = fl_mg_m3,
                      temp = ave_temp_c,
-                     sal = ave_sal_psu) 
+                     sal = ave_sal_psu,
+                     density = ave_dens_kg_m3,
+                     beamT = beamT_perc) 
 
 
 npp <- read_rds("~/GITHUB/naames_multiday/Input/Z_resolved_model_NPP.rds") %>% 
   rename(z = depth,
          npp = NPP)
 
-new.sample.tab <- read_rds("~/GITHUB/naames_multiday/Input/export_ms/processed_bf.2.2020.rds") %>% 
+new.sample.tab <- read_rds("~/GITHUB/naames_multiday/Input/export_ms/processed_bf.8.2020.rds") %>% 
+  mutate(Station = ifelse(Station == "1A", 0, Station)) %>% 
+  mutate_at(vars(Station), as.numeric) %>% 
   select(Cruise:CampCN, Target_Z, DNA_ID) %>% 
   drop_na(DNA_ID) %>% 
   rename(z = Target_Z) %>% 
   left_join(., read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>%
-              select(Cruise, Station, Date,  CampCN, mld, z,  doc, n, phyc, bc, bcd ) %>% 
+              select(Cruise, Station, Date,  CampCN, mld, z,  doc, n, phyc, bc, bcd, tdaa, Asp:Lys ) %>% 
               distinct() %>% 
-              mutate_at(vars(phyc:bcd), function(x)(x/10^3))) %>% 
+              mutate_at(vars(phyc:bcd, tdaa:Lys), function(x)(x/10^3))) %>% 
   mutate(`Depth Interval` = ifelse(z <= 100, "5-100 m", "150-200 m"),
          `Depth Interval` = ifelse(z == 300, "300 m", `Depth Interval`),
          `Depth Interval` = ifelse(z > 300, "> 300 m", `Depth Interval`)) %>% 
@@ -171,8 +179,6 @@ One of the best exploratory analyses for amplicon data is unconstrained ordinati
 ```{r}
 rarefy_ps = rarefy_even_depth(sub_ps, sample.size = min(sample_sums(sub_ps)), rngseed = 532898)
 
-sample_data(rarefy_ps)$`Depth.Interval` <- factor(sample_data(rarefy_ps)$`Depth.Interval`, levels = levels)
-sample_data(rarefy_ps)$Season <- factor(sample_data(rarefy_ps)$Season, levels = levels)
 ```
 
 ## PCoA
@@ -184,7 +190,7 @@ pcoa <- ordinate(rarefy_ps, method = "PCoA", distance = "bray")
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center"}
 
 pcoa.plot <- plot_ordination(rarefy_ps, pcoa,  title = "Bray Curtis PCoA") +
-  geom_point(aes(fill = days, shape = Depth.Interval), alpha = 0.6, stroke = 2, size = 4) +
+  geom_point(aes(fill = days, shape = factor(Depth.Interval, levels = levels)), alpha = 0.6, stroke = 2, size = 4) +
   scale_shape_manual(values = c(21, 22, 23)) +
   scale_fill_gradientn(colors = rev(odv.colors)) +
   custom_theme()  
@@ -214,7 +220,7 @@ nmds <- ordinate(rarefy_ps, method = "NMDS",  distance = "bray") # stress = 0.08
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center"}
 
 nmds.plot <- plot_ordination(rarefy_ps, nmds,  title = "NMDS") +
-  geom_point(aes(fill = days, shape = Depth.Interval), alpha = 0.6, stroke = 2, size = 4) +
+  geom_point(aes(fill = days, shape = factor(Depth.Interval, level = levels)), alpha = 0.6, stroke = 2, size = 4) +
   scale_shape_manual(values = c(21, 22, 23)) +
   scale_fill_gradientn(colors = rev(odv.colors)) +
   custom_theme()  
@@ -241,16 +247,18 @@ ps_not_na <- rarefy_ps %>%
       !is.na(n) & 
       !is.na(bc) & 
       !is.na(bcd) & 
-      !is.na(o2) & 
+      !is.na(aou) & 
       !is.na(fl) & 
       !is.na(sal) & 
-      !is.na(temp)
+      !is.na(temp) &
+      !is.na(density) &
+      !is.na(beamT) 
   )
 
 bray <- phyloseq::distance(ps_not_na, method = "bray")
 
 # CAP ordinate
-cap_ord <- ordinate(ps_not_na, method = "CAP", distance = bray, formula = ~ mld + doc + n  + bcd + o2 + fl + sal + bc + z +  npp + temp + days
+cap_ord <- ordinate(ps_not_na, method = "CAP", distance = bray, formula = ~ mld + doc + n  + bcd + aou + fl + sal + bc + beamT +  npp + temp + days + z + density 
 )
 ```
 
@@ -260,7 +268,7 @@ cap_ord <- ordinate(ps_not_na, method = "CAP", distance = bray, formula = ~ mld 
 
 # CAP plot
 cap.plot <- plot_ordination(ps_not_na, ordination = cap_ord, axes = c(1,2)) +
-  geom_point(aes(fill = days, shape = Depth.Interval), alpha = 0.6, stroke = 2, size = 4) +
+  geom_point(aes(fill = days, shape = factor(Depth.Interval, level = levels)), alpha = 0.6, stroke = 2, size = 4) +
   scale_shape_manual(values = c(21, 22, 23)) +
   scale_fill_gradientn(colors = rev(odv.colors)) +
   custom_theme()  +
@@ -319,17 +327,148 @@ anova(cap_ord)
 ```
 
 
+# Alpha Diversity
+
+Estimating alpha diversity of microbial communities is [problematic](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC93182/) no matter what you do. We will use the rarefied library, which retains estimates of the species abundance of the real population while standardizing sampling effort.
+
+```{r}
+# Initialize matrices to store richness and evenness estimates
+nsamp = nsamples(rarefy_ps)
+trials = 100
+
+richness <- matrix(nrow = nsamp, ncol = trials)
+row.names(richness) <- sample_names(rarefy_ps)
+
+evenness <- matrix(nrow = nsamp, ncol = trials)
+row.names(evenness) <- sample_names(rarefy_ps)
+
+# It is always important to set a seed when you subsample so your result is replicable 
+set.seed(3)
+
+for (i in 1:100) {
+  # Subsample
+  r <- rarefy_ps
+  
+  # Calculate richness
+  rich <- as.numeric(as.matrix(estimate_richness(r, measures = "Observed")))
+  richness[ ,i] <- rich
+  
+  # Calculate evenness
+  even <- as.numeric(as.matrix(estimate_richness(r, measures = "InvSimpson")))
+  evenness[ ,i] <- even
+}
+```
+
+Let’s calculate the mean and standard deviation per sample for observed richness and inverse simpson’s index and store those values in a dataframe.
+
+```{r}
+# Create a new dataframe to hold the means and standard deviations of richness estimates
+DNA_ID <- row.names(richness)
+mean <- apply(richness, 1, mean)
+sd <- apply(richness, 1, sd)
+measure <- rep("Richness", nsamp)
+rich_stats <- data.frame(DNA_ID, mean, sd, measure)
+
+# Create a new dataframe to hold the means and standard deviations of evenness estimates
+DNA_ID <- row.names(evenness)
+mean <- apply(evenness, 1, mean)
+sd <- apply(evenness, 1, sd)
+measure <- rep("Inverse Simpson", nsamp)
+even_stats <- data.frame(DNA_ID, mean, sd, measure)
+```
+
+Now we will combine our estimates for richness and evenness into one dataframe
+
+```{r}
+alpha <- rbind(rich_stats, even_stats)
+```
+
+Let’s add the sample metadata into this dataframe 
+
+```{r}
+alphadiv <- left_join(alpha, new.sample.tab %>% rownames_to_column(., var = "DNA_ID")) 
+```
+
+```{r warning = FALSE, message = FALSE, fig.height = 4, fig.width = 6, fig.align = "center"}
+library(ggpubr)
+
+# my_comparisons <- list( c("0", "1", "2", "3"))
+
+alphadiv %>% 
+  mutate(Days = as.character(ceiling(days))) %>% 
+  ggboxplot(., x = "Days", y = "mean", 
+            order = c("0", "1", "2", "3"),
+            xlab = expression(italic(paste("Days on Station"))), 
+            ylab = expression(italic(paste("Mean"))),
+            add = "jitter",
+            width = 0.5,
+            ggtheme = theme_classic()) + 
+  facet_grid(measure~factor(`Depth Interval`, levels = levels), scales = "free") +
+  # stat_compare_means(comparisons = my_comparisons,
+  #                    label = "p.signif",
+  #                    step.increase = 0.05) + # if you have more than two groups
+  stat_compare_means(label.y = 1) 
+
+
+```
+Boxes represent the 1.5 interquartile range, with the internal solid line representing the median. Circles represent data points. p-values are reported  the non-parametric Kruskal-Wallis test, which tests whether the means groups are equal (ns: p > 0.05, * : p≤ 0.05, ** : p ≤ 0.01).
+
+# DESeq2
+
+Which taxa are important? A univariate analysis of individual taxa abudances can be performed using DESeq2, to measure significant fold changes.
+
+```{r}
+# if (!requireNamespace("BiocManager", quietly = TRUE))
+#     install.packages("BiocManager")
+# 
+# BiocManager::install("DESeq2")
+```
+
+```{r message = F}
+library(DESeq2)
+```
+
+## Deep
+
+```{r}
+deep <- subset_samples(rarefy_ps, Depth.Interval != "5-100 m" )
+
+
+ps_deseq <-  phyloseq_to_deseq2(deep, ~ days)
+deseq <-  DESeq(ps_deseq, test = "Wald", fitType = "local")
+```
 
 
 
+```{r}
+res <- results(deseq, cooksCutoff = FALSE)
+alpha <- 0.01
+sigtab <-  res[which(res$padj < alpha), ]
+sigtab <-  cbind(as(sigtab, "data.frame"), as(tax_table(deep)[rownames(sigtab), ], "matrix"))
+head(sigtab)
+```
 
+```{r}
+dim(sigtab)
+```
 
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 4, fig.width = 6, fig.align = "center"}
+# x <-  tapply(sigtab$log2FoldChange, sigtab$Phylum, function(x) max(x))
+# x <-  sort(x, TRUE)
+# sigtab$Phylum = factor(as.character(sigtab$Phylum), levels = names(x))
+# # Genus order
+# x <-  tapply(sigtab$log2FoldChange, sigtab$Genus, function(x) max(x))
+# x <-  sort(x, TRUE)
+# sigtab$Genus = factor(as.character(sigtab$Genus), levels = names(x))
 
-
-
-
-
-
+ggplot(sigtab, aes(x = Family, y = log2FoldChange, fill = Order)) + 
+  geom_point(color = "black", shape = 21, alpha = 0.7, size = 6) + 
+  custom_theme() +
+  scale_fill_manual(values = odv.colors) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  labs(x = expression(italic("Family")), y = expression(italic("log2 Fold Change"))) +
+  theme(axis.text.x = element_text(angle = -15, hjust = 0, vjust = 0.5))
+```
 
 
 
