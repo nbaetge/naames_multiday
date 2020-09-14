@@ -36,6 +36,9 @@ library(mgcv)
 library(phyloseq)
 library(RColorBrewer)
 
+
+```
+```{r}
 custom_theme <- function() {
   theme_test(base_size = 30) %+replace%
     theme(legend.position = "right",
@@ -50,7 +53,7 @@ custom_theme <- function() {
 
 custom.colors <- c("AT39" = "#377EB8", "AT34" = "#4DAF4A", "AT38" = "#E41A1C", "AT32" = "#FF7F00", "Temperate" = "#A6CEE3", "Subpolar" = "#377EB8", "Subtropical" = "#FB9A99", "GS/Sargasso" = "#E41A1C", "Early Spring" = "#377EB8", "Late Spring" = "#4DAF4A","Early Autumn" = "#E41A1C", "Summer" = "#E41A1C", "Late Autumn" = "#FF7F00", "Gv2_2019" = "#377EB8", "WOA18_MN" = "#4DAF4A", "WOA18_AN" = "#E41A1C")
 
-levels = c("GS/Sargasso", "Subtropical", "Temperate", "Subpolar",  "AT39-6", "AT34", "AT38", "AT32","South", "North", "Early Spring", "Late Spring","Early Autumn",  "Summer", "Late Autumn", "Gv2_2019", "WOA18_MN", "WOA18_AN","Nov", "Nov sd", "Dec", "Dec sd", "Jan", "Jan sd", "Feb", "Feb sd", "Mar", "Mar sd", "Apr", "Apr sd",  "Cruise", "ARGO", "5-100 m", "150-200 m", "300 m")
+levels = c("GS/Sargasso", "Subtropical", "Temperate", "Subpolar",  "AT39-6", "AT34", "AT38", "AT32","South", "North", "Early Spring", "Late Spring","Early Autumn",  "Summer", "Late Autumn", "Gv2_2019", "WOA18_MN", "WOA18_AN","Nov", "Nov sd", "Dec", "Dec sd", "Jan", "Jan sd", "Feb", "Feb sd", "Mar", "Mar sd", "Apr", "Apr sd",  "Cruise", "ARGO", "5-100 m", "150-200 m", "300 m", "> 300 m", "0", "1", "2", "3")
 
 
 bar.colors <- c("100 m" = "white", "CM" = "#4DAF4A",  "PAM" = "#377EB8")
@@ -117,13 +120,12 @@ sample_data(ps)$Season <- factor(sample_data(ps)$Season, levels = levels)
 
 # Filter sequences
 
-We will filter out Eukaryotes, Archaea, chloroplasts and mitochondria, because we only intended to amplify bacterial sequences. It's good to check you don’t have anything lurking in the taxonomy table. 
+We will filter out  chloroplasts and mitochondria, because we only intended to amplify bacterial sequences. It's good to check you don’t have anything lurking in the taxonomy table. 
 
 ```{r}
 sub_ps <- ps %>%
   subset_samples(z %in% c(5, 25, 50, 75, 100, 150, 200, 300)) %>%
   subset_taxa(
-    Kingdom == "Bacteria" &
     Family  != "mitochondria" &
     Class   != "Chloroplast"
   )
@@ -189,29 +191,65 @@ ggplot(sub_ps_phylum, aes(x = latitude, y = Abundance, fill = Phylum)) +
   ylab("Relative Abundance (Phyla > 1%) \n") +
   ggtitle("Phylum Composition of Bacterial Communities")
 ```
+# Beta Diversity
 
-# Unconstrained Ordination
+Beta diversity involves calculating metrics such as distances or dissimilarities based on pairwise comparisons of samples – they don’t exist for a single sample, but rather only as metrics that relate samples to each other. i.e. beta diversity =  patterns in community structure between samples
+
+Since differences in sampling depths between samples can influence distance/dissimilarity metrics, we first need to somehow normalize the read depth across our samples. 
+
+## Subsample
+
+We will rarefy (random subsample with replacement) the read depth of the samples first (scale to the smallest library size).
+
+[Case for not subsampling]( https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1003531)
+
+[Response blog for subsampling](https://www.polarmicrobes.org/how-i-learned-to-stop-worrying-and-love-subsampling-rarifying/)
+
+Read depth is an artifact of a machine made by a company in San Diego, not anything about your samples or their biology. It is totally artifactual, and controlling for artifacts is critical in science. Subsampling randomly is the simplest way to control for this, and the question is whether this is the "best" way of controlling for it. See links above for alternative arguments about what the best way of controlling for this artifact is. 
+
+A strong reason to subsample is to standardize effort. The bottom line is that in all experimental design you should not be comparing things to which you devote different effort in resolution. For instance, you don't sample one site once a week and another once a month if you want to compare the dynamics between the sites. You standardize effort.
+
+With that said, the bigger your differential in mean (or median) read depth (reads/sample) between pre- and post-subsampling, the greater the "effect" on beta diversity. 
+
+Examples:
+
+- means reads before = 40k, mean reads after = 1k, big effect.
+- mean reads before = 40k, mean reads after = 20k, small effect.
+- mean reads before = 2k, mean reads after = 1k, small effect.
+
+
+We will subsample  three ways (depths of 5000, minimum read depth of all samples, and no subsampling) and compare resulting patterns, inluding:
+
+- How environmental patterns in alpha diversity change
+- How absolute alpha diversity changes
+- How patterns among samples change (compare distance matrices, or compare PERMANOVA results)
+
+```{r}
+
+ps_min <-  rarefy_even_depth(sub_ps, sample.size = min(sample_sums(sub_ps)), rngseed = 532898)
+ps_5000 <-  rarefy_even_depth(sub_ps, sample.size = 5000, rngseed = 532898)
+
+#mean read depth before and after random subsampling, larger differential = greater "effect" on beta diversity
+mean(sample_sums(sub_ps)) #85856
+min(sample_sums(sub_ps)) #9702
+
+
+```
+
+## Unconstrained Ordination
 
 One of the best exploratory analyses for amplicon data is unconstrained ordinations. Here we will look at ordinations of our full community samples. We will rarfy the samples first (scale to the smallest library size).
 
-## Rarefy
+
+### PCoA
 
 ```{r}
-rarefy_ps = rarefy_even_depth(sub_ps, sample.size = min(sample_sums(sub_ps)), rngseed = 42398403)
-
-sample_data(rarefy_ps)$`Depth.Interval` <- factor(sample_data(rarefy_ps)$`Depth.Interval`, levels = levels)
-sample_data(rarefy_ps)$Season <- factor(sample_data(rarefy_ps)$Season, levels = levels)
-```
-
-## PCoA
-
-```{r}
-pcoa <- ordinate(rarefy_ps, method = "PCoA", distance = "bray")
+pcoa <- ordinate(ps_min, method = "PCoA", distance = "bray")
 ```
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 22, fig.align = "center"}
 
-pcoa.plot <- plot_ordination(rarefy_ps, pcoa,  title = "Bray Curtis PCoA") +
+pcoa.plot <- plot_ordination(ps_min, pcoa,  title = "Bray Curtis PCoA") +
   geom_hline(yintercept = 0, linetype = 2) +
   geom_point(aes(fill = latitude, shape = Depth.Interval), alpha = 0.6, stroke = 2, size = 4) +
   scale_shape_manual(values = c(21, 22, 23)) +
@@ -225,7 +263,7 @@ pcoa.plot +
    guides(fill = guide_colorbar(title = "Latitude, ˚N"), shape = guide_legend(title = "Depth Interval"))
 ```
 
-## NMDS
+### NMDS
 
 Let’s try an NMDS instead. For NMDS plots it’s important to set a seed since the starting positions of samples in the alogrithm is random.
 
@@ -236,13 +274,13 @@ Important: if you calculate your bray-curtis distance metric “in-line” it wi
 set.seed(1)
 
 # Ordinate
-nmds <- ordinate(rarefy_ps,, method = "NMDS",  distance = "bray") # stress = 0.09
+nmds <- ordinate(ps_min,, method = "NMDS",  distance = "bray") # stress = 0.09
 ```
 
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 22, fig.align = "center"}
 
-nmds.plot <- plot_ordination(rarefy_ps, nmds,  title = "NMDS") +
+nmds.plot <- plot_ordination(ps_min, nmds,  title = "NMDS") +
   geom_hline(yintercept = 0, linetype = 2) +
   geom_point(aes(fill = latitude, shape = Depth.Interval), alpha = 0.6, stroke = 2, size = 4) +
   scale_shape_manual(values = c(21, 22, 23)) +
@@ -264,7 +302,7 @@ Above we used unconstrained ordinations (PCoA, NMDS) to show relationships betwe
 
 ```{r}
 # Remove data points with missing metadata
-ps_not_na <- rarefy_ps %>%
+ps_not_na <- ps_min %>%
   subset_samples(
     !is.na(mld) &
       !is.na(npp) & 
@@ -352,88 +390,6 @@ anova(cap_ord)
 ```
 
 
-# Alpha Diversity
-
-Estimating alpha diversity of microbial communities is [problematic](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC93182/) no matter what you do. We will use the rarefied library, which retains estimates of the species abundance of the real population while standardizing sampling effort.
-
-```{r}
-# Initialize matrices to store richness and evenness estimates
-nsamp = nsamples(rarefy_ps)
-trials = 100
-
-richness <- matrix(nrow = nsamp, ncol = trials)
-row.names(richness) <- sample_names(rarefy_ps)
-
-evenness <- matrix(nrow = nsamp, ncol = trials)
-row.names(evenness) <- sample_names(rarefy_ps)
-
-# It is always important to set a seed when you subsample so your result is replicable 
-set.seed(3)
-
-for (i in 1:100) {
-  # Subsample
-  r <- rarefy_ps
-  
-  # Calculate richness
-  rich <- as.numeric(as.matrix(estimate_richness(r, measures = "Observed")))
-  richness[ ,i] <- rich
-  
-  # Calculate evenness
-  even <- as.numeric(as.matrix(estimate_richness(r, measures = "InvSimpson")))
-  evenness[ ,i] <- even
-}
-```
-
-Let’s calculate the mean and standard deviation per sample for observed richness and inverse simpson’s index and store those values in a dataframe.
-
-```{r}
-# Create a new dataframe to hold the means and standard deviations of richness estimates
-DNA_ID <- row.names(richness)
-mean <- apply(richness, 1, mean)
-sd <- apply(richness, 1, sd)
-measure <- rep("Richness", nsamp)
-rich_stats <- data.frame(DNA_ID, mean, sd, measure)
-
-# Create a new dataframe to hold the means and standard deviations of evenness estimates
-DNA_ID <- row.names(evenness)
-mean <- apply(evenness, 1, mean)
-sd <- apply(evenness, 1, sd)
-measure <- rep("Inverse Simpson", nsamp)
-even_stats <- data.frame(DNA_ID, mean, sd, measure)
-```
-
-Now we will combine our estimates for richness and evenness into one dataframe
-
-```{r}
-alpha <- rbind(rich_stats, even_stats)
-```
-
-Let’s add the sample metadata into this dataframe 
-
-```{r}
-alphadiv <- left_join(alpha, sample.tab %>% rownames_to_column(., var = "DNA_ID")) %>% 
-  arrange(CampCN, z)
-
-alphadiv$Season <- factor(alphadiv$Season, levels = levels)
-alphadiv$`Depth Interval` <- factor(alphadiv$`Depth Interval`, levels = levels)
-```
-
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 10, fig.width = 22, fig.align = "center"}
-ggplot(alphadiv, aes(x = `Depth Interval`, y = mean, group = `Depth Interval`)) +
-  facet_grid(measure~ Season, scales = "free") +
-  geom_boxplot(size = 0.5) +
-  custom_theme()
-```
-
-
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 10, fig.width = 22, fig.align = "center"}
-ggplot(alphadiv, aes(x = Season, y = mean, group = Season)) +
-  facet_grid(`Depth Interval` ~ measure, scales = "free") +
-  geom_boxplot(size = 0.5) +
-  custom_theme()
-```
-
-
 
 # Custom Table
 
@@ -487,8 +443,7 @@ sweet.tab <- t_custom.tab %>%
 ```{r}
 saveRDS(sweet.tab, "~/GITHUB/naames_multiday/Output/Custom_ASV_Table.rds")
 saveRDS(sub_ps, "~/GITHUB/naames_multiday/Output/phyloseq_obj.rds")
-saveRDS(rarefy_ps, "~/GITHUB/naames_multiday/Output/rarefied_phyloseq_obj.rds")
-saveRDS(alphadiv, "~/GITHUB/naames_multiday/Output/alphadiv.rds")
+
 
 ```
 
