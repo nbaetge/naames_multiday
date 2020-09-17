@@ -26,6 +26,7 @@ library(ggpubr)
 #phyloseq
 library(phyloseq)
 library(RColorBrewer)
+library(calecopal)
 
 
 ```
@@ -730,7 +731,8 @@ ggplot(sigtab, aes(x = Family, y = log2FoldChange, fill = Order, shape = Phylum)
   scale_shape_manual(values = c(21, 22, 23, 24)) +
   geom_hline(yintercept = 0, linetype = 2) +
   labs(x = expression(italic("Family")), y = expression(italic("log2 Fold Change"))) +
-  theme(axis.text.x = element_text(angle = -15, hjust = 0, vjust = 0.5))
+  theme(axis.text.x = element_text(angle = -15, hjust = 0, vjust = 0.5)) +
+  guides(fill = guide_legend(override.aes = list(shape = 21)))
 ```
 
 
@@ -803,34 +805,32 @@ ggplot(deep_sigtab, aes(x = Family, y = log2FoldChange)) +
 
 Let’s make a stacked barplot of Phyla to get a sense of the community composition in these samples.
 
-Since this is not a quantitative analysis, and since we have more Phyla in this dataset than we can reasonably distinguish colors, we will prune out low abundance taxa and only include Families that contribute more than 1% of the relative abundance of each sample. Depending on your dataset and the taxonomic level you are depicting, you can adjust this prune parameter. In later analyses, we will of course included these taxa, but for now they will just clutter our plot.
+Since this is not a quantitative analysis, and since we have more Phyla in this dataset than we can reasonably distinguish colors, we will prune out low abundance taxa and only include Orders that contribute more than 0.5% of the relative abundance of each sample. Depending on your dataset and the taxonomic level you are depicting, you can adjust this prune parameter. In later analyses, we will of course included these taxa, but for now they will just clutter our plot.
 
 
 ```{r}
 # melt to long format (for ggploting) 
-# prune out phyla below 1% in each sample
+# prune out orders below 0.5% in each sample
 
-sub_ps_family <- sub_ps %>%
-  tax_glom(taxrank = "Family") %>%                     # agglomerate at phylum level
+stack_sub_ps <- sub_ps %>%
+  tax_glom(taxrank = "Order") %>%                     # agglomerate at phylum level
   transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
   psmelt() %>%                                         # Melt to long format
-  filter(Abundance > 0.01) %>%                         # Filter out low abundance taxa
-  arrange(Family)                                      # Sort data frame alphabetically by family
+  filter(Abundance >= 0.005) %>%                         # Filter out low abundance taxa
+  arrange(Order)                                      # Sort data frame alphabetically by Order
 ```
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 14, fig.width = 8, fig.align = "center"}
 
-family.colors <- colorRampPalette(brewer.pal(10, "Accent"))(length(unique(sub_ps_family$Family)))
-
 # Plot 
-ggplot(sub_ps_family, aes(x = days, y = Abundance, fill = Family)) + 
+ggplot(stack_sub_ps, aes(x = days, y = Abundance)) + 
   facet_grid(rows = "z") +
-  geom_bar(stat = "identity", position = "stack", width = 0.25) +
-  scale_fill_manual(values = rev(family.colors)) +
+  geom_bar(aes(fill = Order), color = "black", stat = "identity", position = "stack", width = 0.25, stroke = 1) +
+ scale_fill_manual(values = cal_palette("figmtn", n = 19, type = "continuous")) +
   labs(x = "Days") +
   custom_theme() +
-  guides(fill = guide_legend(reverse = TRUE, keywidth = 1, keyheight = 1)) +
-  ylab("Relative Abundance (Family > 1%) \n") 
+  guides(fill = guide_legend(reverse = TRUE, keywidth = 1, kerheight = 1)) +
+  ylab("Relative Abundance (Order > 0.5%) \n") 
 ```
 
 
