@@ -32,6 +32,9 @@ library(reshape2)
 library(MBA)
 library(mgcv)
 
+```
+
+```{r}
 custom_theme <- function() {
   theme_test(base_size = 30) %+replace%
     theme(legend.position = "right",
@@ -44,14 +47,13 @@ custom_theme <- function() {
           plot.background = element_rect(fill = "transparent",colour = NA)) 
 }
 
-custom.colors <- c("AT39" = "#377EB8", "AT34" = "#4DAF4A", "AT38" = "#E41A1C", "AT32" = "#FF7F00", "Temperate" = "#A6CEE3", "Subpolar" = "#377EB8", "Subtropical" = "#FB9A99", "GS/Sargasso" = "#E41A1C", "Early Spring" = "#377EB8", "Late Spring" = "#4DAF4A","Early Autumn" = "#E41A1C", "Summer" = "#E41A1C", "Late Autumn" = "#FF7F00", "Gv2_2019" = "#377EB8", "WOA18_MN" = "#4DAF4A", "WOA18_AN" = "#E41A1C")
+custom.colors <- c("AT39" = "#377EB8", "AT34" = "#4DAF4A", "AT38" = "#E41A1C", "AT32" = "#FF7F00", "Temperate" = "#A6CEE3", "Subpolar" = "#377EB8", "Subtropical" = "#FB9A99", "GS/Sargasso" = "#E41A1C", "Early Spring" = "#377EB8", "Late Spring" = "#4DAF4A","Early Autumn" = "#E41A1C", "Late Autumn" = "#FF7F00")
 
-levels = c("GS/Sargasso", "Subtropical", "Temperate", "Subpolar",  "AT39-6", "AT34", "AT38", "AT32","South", "North", "Early Spring", "Late Spring","Early Autumn",  "Summer", "Late Autumn", "Gv2_2019", "WOA18_MN", "WOA18_AN","Nov", "Nov sd", "Dec", "Dec sd", "Jan", "Jan sd", "Feb", "Feb sd", "Mar", "Mar sd", "Apr", "Apr sd",  "Cruise", "ARGO")
-
-bar.colors <- c("100 m" = "white", "CM" = "#4DAF4A",  "PAM" = "#377EB8")
+levels = c("GS/Sargasso", "Subtropical", "Temperate", "Subpolar",  "AT39-6", "AT34", "AT38", "AT32", "Early Spring", "Late Spring","Early Autumn",  "Late Autumn")
 
 odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe", "#d16cfa")
 ```
+
 
 # Import Data
 
@@ -136,9 +138,11 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 beamt.plot <-  mba %>% 
   ggplot(aes(x = lat, y = z)) + 
   geom_raster(aes(fill = zscore)) +
+  geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2) +
+  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2) +
   geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 0.4, shape = 3, alpha = 0.1) +
-  geom_point(data = s4_ctd_mark, aes(x = lat, y = z), colour = "Black", size = 0.4, shape = 3, alpha = 0.1) +
-  geom_point(data = s6_ctd_mark, aes(x = lat, y = z), colour = "Black", size = 0.4, shape = 3, alpha = 0.1) +
+  # geom_point(data = s4_ctd_mark, aes(x = lat, y = z), colour = "Black", size = 0.4, shape = 3, alpha = 0.1) +
+  # geom_point(data = s6_ctd_mark, aes(x = lat, y = z), colour = "Black", size = 0.4, shape = 3, alpha = 0.1) +
   scale_fill_gradientn(colors = odv.colors) +
   scale_y_reverse(breaks = pretty_breaks()) +
   scale_x_continuous(breaks = pretty_breaks()) +
@@ -178,9 +182,11 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 fl.plot <-  mba %>% 
   ggplot(aes(x = lat, y = z)) +
   geom_raster(aes(fill = zscore)) +
+  geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2) +
+  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2) +
   geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 0.4, shape = 3, alpha = 0.1) +
-  geom_point(data = s4_ctd_mark, aes(x = lat, y = z), colour = "Black", size = 0.4, shape = 3, alpha = 0.1) +
-  geom_point(data = s6_ctd_mark, aes(x = lat, y = z), colour = "Black", size = 0.4, shape = 3, alpha = 0.1) +
+  # geom_point(data = s4_ctd_mark, aes(x = lat, y = z), colour = "Black", size = 0.4, shape = 3, alpha = 0.1) +
+  # geom_point(data = s6_ctd_mark, aes(x = lat, y = z), colour = "Black", size = 0.4, shape = 3, alpha = 0.1) +
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse(breaks = pretty_breaks()) +
   scale_x_continuous(breaks = pretty_breaks()) +
@@ -227,9 +233,11 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 phyto.plot <-  mba %>% 
   ggplot(aes(x = lat, y = z)) + 
   geom_raster(aes(fill = zscore)) +
+  geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2) +
+  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2) +
   geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 2, shape = 3, alpha = 0.6) +
-  geom_point(data = s4_mark, aes(x = lat, y = z), colour = "Black", size = 2, shape = 3, alpha = 0.6) +
-  geom_point(data = s6_mark, aes(x = lat, y = z), colour = "Black", size = 2, shape = 3, alpha = 0.6) +
+  # geom_point(data = s4_mark, aes(x = lat, y = z), colour = "Black", size = 2, shape = 3, alpha = 0.6) +
+  # geom_point(data = s6_mark, aes(x = lat, y = z), colour = "Black", size = 2, shape = 3, alpha = 0.6) +
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse(breaks = pretty_breaks()) +
   scale_x_continuous(breaks = pretty_breaks()) +
@@ -282,9 +290,11 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 npp.plot <-  mba %>% 
   ggplot(aes(x = lat, y = z)) + 
   geom_raster(aes(fill = zscore)) +
+  geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2) +
+  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2) +
   geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 0.4, shape = 3, alpha = 0.3) +
-  geom_point(data = s4_mark, aes(x = lat, y = z), colour = "Black", size = 0.4, shape = 3, alpha = 0.3) +
-  geom_point(data = s6_mark, aes(x = lat, y = z), colour = "Black", size = 0.4, shape = 3, alpha = 0.3) +
+  # geom_point(data = s4_mark, aes(x = lat, y = z), colour = "Black", size = 0.4, shape = 3, alpha = 0.3) +
+  # geom_point(data = s6_mark, aes(x = lat, y = z), colour = "Black", size = 0.4, shape = 3, alpha = 0.3) +
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse(breaks = pretty_breaks()) +
   scale_x_continuous(breaks = pretty_breaks()) +
@@ -294,8 +304,6 @@ npp.plot <-  mba %>%
   ggtitle("Modeled NPP")
 
 ```
-
-
 
 
 ## Bacterial Abundance
@@ -334,9 +342,11 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 ba.plot <-  mba %>% 
   ggplot(aes(x = lat, y = z)) + 
   geom_raster(aes(fill = zscore)) +
+  geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2) +
+  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2) +
  geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 2, shape = 3, alpha = 0.6) +
-  geom_point(data = s4_mark, aes(x = lat, y = z), colour = "Black", size = 2, shape = 3, alpha = 0.6) +
-  geom_point(data = s6_mark, aes(x = lat, y = z), colour = "Black", size = 2, shape = 3, alpha = 0.6) +
+  # geom_point(data = s4_mark, aes(x = lat, y = z), colour = "Black", size = 2, shape = 3, alpha = 0.6) +
+  # geom_point(data = s6_mark, aes(x = lat, y = z), colour = "Black", size = 2, shape = 3, alpha = 0.6) +
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse(breaks = pretty_breaks()) +
   scale_x_continuous(breaks = pretty_breaks()) +
@@ -383,9 +393,11 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 bcd.plot <-  mba %>% 
   ggplot(aes(x = lat, y = z)) + 
   geom_raster(aes(fill = zscore)) +
+  geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2) +
+  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2) +
   geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 2, shape = 3, alpha = 0.6) +
-  geom_point(data = s4_mark, aes(x = lat, y = z), colour = "Black", size = 2, shape = 3, alpha = 0.6) +
-  geom_point(data = s6_mark, aes(x = lat, y = z), colour = "Black", size = 2, shape = 3, alpha = 0.6) +
+  # geom_point(data = s4_mark, aes(x = lat, y = z), colour = "Black", size = 2, shape = 3, alpha = 0.6) +
+  # geom_point(data = s6_mark, aes(x = lat, y = z), colour = "Black", size = 2, shape = 3, alpha = 0.6) +
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse(breaks = pretty_breaks()) +
   scale_x_continuous(breaks = pretty_breaks()) +
@@ -444,9 +456,11 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 n.plot <-  mba %>% 
   ggplot(aes(x = lat, y = z)) + 
   geom_raster(aes(fill = zscore)) +
+  geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2) +
+  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2) +
   geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 2, shape = 3, alpha = 0.6) +
-  geom_point(data = s4_mark, aes(x = lat, y = z), colour = "Black", size = 2, shape = 3, alpha = 0.6) +
-  geom_point(data = s6_mark, aes(x = lat, y = z), colour = "Black", size = 2, shape = 3, alpha = 0.6) +
+  # geom_point(data = s4_mark, aes(x = lat, y = z), colour = "Black", size = 2, shape = 3, alpha = 0.6) +
+  # geom_point(data = s6_mark, aes(x = lat, y = z), colour = "Black", size = 2, shape = 3, alpha = 0.6) +
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse(breaks = pretty_breaks()) +
   scale_x_continuous(breaks = pretty_breaks()) +
@@ -494,9 +508,11 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 doc.plot <-  mba %>% 
   ggplot(aes(x = lat, y = z)) + 
   geom_raster(aes(fill = zscore)) +
+  geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2) +
+  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2) +
   geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 2, shape = 3, alpha = 0.6) +
-  geom_point(data = s4_mark, aes(x = lat, y = z), colour = "Black", size = 2, shape = 3, alpha = 0.6) +
-  geom_point(data = s6_mark, aes(x = lat, y = z), colour = "Black", size = 2, shape = 3, alpha = 0.6) +
+  # geom_point(data = s4_mark, aes(x = lat, y = z), colour = "Black", size = 2, shape = 3, alpha = 0.6) +
+  # geom_point(data = s6_mark, aes(x = lat, y = z), colour = "Black", size = 2, shape = 3, alpha = 0.6) +
   #geom_line(data = mld.odv, aes(x = decimaldate, y = MLD), colour = "White", linetype = 2, size = 1 ) +
    # geom_point(data = mld.odv, aes(x = decimaldate, y = MLD), colour = "White", shape = 19, size = 3, alpha = 0.8) +
   scale_fill_gradientn(colors = rev(odv.colors)) +
@@ -541,9 +557,11 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 aou.plot <-  mba %>% 
   ggplot(aes(x = lat, y = z)) + 
   geom_raster(aes(fill = zscore)) +
+  geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2) +
+  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2) +
   geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 0.4, shape = 3, alpha = 0.1) +
-  geom_point(data = s4_ctd_mark, aes(x = lat, y = z), colour = "Black", size = 0.4, shape = 3, alpha = 0.1) +
-  geom_point(data = s6_ctd_mark, aes(x = lat, y = z), colour = "Black", size = 0.4, shape = 3, alpha = 0.1) +
+  # geom_point(data = s4_ctd_mark, aes(x = lat, y = z), colour = "Black", size = 0.4, shape = 3, alpha = 0.1) +
+  # geom_point(data = s6_ctd_mark, aes(x = lat, y = z), colour = "Black", size = 0.4, shape = 3, alpha = 0.1) +
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse(breaks = pretty_breaks()) +
   scale_x_continuous(breaks = pretty_breaks()) +
