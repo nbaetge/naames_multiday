@@ -59,7 +59,7 @@ odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe"
 ``` r
 data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
   filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station == 6) %>% 
-  filter(Cruise == "AT34") %>% 
+  filter(Cruise == "AT34", Date != "2016-05-27") %>% 
   mutate(time = ymd_hms(datetime),
          interv = interval(first(time), time),
          dur = as.duration(interv),

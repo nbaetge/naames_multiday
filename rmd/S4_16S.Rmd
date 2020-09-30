@@ -56,7 +56,7 @@ odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe"
 
 ```{r}
 custom.tab <- readRDS("~/GITHUB/naames_multiday/Output/Custom_ASV_Table.rds") %>% 
-  filter(Cruise == "AT34" & Station == 4 & z <= 200) %>% 
+  filter(Cruise == "AT34" & Station == 4 & z <= 200, Date != "2016-05-27") %>% 
   mutate(time = ymd_hms(datetime),
          interv = interval(first(time), time),
          dur = as.duration(interv),
@@ -64,7 +64,7 @@ custom.tab <- readRDS("~/GITHUB/naames_multiday/Output/Custom_ASV_Table.rds") %>
   select(Cruise:bcd, time:days, everything())
 
 sub_ps <- readRDS("~/GITHUB/naames_multiday/Output/phyloseq_obj.rds") %>% 
-  subset_samples(Cruise == "AT34" & Station == 4 & z <= 200)
+  subset_samples(Cruise == "AT34" & Station == 4 & z <= 200, Date != "2016-05-27")
 
 ```
 
@@ -104,7 +104,7 @@ new.sample.tab <- read_rds("~/GITHUB/naames_multiday/Input/export_ms/processed_b
   select(Cruise:z, `Depth Interval`, everything()) %>% 
   left_join(., ctd) %>% 
   left_join(., npp) %>% 
-  filter(Cruise == "AT34" & Station == 4 & z <= 200) %>% 
+  filter(Cruise == "AT34" & Station == 4 & z <= 200, Date != "2016-05-27") %>% 
   mutate(time = ymd_hms(datetime),
          interv = interval(first(time), time),
          dur = as.duration(interv),
@@ -172,7 +172,7 @@ ggplot(sample_sum_df, aes(x = sum)) +
 
 ```{r}
 #mean read depth before and after random subsampling, larger differential = greater "effect" on beta diversity
-mean(sample_sums(sub_ps)) #120,301
+mean(sample_sums(sub_ps)) #109,615
 
 ps_min <- rarefy_even_depth(sub_ps, sample.size = min(sample_sums(sub_ps)), rngseed = 532898)
 
@@ -253,9 +253,9 @@ Important: if you calculate your bray-curtis distance metric “in-line” it wi
 set.seed(1)
 
 # Ordinate
-nmds_all <- ordinate(sub_ps, method = "NMDS",  distance = "bray") # stress = 0.10
-nmds_min <- ordinate(ps_min, method = "NMDS",  distance = "bray") # stress = 0.08
-nmds_10k <- ordinate(ps_10k, method = "NMDS",  distance = "bray") # stress = 0.09
+nmds_all <- ordinate(sub_ps, method = "NMDS",  distance = "bray") # stress = 0.07, no convergence i.e. two axes not sufficient to view data
+nmds_min <- ordinate(ps_min, method = "NMDS",  distance = "bray") # stress = 0.07, no convergence i.e. two axes not sufficient to view data
+nmds_10k <- ordinate(ps_10k, method = "NMDS",  distance = "bray") # stress = 0.08, two solutions reached 
 
 
 ```
@@ -304,7 +304,7 @@ nmds.plot +
 ```
 
 
-NMDS plots attempt to show ordinal distances between samples as accurately as possible in two dimensions. It is important to report the stress of these plots, because a high stress value means that the algorithm had a hard time representing the distances between samples in 2 dimensions. The stress of this plot was good (generally anything below 0.2 is considered acceptable). 
+NMDS plots attempt to show ordinal distances between samples as accurately as possible in two dimensions. It is important to report the stress of these plots, because a high stress value means that the algorithm had a hard time representing the distances between samples in 2 dimensions (also if there is no convergence). The stress of all the plots was good (generally anything below 0.2 is considered acceptable). The subsampled to 10k reads was the only dataset where a convergent solution was reached. 
 
 ## Constrained Ordination
 
