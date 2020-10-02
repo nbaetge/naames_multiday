@@ -19,6 +19,7 @@ library(scales)
 library(zoo)
 library(oce)
 library(patchwork)
+library(lubridate)
 #rmarkdown tables
 library(stargazer)
 library(pander)
@@ -28,7 +29,6 @@ library(lmodel2)
 library(rstatix)
 library(ggpubr)
 #for odv type plots
-library(lubridate)
 library(reshape2)
 library(MBA)
 library(mgcv)
@@ -271,10 +271,6 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
   filter(z >= 0) 
 ```
 
-### Set 1
-
-<img src="ODV_Plots_files/figure-gfm/unnamed-chunk-16-1.png" style="display: block; margin: auto;" />
-
 ## N + N
 
 ``` r
@@ -354,6 +350,6 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
   filter(z >= 0) 
 ```
 
-### Set 2
+### Patchwork
 
-<img src="ODV_Plots_files/figure-gfm/unnamed-chunk-23-1.png" style="display: block; margin: auto;" />
+<img src="ODV_Plots_files/figure-gfm/unnamed-chunk-22-1.png" style="display: block; margin: auto;" />
