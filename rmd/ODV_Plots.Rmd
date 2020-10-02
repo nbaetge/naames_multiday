@@ -18,6 +18,7 @@ library(scales)
 library(zoo)
 library(oce)
 library(patchwork)
+library(lubridate)
 #rmarkdown tables
 library(stargazer)
 library(pander)
@@ -27,7 +28,6 @@ library(lmodel2)
 library(rstatix)
 library(ggpubr)
 #for odv type plots
-library(lubridate)
 library(reshape2)
 library(MBA)
 library(mgcv)
@@ -147,9 +147,12 @@ beamt.plot <-  mba %>%
   scale_y_reverse(breaks = pretty_breaks()) +
   scale_x_continuous(breaks = pretty_breaks()) +
   labs(y = expression(italic("Depth, m")), x = expression(italic("")), fill = expression(italic(paste("z-score")))) +
-  guides(fill = guide_colourbar(barheight = 20, barwidth = 2)) +
+  guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
+  theme(legend.spacing.y = unit(0.5, 'cm')) +
   custom_theme() +
   ggtitle("Beam Transmission")
+
+
 
 ```
 
@@ -191,7 +194,8 @@ fl.plot <-  mba %>%
   scale_y_reverse(breaks = pretty_breaks()) +
   scale_x_continuous(breaks = pretty_breaks()) +
   labs(y = expression(italic("Depth, m")), x = expression(italic("")), fill = expression(italic(paste("")))) +
-  guides(fill = guide_colourbar(barheight = 20, barwidth = 2)) +
+  guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
+  theme(legend.spacing.y = unit(0.5, 'cm')) +
   custom_theme() +
   ggtitle("Fluorescence")
 
@@ -241,8 +245,9 @@ phyto.plot <-  mba %>%
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse(breaks = pretty_breaks()) +
   scale_x_continuous(breaks = pretty_breaks()) +
-  labs(y = expression(italic("Depth, m")), x = expression(italic("")), fill = expression(italic(paste("")))) +
-  guides(fill = guide_colourbar(barheight = 20, barwidth = 2)) +
+  labs(y = expression(italic("Depth, m")), x = expression(italic("Latitude,˚N")), fill = expression(italic(paste("")))) +
+  guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
+  theme(legend.spacing.y = unit(0.5, 'cm')) +
   custom_theme() +
   ggtitle("Phytoplankton Abundance")
 
@@ -298,8 +303,9 @@ npp.plot <-  mba %>%
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse(breaks = pretty_breaks()) +
   scale_x_continuous(breaks = pretty_breaks()) +
-  labs(y = expression(italic("Depth, m")), x = expression(italic("")), fill = expression(italic(paste("")))) +
-  guides(fill = guide_colourbar(barheight = 20, barwidth = 2)) +
+  labs(y = expression(italic("")), x = expression(italic("")), fill = expression(italic(paste("")))) +
+  guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
+  theme(legend.spacing.y = unit(0.5, 'cm')) +
   custom_theme() +
   ggtitle("Modeled NPP")
 
@@ -350,8 +356,9 @@ ba.plot <-  mba %>%
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse(breaks = pretty_breaks()) +
   scale_x_continuous(breaks = pretty_breaks()) +
-  labs(y = expression(italic("Depth, m")), x = expression(italic("")), fill = expression(italic(paste("")))) +
-  guides(fill = guide_colourbar(barheight = 20, barwidth = 2)) +
+  labs(y = expression(italic("")), x = expression(italic("")), fill = expression(italic(paste("z-score")))) +
+  guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
+  theme(legend.spacing.y = unit(0.5, 'cm')) +
   custom_theme() +
   ggtitle("Bacterioplankton Abundance")
 
@@ -401,23 +408,15 @@ bcd.plot <-  mba %>%
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse(breaks = pretty_breaks()) +
   scale_x_continuous(breaks = pretty_breaks()) +
-  labs(y = expression(italic("Depth, m")), x = expression(italic("Latitude, ˚N")), fill = expression(italic(paste("")))) +
-  guides(fill = guide_colourbar(barheight = 20, barwidth = 2)) +
+  labs(y = expression(italic("")), x = expression(italic("Latitude, ˚N")), fill = expression(italic(paste("")))) +
+  guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
+  theme(legend.spacing.y = unit(0.5, 'cm')) +
   custom_theme() +
   ggtitle("Bacterioplankton Carbon Demand")
 
 ```
 
-### Set 1 
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 36, fig.width = 16, fig.align = "center", warning = FALSE}
-
-patchwork <- beamt.plot / fl.plot / phyto.plot / ba.plot / npp.plot / bcd.plot 
-
-patchwork +  plot_annotation(tag_levels = "a") &
-  theme(plot.tag = element_text(size = 22))
-
-```
 
 
 ## N + N
@@ -464,8 +463,9 @@ n.plot <-  mba %>%
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse(breaks = pretty_breaks()) +
   scale_x_continuous(breaks = pretty_breaks()) +
-  labs(y = expression(italic("Depth, m")), x = expression(italic("")), fill = expression(italic(paste("z-score")))) +
-  guides(fill = guide_colourbar(barheight = 20, barwidth = 2)) +
+  labs(y = expression(italic("")), x = expression(italic("")), fill = expression(italic(paste("z-score")))) +
+  guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
+  theme(legend.spacing.y = unit(0.5, 'cm')) +
   custom_theme() +
   ggtitle("N + N")
 
@@ -518,8 +518,9 @@ doc.plot <-  mba %>%
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse(breaks = pretty_breaks()) +
   scale_x_continuous(breaks = pretty_breaks()) +
-  labs(y = expression(italic("Depth, m")), x = expression(italic("")), fill = expression(italic(paste("")))) +
-  guides(fill = guide_colourbar(barheight = 20, barwidth = 2)) +
+  labs(y = expression(italic("")), x = expression(italic("")), fill = expression(italic(paste("")))) +
+  guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
+  theme(legend.spacing.y = unit(0.5, 'cm')) +
   custom_theme() +
   ggtitle("DOC")
 
@@ -565,23 +566,25 @@ aou.plot <-  mba %>%
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse(breaks = pretty_breaks()) +
   scale_x_continuous(breaks = pretty_breaks()) +
-  labs(y = expression(italic("Depth, m")), x = expression(italic("Latitude, ˚N")), fill = expression(italic(paste("")))) +
-  guides(fill = guide_colourbar(barheight = 20, barwidth = 2)) +
+  labs(y = expression(italic("")), x = expression(italic("Latitude, ˚N")), fill = expression(italic(paste("")))) +
+  guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
+  theme(legend.spacing.y = unit(0.5, 'cm')) +
   custom_theme() +
   ggtitle("AOU")
 
 ```
 
-### Set 2
+### Patchwork
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 20, fig.width = 16, fig.align = "center", warning = FALSE}
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 20, fig.width = 34, fig.align = "center", warning = FALSE}
 
-patchwork <- n.plot / doc.plot / aou.plot 
+patchwork <- (beamt.plot / fl.plot / phyto.plot) | (ba.plot / npp.plot / bcd.plot) | (n.plot / doc.plot / aou.plot )
 
 patchwork +  plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 22))
 
 ```
+
 
 
 

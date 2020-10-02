@@ -56,15 +56,16 @@ odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe"
 
 ```{r}
 custom.tab <- readRDS("~/GITHUB/naames_multiday/Output/Custom_ASV_Table.rds") %>% 
-  filter(Cruise == "AT34" & Station == 4 & z <= 200, Date != "2016-05-27") %>% 
+  filter(Cruise == "AT34" & Station == 4 & z <= 200) %>% 
   mutate(time = ymd_hms(datetime),
          interv = interval(first(time), time),
          dur = as.duration(interv),
-         days = as.numeric(dur, "days")) %>% 
-  select(Cruise:bcd, time:days, everything())
+         days = round(as.numeric(dur, "days")),
+         eddy = ifelse(Date != "2016-05-27" & Station != 6, "Core", "Outside")) %>% 
+  select(Cruise:bcd, eddy, time:days, everything())
 
 sub_ps <- readRDS("~/GITHUB/naames_multiday/Output/phyloseq_obj.rds") %>% 
-  subset_samples(Cruise == "AT34" & Station == 4 & z <= 200, Date != "2016-05-27")
+  subset_samples(Cruise == "AT34" & Station == 4 & z <= 200)
 
 ```
 
@@ -98,18 +99,19 @@ new.sample.tab <- read_rds("~/GITHUB/naames_multiday/Input/export_ms/processed_b
               select(Cruise, Station, Date,  CampCN, mld, z,  doc, n, phyc, bc, bcd, tdaa, Asp:Lys ) %>% 
               distinct() %>% 
               mutate_at(vars(phyc:bcd, tdaa:Lys), function(x)(x/10^3))) %>% 
-  mutate(`Depth Interval` = ifelse(z < 100, "5-75 m", "100-200 m"),
-         `Depth Interval` = ifelse(z == 300, "300 m", `Depth Interval`),
-         `Depth Interval` = ifelse(z > 300, "> 300 m", `Depth Interval`)) %>% 
-  select(Cruise:z, `Depth Interval`, everything()) %>% 
+  mutate(sample_depths = ifelse(z < 100, "5-75 m", "100-200 m"),
+         sample_depths = ifelse(z == 300, "300 m", sample_depths),
+         sample_depths = ifelse(z > 300, "> 300 m", sample_depths)) %>% 
+  select(Cruise:z, sample_depths, everything()) %>% 
   left_join(., ctd) %>% 
   left_join(., npp) %>% 
-  filter(Cruise == "AT34" & Station == 4 & z <= 200, Date != "2016-05-27") %>% 
+  filter(Cruise == "AT34" & Station == 4 & z <= 200) %>% 
   mutate(time = ymd_hms(datetime),
          interv = interval(first(time), time),
          dur = as.duration(interv),
-         days = as.numeric(dur, "days")) %>% 
-  select(Cruise:npp, time:days) %>% 
+         days = round(as.numeric(dur, "days")),
+         eddy = ifelse(Date != "2016-05-27" & Station != 6, "Core", "Outside")) %>% 
+  select(Cruise:npp, eddy,  time:days) %>% 
   column_to_rownames(var = "DNA_ID") 
 
 sample_data(sub_ps) <- new.sample.tab
@@ -157,6 +159,7 @@ We will subsample  three ways (depths of 5000, minimum read depth of all samples
 We will first look at the distribution of read counts from our samples
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 12, fig.align = "center"}
+
 # Make a data frame with a column for the read counts of each sample
 sample_sum_df <- data.frame(sum = sample_sums(sub_ps))
 
@@ -172,11 +175,11 @@ ggplot(sample_sum_df, aes(x = sum)) +
 
 ```{r}
 #mean read depth before and after random subsampling, larger differential = greater "effect" on beta diversity
-mean(sample_sums(sub_ps)) #109,615
+mean(sample_sums(sub_ps)) #120,302
+min(sample_sums(sub_ps)) #30,887
 
 ps_min <- rarefy_even_depth(sub_ps, sample.size = min(sample_sums(sub_ps)), rngseed = 532898)
 
-min(sample_sums(ps_min)) #30,887
 
 ps_10k = rarefy_even_depth(sub_ps, sample.size = 10000, rngseed = 532898)
 
@@ -197,49 +200,49 @@ pcoa_10k <- ordinate(ps_10k, method = "PCoA", distance = "bray")
 ```
 
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 12, fig.align = "center"}
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
 
 pcoa.plot <- plot_ordination(sub_ps, pcoa_all,  title = "Bray Curtis PCoA - No Subsampling") +
-  geom_point(aes(fill = days, shape = factor(Depth.Interval, levels = levels)), alpha = 0.6, stroke = 2, size = 4) +
+  geom_point(aes(fill = Date, shape = factor(sample_depths, levels = levels)), color = "black", alpha = 0.6, stroke = 2, size = 4) +
   scale_shape_manual(values = c(21, 22, 23)) +
-  scale_fill_gradientn(colors = rev(odv.colors)) +
+  scale_fill_date(low = "#0db5e6",  high = "#d31f2a") +
   custom_theme()  
 #removing one of the plotting layers (there are points within points)
 pcoa.plot$layers <- pcoa.plot$layers[-1]
 
 pcoa.plot + 
-  #facet_grid(rows = "Depth.Interval") +
-   guides(fill = guide_colorbar(title = "Days"), shape = guide_legend(title = "Depth Interval"))
+  facet_grid(rows = "eddy") +
+   guides(fill = guide_colourbar(title = "", barheight = 10, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), shape = guide_legend(title = "Sample Depths"))
 ```
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 12, fig.align = "center"}
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
 
-pcoa.plot <- plot_ordination(ps_min, pcoa_min,  title = "Bray Curtis PCoA - Subsampling Min Read Depth") +
-  geom_point(aes(fill = days, shape = factor(Depth.Interval, levels = levels)), alpha = 0.6, stroke = 2, size = 4) +
+pcoa.plot <- plot_ordination(ps_min, pcoa_min) +
+  geom_point(aes(fill = Date, shape = factor(sample_depths, levels = levels)), color = "black", alpha = 0.6, stroke = 2, size = 4) +
   scale_shape_manual(values = c(21, 22, 23)) +
-  scale_fill_gradientn(colors = rev(odv.colors)) +
+  scale_fill_date(low = "#0db5e6",  high = "#d31f2a") +
   custom_theme()  
 #removing one of the plotting layers (there are points within points)
 pcoa.plot$layers <- pcoa.plot$layers[-1]
 
 pcoa.plot + 
-  #facet_grid(rows = "Depth.Interval") +
-   guides(fill = guide_colorbar(title = "Days"), shape = guide_legend(title = "Depth Interval"))
+  facet_grid(rows = "eddy") +
+   guides(fill = guide_colourbar(title = "", barheight = 10, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), shape = guide_legend(title = "Sample Depths"))
 ```
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 12, fig.align = "center"}
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
 
 pcoa.plot <- plot_ordination(ps_10k, pcoa_10k,  title = "Bray Curtis PCoA - Subsampling 10k Reads") +
-  geom_point(aes(fill = days, shape = factor(Depth.Interval, levels = levels)), alpha = 0.6, stroke = 2, size = 4) +
+   geom_point(aes(fill = Date, shape = factor(sample_depths, levels = levels)), color = "black", alpha = 0.6, stroke = 2, size = 4) +
   scale_shape_manual(values = c(21, 22, 23)) +
-  scale_fill_gradientn(colors = rev(odv.colors)) +
+  scale_fill_date(low = "#0db5e6",  high = "#d31f2a") +
   custom_theme()  
 #removing one of the plotting layers (there are points within points)
 pcoa.plot$layers <- pcoa.plot$layers[-1]
 
 pcoa.plot + 
-  #facet_grid(rows = "Depth.Interval") +
-   guides(fill = guide_colorbar(title = "Days"), shape = guide_legend(title = "Depth Interval"))
+  facet_grid(rows = "eddy") +
+  guides(fill = guide_colourbar(title = "", barheight = 10, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), shape = guide_legend(title = "Sample Depths"))
 ```
 
 ### NMDS
@@ -253,58 +256,61 @@ Important: if you calculate your bray-curtis distance metric “in-line” it wi
 set.seed(1)
 
 # Ordinate
-nmds_all <- ordinate(sub_ps, method = "NMDS",  distance = "bray") # stress = 0.07, no convergence i.e. two axes not sufficient to view data
-nmds_min <- ordinate(ps_min, method = "NMDS",  distance = "bray") # stress = 0.07, no convergence i.e. two axes not sufficient to view data
-nmds_10k <- ordinate(ps_10k, method = "NMDS",  distance = "bray") # stress = 0.08, two solutions reached 
+nmds_all <- ordinate(sub_ps, method = "NMDS",  distance = "bray", trymax = 500) # stress = 0.08
+nmds_min <- ordinate(ps_min, method = "NMDS",  distance = "bray", trymax = 500) # stress = 0.08, no convergence i.e. two axes not sufficient to view data
+nmds_10k <- ordinate(ps_10k, method = "NMDS",  distance = "bray", trymax = 500) # stress = 0.09, no convergence
 
 
 ```
 
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 12, fig.align = "center"}
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
 
 nmds.plot <- plot_ordination(sub_ps, nmds_all,  title = "NMDS - No Subsampling") +
-  geom_point(aes(fill = days, shape = factor(Depth.Interval, level = levels)), alpha = 0.6, stroke = 2, size = 4) +
+  geom_point(aes(fill = Date, shape = factor(sample_depths, levels = levels)), color = "black", alpha = 0.6, stroke = 2, size = 4) +
   scale_shape_manual(values = c(21, 22, 23)) +
-  scale_fill_gradientn(colors = rev(odv.colors)) +
+  scale_fill_date(low = "#0db5e6",  high = "#d31f2a") +
   custom_theme()  
 #removing one of the plotting layers (there are points within points)
 nmds.plot$layers <- nmds.plot$layers[-1]
 
 nmds.plot + 
-   guides(fill = guide_colorbar(title = "Days"), shape = guide_legend(title = "Depth Interval"))
+  facet_grid(rows = "eddy") +
+  guides(fill = guide_colourbar(title = "", barheight = 10, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), shape = guide_legend(title = "Sample Depths"))
 ```
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 12, fig.align = "center"}
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
 
-nmds.plot <- plot_ordination(ps_min, nmds_min,  title = "NMDS - Subsampling Min Read Depth") +
-  geom_point(aes(fill = days, shape = factor(Depth.Interval, level = levels)), alpha = 0.6, stroke = 2, size = 4) +
+nmds.plot <- plot_ordination(ps_min, nmds_min) +
+   geom_point(aes(fill = Date, shape = factor(sample_depths, levels = levels)), color = "black", alpha = 0.6, stroke = 2, size = 4) +
   scale_shape_manual(values = c(21, 22, 23)) +
-  scale_fill_gradientn(colors = rev(odv.colors)) +
+  scale_fill_date(low = "#0db5e6",  high = "#d31f2a") +
   custom_theme()  
 #removing one of the plotting layers (there are points within points)
 nmds.plot$layers <- nmds.plot$layers[-1]
 
 nmds.plot + 
-   guides(fill = guide_colorbar(title = "Days"), shape = guide_legend(title = "Depth Interval"))
+  facet_grid(rows = "eddy") +
+  guides(fill = guide_colourbar(title = "", barheight = 10, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), shape = guide_legend(title = "Sample Depths"))
 ```
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 12, fig.align = "center"}
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
 
 nmds.plot <- plot_ordination(ps_10k, nmds_10k,  title = "NMDS - Subsampling 10k Reads") +
-  geom_point(aes(fill = days, shape = factor(Depth.Interval, level = levels)), alpha = 0.6, stroke = 2, size = 4) +
+  geom_point(aes(fill = Date, shape = factor(sample_depths, levels = levels)), color = "black", alpha = 0.6, stroke = 2, size = 4) +
   scale_shape_manual(values = c(21, 22, 23)) +
-  scale_fill_gradientn(colors = rev(odv.colors)) +
+  scale_fill_date(low = "#0db5e6",  high = "#d31f2a") +
   custom_theme()  
 #removing one of the plotting layers (there are points within points)
 nmds.plot$layers <- nmds.plot$layers[-1]
 
 nmds.plot + 
-   guides(fill = guide_colorbar(title = "Days"), shape = guide_legend(title = "Depth Interval"))
+  facet_grid(rows = "eddy") +
+  guides(fill = guide_colourbar(title = "", barheight = 10, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), shape = guide_legend(title = "Sample Depths"))
 ```
 
 
-NMDS plots attempt to show ordinal distances between samples as accurately as possible in two dimensions. It is important to report the stress of these plots, because a high stress value means that the algorithm had a hard time representing the distances between samples in 2 dimensions (also if there is no convergence). The stress of all the plots was good (generally anything below 0.2 is considered acceptable). The subsampled to 10k reads was the only dataset where a convergent solution was reached. 
+NMDS plots attempt to show ordinal distances between samples as accurately as possible in two dimensions. It is important to report the stress of these plots, because a high stress value means that the algorithm had a hard time representing the distances between samples in 2 dimensions. The stress of all the plots was good (generally anything below 0.2 is considered acceptable). 
 
 ## Constrained Ordination
 
@@ -334,15 +340,16 @@ cap_ord_10k <- ordinate(ps_10k_na.rm, method = "CAP", distance = bray_10k, formu
 
 
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 12, fig.align = "center"}
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
 
 # CAP plot
 cap.plot <- plot_ordination(ps_all_na.rm, ordination = cap_ord_all, axes = c(1,2)) +
-  geom_point(aes(fill = days, shape = factor(Depth.Interval, level = levels)), alpha = 0.6, stroke = 2, size = 4) +
+ geom_point(aes(fill = Date, shape = factor(sample_depths, levels = levels)), color = "black", alpha = 0.6, stroke = 2, size = 4) +
   scale_shape_manual(values = c(21, 22, 23)) +
-  scale_fill_gradientn(colors = rev(odv.colors)) +
+  scale_fill_date(low = "#0db5e6",  high = "#d31f2a") +
   custom_theme()  +
-  guides(fill = guide_colorbar(title = "Days"), shape = guide_legend(title = "Depth Interval")) +
+  facet_grid(rows = "eddy") +
+  guides(fill = guide_colourbar(title = "", barheight = 10, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), shape = guide_legend(title = "Sample Depths")) +
   ggtitle("No Subsampling")
 #removing one of the plotting layers (there are points within points)
 
@@ -392,16 +399,17 @@ cap.plot +
 ```
 
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 12, fig.align = "center"}
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
 
 # CAP plot
 cap.plot <- plot_ordination(ps_min_na.rm, ordination = cap_ord_min, axes = c(1,2)) +
-  geom_point(aes(fill = days, shape = factor(Depth.Interval, level = levels)), alpha = 0.6, stroke = 2, size = 4) +
+   geom_point(aes(fill = Date, shape = factor(sample_depths, levels = levels)), color = "black", alpha = 0.6, stroke = 2, size = 4) +
   scale_shape_manual(values = c(21, 22, 23)) +
-  scale_fill_gradientn(colors = rev(odv.colors)) +
+  scale_fill_date(low = "#0db5e6",  high = "#d31f2a") +
   custom_theme()  +
-  guides(fill = guide_colorbar(title = "Days"), shape = guide_legend(title = "Depth Interval")) +
-  ggtitle("Subsampling Min Read Depth")
+  facet_grid(rows = "eddy") +
+  guides(fill = guide_colourbar(title = "", barheight = 10, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), shape = guide_legend(title = "Sample Depths")) 
+  #ggtitle("Subsampling Min Read Depth")
 #removing one of the plotting layers (there are points within points)
 
 cap.plot$layers <- cap.plot$layers[-1]
@@ -450,15 +458,16 @@ cap.plot +
 ```
 
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 12, fig.align = "center"}
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
 
 # CAP plot
 cap.plot <- plot_ordination(ps_10k_na.rm, ordination = cap_ord_10k, axes = c(1,2)) +
-  geom_point(aes(fill = days, shape = factor(Depth.Interval, level = levels)), alpha = 0.6, stroke = 2, size = 4) +
+  geom_point(aes(fill = Date, shape = factor(sample_depths, levels = levels)), color = "black", alpha = 0.6, stroke = 2, size = 4) +
   scale_shape_manual(values = c(21, 22, 23)) +
-  scale_fill_gradientn(colors = rev(odv.colors)) +
+  scale_fill_date(low = "#0db5e6",  high = "#d31f2a") +
   custom_theme()  +
-  guides(fill = guide_colorbar(title = "Days"), shape = guide_legend(title = "Depth Interval")) +
+  facet_grid(rows = "eddy") +
+  guides(fill = guide_colourbar(title = "", barheight = 10, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), shape = guide_legend(title = "Sample Depths")) +
   ggtitle("Subsampling 10k Reads")
 #removing one of the plotting layers (there are points within points)
 
@@ -563,7 +572,7 @@ Our first question is: Is the community composition from 5-200 m different betwe
 In the function below: we are using the distance matrix to calculate the multivariate dispersions (variances; average distance to centroids). We then use group dispersions to perform an ANOVA test.
 
 ```{r}
-anova(betadisper(euc_dist, sample_info_tab$days)) 
+anova(betadisper(euc_dist, sample_info_tab$Date)) 
 ```
 
 The ANOVA’s p-value is not significant meaning that group dispersions are homogenous (“Null hypothesis of no difference in dispersion between groups”)
@@ -571,14 +580,14 @@ The ANOVA’s p-value is not significant meaning that group dispersions are homo
 Adonis analyzes and partitions sums of squares using distance matrices. It can be seen as an ANOVA using distance matrices (analogous to MANOVA – multivariate analysis of variance). Therefore, it is used to test if two or more groups have similar compositions.
 
 ```{r}
-adonis(euc_dist~sample_info_tab$days)
+adonis(euc_dist~sample_info_tab$Date)
 ```
 
 Our results indicate that the community between each day has a highly significantly different composition (p < 0.01). 
 
 **So our groups (days) present homogeneity among group dispersions (compositions vary similarly) while having significantly different compositions.**
 
-What about at each depth horizon (5-100 m, 150 - 200 m)?
+What about at each depth horizon (5-75 m, 100 - 200 m)?
 
 ### Surface 75 m
 
@@ -593,17 +602,17 @@ surf_sample_info_tab <- new.sample.tab[row.names(new.sample.tab) %in% surf_sampl
 ```
 
 ```{r}
-anova(betadisper(surf_euc_dist, surf_sample_info_tab$days)) 
+anova(betadisper(surf_euc_dist, surf_sample_info_tab$Date)) 
 ```
 
 ```{r}
-adonis(surf_euc_dist~surf_sample_info_tab$days)
+adonis(surf_euc_dist~surf_sample_info_tab$Date)
 ```
 
 **Our groups (days) in the surface 75 m present homogeneity among group dispersions (compositions vary similarly) and do not have significantly different compositions.**
 
 
-### 150 - 200 m
+### 100 - 200 m
 
 ```{r}
 #We can subset our data if we want to and calculate distances/run stats for only a subset of the group. The code below shows how, but we're not actually going to subset anything
@@ -616,11 +625,11 @@ deep_sample_info_tab <- new.sample.tab[row.names(new.sample.tab) %in% deep_sampl
 ```
 
 ```{r}
-anova(betadisper(deep_euc_dist, deep_sample_info_tab$days)) 
+anova(betadisper(deep_euc_dist, deep_sample_info_tab$Date)) 
 ```
 
 ```{r}
-adonis(deep_euc_dist~deep_sample_info_tab$days)
+adonis(deep_euc_dist~deep_sample_info_tab$Date)
 ```
 
 **Our groups (days) in the 100-200 m depth horizon present homogeneity among group dispersions (compositions vary similarly) and have significantly different compositions.**
@@ -656,21 +665,19 @@ alphadiv <- left_join(richness, new.sample.tab %>% rownames_to_column(., var = "
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
 
-my_comparisons <- list( c("0", "1"), c("1", "2"), c("2", "3"), c("0","2"), c("0", "3"), c("1","3") ) 
+my_comparisons <- list( c("24", "25"), c("24", "26"), c("24", "27"), c("25","26"), c("25", "27"), c("26","27") ) 
 
-alphadiv %>% 
-  mutate(Days = as.character(ceiling(days)),
-         z_label = paste(z, "m")) %>% 
-  select(Days, z, z_label, `Depth Interval`, Chao1, Shannon) %>% 
+alpha.plot <- alphadiv %>% 
+  mutate(z_label = paste(z, "m"),
+         day = day(Date)) %>% 
+  select(day, z, z_label, sample_depths, Chao1, Shannon) %>% 
   pivot_longer(.,  cols = c(Chao1,  Shannon), names_to = "measure", values_to = "est" ) %>% 
-  left_join(., alphadiv %>%  mutate(Days = as.character(ceiling(days)),
-                                    z_label = paste(z, "m")) %>% 
-              select(Days, z, z_label, se.chao1)) %>% 
-  mutate(se.chao1 = ifelse(measure == "Chao1", se.chao1, NA),
-         Days = as.character(Days)) %>%
-  ggboxplot(., x = "Days", y = "est", 
-            order = c("0", "1", "2", "3"),
-            xlab = expression(italic(paste("Days"))), 
+  left_join(., alphadiv %>%  mutate(z_label = paste(z, "m"), day = day(Date)) %>% 
+              select(day, z, z_label, se.chao1)) %>% 
+  mutate(se.chao1 = ifelse(measure == "Chao1", se.chao1, NA)) %>%
+  ggboxplot(., x = "day", y = "est", 
+            order = c("24", "25", "26", "27"),
+            xlab = expression(italic(paste("May"))), 
             ylab = expression(italic(paste("Alpha Diversity Measure"))),
             add = "jitter",
             width = 0.5,
@@ -679,14 +686,60 @@ alphadiv %>%
                      label = "p.signif",
                      step.increase = 0.25) +
   stat_compare_means(label.y = 5.5) +
-  facet_grid(measure~factor(`Depth Interval`, levels = levels), scales = "free") 
+  facet_grid(measure~factor(sample_depths, levels = levels), scales = "free") 
+```
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center", warning = FALSE}
+chao.plot <- alphadiv %>% 
+  ggplot(aes(x = z, y = Chao1, group = interaction(Date, CampCN))) +
+   geom_errorbar(aes(ymin = Chao1 - se.chao1, ymax = Chao1 + se.chao1, color = Date), width = 3, alpha = 0.7) +
+  geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
+  geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Chao1"))), colour = "", fill = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm"))
 ```
 
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center", warning = FALSE}
+shannon.plot <-  alphadiv %>% 
+  ggplot(aes(x = z, y = Shannon, group = interaction(Date, CampCN))) +
+  geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
+  geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Shannon"))), colour = "", fill = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  guides(fill = F, color = F, shape = F, linetype = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm"))
+```
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 20, fig.width = 18, fig.align = "center"}
+patchwork <- alpha.plot / (chao.plot + shannon.plot)
+
+patchwork +  
+  plot_layout(guides = 'collect') +
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 22)) 
+```
 
 
 These are not interpretable as “real” numbers of anything (due to the nature of amplicon data), but they can still be useful as relative metrics of comparison. If Chao1 richness goes up, but Shannon diversity goes down, it indicates that the sample may have more ASVs but is dominated by a few of them. 
 
-**In this case, though our groups (days) showed significantly different compositions, there weren't significant changes in overall diversity or richness. So it seems like the community shift wasn't driven by the emergence or disappearance of new ASVs, but rather the change in relative proportion of existing ASVs **
+**In this case, though our groups (days) showed significantly different compositions, there weren't significant changes in overall diversity or richness. So it seems like the community shift wasn't driven by the emergence or disappearance of new ASVs, but rather the change in relative proportion of existing ASVs. With that said, our grouping of sample depths and box plots likely masks dynamics that we can kind of see in the depth profile **
 
 # DESeq2
 
@@ -724,15 +777,33 @@ dim(sigtab)
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 14, fig.align = "center"}
 
-ggplot(sigtab, aes(x = Family, y = log2FoldChange, fill = Order, shape = Phylum)) + 
+order.colors <- c("Alphaproteobacteria/Rhodobacterales" = "#026779",
+                  "Alphaproteobacteria/SAR11_clade" = "#0FB2D3",
+                  "Deltaproteobacteria/Bdellovibrionales" = "#83932D","Deltaproteobacteria/SAR324_clade(Marine_group_B)" = "#516238", "Deltaproteobacteria/Sh765B-TzT-29" = "#AEC96F", "Gammaproteobacteria/Alteromonadales" = "#D3105C", "Gammaproteobacteria/Cellvibrionales" = "#E4B3E2" ,  "Gammaproteobacteria/Oceanospirillales" = "#ac181d",  
+                  "Flavobacteriia/Flavobacteriales" = "#F19B34",
+                  "Sphingobacteriia/Sphingobacteriales" = "#FDD989",  "NA/NA" = "#D9E4DC" )
+
+order.levels <- c("Alphaproteobacteria/Rhodobacterales",
+                  "Alphaproteobacteria/SAR11_clade",
+                  "Deltaproteobacteria/Bdellovibrionales","Deltaproteobacteria/SAR324_clade(Marine_group_B)", "Deltaproteobacteria/Sh765B-TzT-29", "Gammaproteobacteria/Alteromonadales", "Gammaproteobacteria/Cellvibrionales",  "Gammaproteobacteria/Oceanospirillales",  
+                  "Flavobacteriia/Flavobacteriales",
+                  "Sphingobacteriia/Sphingobacteriales" ,  "NA/NA")
+
+
+all_log2 <- sigtab %>% 
+  mutate(family_genus = paste(Family, Genus, sep = "/" ),
+         class_order = paste(Class, Order, sep = "/")) %>% 
+  ggplot(., aes(x = family_genus, y = log2FoldChange, fill =
+                  factor(class_order, levels = order.levels), shape = Phylum)) + 
   geom_point(color = "black",  alpha = 0.7, size = 6) + 
   custom_theme() +
-  scale_fill_manual(values = odv.colors) +
-  scale_shape_manual(values = c(21, 22, 23, 24)) +
+  scale_fill_manual(values = order.colors) +
+  scale_shape_manual(values = c("Proteobacteria" = 21, "Bacteroidetes" = 22, "Marinimicrobia_(SAR406_clade)" = 24)) +
   geom_hline(yintercept = 0, linetype = 2) +
-  labs(x = expression(italic("Family")), y = expression(italic("log2 Fold Change"))) +
+  labs(x = expression(italic("")), y = expression(italic("log2 Fold Change")), fill = "Class/Order") +
   theme(axis.text.x = element_text(angle = -15, hjust = 0, vjust = 0.5)) +
-  guides(fill = guide_legend(override.aes = list(shape = 21)))
+  guides(fill = guide_legend(override.aes = list(shape = 21))) +
+  ggtitle("All Depths")
 ```
 
 
@@ -756,16 +827,20 @@ head(surf_sigtab)
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 14, fig.align = "center"}
 
-ggplot(surf_sigtab, aes(x = Family, y = log2FoldChange)) + 
-  geom_point(aes(fill = Order, shape = Phylum), color = "black",  alpha = 0.7, size = 6) +
+surf_log2 <- surf_sigtab %>% 
+  mutate(family_genus = paste(Family, Genus, sep = "/" ),
+         class_order = paste(Class, Order, sep = "/")) %>% 
+ggplot(., aes(x = family_genus, y = log2FoldChange, fill =
+                  factor(class_order, levels = order.levels), shape = Phylum)) + 
+  geom_point(color = "black",  alpha = 0.7, size = 6) + 
   custom_theme() +
-  scale_shape_manual(values = c(21, 22, 23, 24)) +
-  scale_fill_manual(values = odv.colors) +
+  scale_shape_manual(values = c("Proteobacteria" = 21, "Bacteroidetes" = 22, "Marinimicrobia_(SAR406_clade)" = 24)) +
+  scale_fill_manual(values = order.colors) +
   geom_hline(yintercept = 0, linetype = 2) +
-  labs(x = expression(italic("Family")), y = expression(italic("log2 Fold Change"))) +
+  labs(x = expression(italic("")), y = expression(italic("log2 Fold Change")), fill = "Class/Order") +
   theme(axis.text.x = element_text(angle = -15, hjust = 0, vjust = 0.5)) +
-  ggtitle("Surface 75 m") +
-  guides(fill = guide_legend(override.aes = list(shape = 21)))
+  guides(fill = guide_legend(override.aes = list(shape = 21)), shape = F) +
+  ggtitle("5 - 75 m")
 ```
 
 ### 100 - 200 m
@@ -788,17 +863,147 @@ head(deep_sigtab)
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 14, fig.align = "center"}
 
-ggplot(deep_sigtab, aes(x = Family, y = log2FoldChange)) + 
-  geom_point(aes(fill = Order, shape = Phylum), color = "black",  alpha = 0.7, size = 6) +
+deep_log2 <- deep_sigtab %>% 
+  mutate(family_genus = paste(Family, Genus, sep = "/" ),
+         class_order = paste(Class, Order, sep = "/")) %>% 
+ggplot(., aes(x = family_genus, y = log2FoldChange, fill =
+                  factor(class_order, levels = order.levels), shape = Phylum)) + 
+  geom_point(color = "black",  alpha = 0.7, size = 6) + 
   custom_theme() +
-  scale_shape_manual(values = c(21, 22, 23, 24)) +
-  scale_fill_manual(values = odv.colors) +
+  scale_shape_manual(values = c("Proteobacteria" = 21, "Bacteroidetes" = 22, "Marinimicrobia_(SAR406_clade)" = 24)) +
+  scale_fill_manual(values = order.colors) +
   geom_hline(yintercept = 0, linetype = 2) +
-  labs(x = expression(italic("Family")), y = expression(italic("log2 Fold Change"))) +
+  labs(x = expression(italic("Family/Genus")), y = expression(italic("log2 Fold Change")), fill = "Class/Order") +
   theme(axis.text.x = element_text(angle = -15, hjust = 0, vjust = 0.5)) +
-  ggtitle("100 - 200 m") +
-  guides(fill = guide_legend(override.aes = list(shape = 21)))
+  guides(fill = guide_legend(override.aes = list(shape = 21)), shape = F) +
+  ggtitle("100 - 200 m")
 ```
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 20, fig.width = 18, fig.align = "center"}
+patchwork <- all_log2 / surf_log2 / deep_log2
+
+patchwork +  
+  #plot_layout(guides = 'collect') +
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 22)) 
+```
+
+# Custom Table
+
+## Generate relative abundances
+
+Our data currently shows the relative proportion of different sequences to the total number of gene copies recovered, so we'll normalize the gene copy number
+
+```{r}
+ps_std <- transform_sample_counts(ps_min, function(x) x/sum(x))
+#extract the relative abundance table and coerce into dataframe
+ps_std.tab <- as(otu_table(ps_std), "matrix")
+ps_std.df = as.data.frame(ps_std.tab) 
+```
+
+## Table with Rel Abund, Taxa, Sample Info 
+
+Create a new table that combines relative abundances with the taxa table
+
+```{r}
+
+tax.tab <- as.matrix(read.table("~/GITHUB/naames_multiday/Input/16s/HetV1TUtax.txt", header = T, row.names = 1, check.names = F, na.strings = "", sep = "\t"))
+
+#first coerce the taxa table into a data frame
+tax.df = as.data.frame(tax.tab) 
+#then combine the data frames
+custom.tab <- tax.df %>% 
+  rownames_to_column(., var = "asv") %>% 
+  left_join(., ps_std.df %>% rownames_to_column(., var = "asv")) %>% 
+  #create a new index of that combines the  class, order, family, and genus values
+  mutate(#pcofg = paste(Phylum, "_", Class, "_", Order,"_", Family, "_", Genus),
+         # pcof = paste(Phylum, "_", Class, "_", Order,"_", Family,),
+         pco = paste(Phylum, "_", Class, "_", Order)) %>% 
+  select(-c(asv:Genus)) %>% 
+  # select(pcof,everything()) %>% 
+  # group_by(pcof) %>% 
+  select(pco,everything()) %>% 
+  group_by(pco) %>% 
+  summarise_at(vars(contains("NAAMES2")), sum, na.rm = T) %>% 
+  ungroup()
+
+#save the row names and then make them into the column names
+colnames <- custom.tab[,1] 
+
+#transpose the dataframe so we can merge with the sample info table
+t_custom.tab <-  as.data.frame(t(custom.tab[,-1]))
+# colnames(t_custom.tab) <- colnames$pcof
+colnames(t_custom.tab) <- colnames$pco
+
+#merge
+sweet.tab <- t_custom.tab %>% 
+  rownames_to_column(., var = "sample") %>% 
+  left_join(., new.sample.tab %>% rownames_to_column(., var = "sample")) %>% 
+  select(sample, Cruise:bcd, aou:days, tdaa:Lys, everything()) %>% 
+  arrange(CampCN, z)
+
+
+rm.groups <- sweet.tab %>% 
+  select(-c(sample:Lys)) %>% 
+  #remove groups that are completely absent
+  .[ , colSums(.) > 0] %>% 
+  #arrange by biggest contributors
+  .[, order(colSums(-.))] %>% 
+  bind_cols(sweet.tab %>% select(sample:Lys), .)
+
+#calculate z-scores
+mean.relabund <- rm.groups %>% 
+  select(z, `Proteobacteria _ Alphaproteobacteria _ SAR11_clade`:`Verrucomicrobia _ Opitutae _ RS-B22`) %>% 
+  group_by(z) %>% 
+  summarise_at(vars(`Proteobacteria _ Alphaproteobacteria _ SAR11_clade`:`Verrucomicrobia _ Opitutae _ RS-B22`), mean, na.rm = T) 
+```
+
+
+#ASV Depth Profiles
+
+```{r}
+sar11_1a <- rm.groups %>% 
+  ggplot(aes(x = z, y = `Proteobacteria _ Alphaproteobacteria _ SAR11_clade _ SAR11_Ia`, group = interaction(Date, CampCN))) +
+  geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
+  geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("ASV"))), colour = "", fill = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  guides(fill = F, color = F, shape = F, linetype = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm"))
+```
+
+# Heatmaps
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 16, fig.width = 18, fig.align = "center"}
+test <- rm.groups %>% 
+  # select(Date, z, `Proteobacteria _ Alphaproteobacteria _ SAR11_clade _ SAR11_Ia`:tail(names(.), 1)) %>%
+  # pivot_longer(., `Proteobacteria _ Alphaproteobacteria _ SAR11_clade _ SAR11_Ia`:tail(names(.), 1), names_to = "taxa", values_to = "relabund")
+  
+ #  #top25 taxa
+ # select(Date, z, `Proteobacteria _ Alphaproteobacteria _ SAR11_clade _ SAR11_Ia`:`Chloroflexi _ SAR202_clade _ SAR202_Clade1 _ SAR202_Clade1`) %>% 
+ #  pivot_longer(., c(`Proteobacteria _ Alphaproteobacteria _ SAR11_clade _ SAR11_Ia`:`Chloroflexi _ SAR202_clade _ SAR202_Clade1 _ SAR202_Clade1`), names_to = "taxa", values_to = "relabund")
+
+select(Date, z, `Proteobacteria _ Alphaproteobacteria _ SAR11_clade`:tail(names(.), 1)) %>%
+  pivot_longer(., `Proteobacteria _ Alphaproteobacteria _ SAR11_clade`:tail(names(.), 1), names_to = "taxa", values_to = "relabund")
+
+
+test %>% 
+  ggplot(aes(x = Date, y = taxa)) +
+  geom_tile(aes(fill = relabund), color = "white") +
+  # scale_fill_gradient2(low = "#0db5e6", mid = "white", high = "#d31f2a", midpoint = 0.05 ) +
+  # scale_fill_gradient(low = "#0db5e6",  high = "#d31f2a") +
+  scale_fill_gradient(low = "white",high = "#0db5e6") +
+facet_grid(~z)
+```
+
 
 
 # Stacked Barplots
