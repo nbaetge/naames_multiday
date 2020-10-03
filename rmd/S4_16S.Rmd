@@ -16,8 +16,8 @@ library(knitr)
 library(readxl)
 library(data.table) 
 library(scales)
-library(patchwork)
 library(lubridate)
+library(patchwork)
 #stat tests
 library(lmtest)
 library(lmodel2)
@@ -725,9 +725,11 @@ shannon.plot <-  alphadiv %>%
   theme(panel.spacing.x = unit(1, "cm"),
         axis.text.x = element_text(angle = 0),
         legend.key.size = unit(1, "cm"))
+
 ```
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 20, fig.width = 18, fig.align = "center"}
+
 patchwork <- alpha.plot / (chao.plot + shannon.plot)
 
 patchwork +  
@@ -943,7 +945,7 @@ sweet.tab <- t_custom.tab %>%
   arrange(CampCN, z)
 
 
-rm.groups <- sweet.tab %>% 
+relabund <- sweet.tab %>% 
   select(-c(sample:Lys)) %>% 
   #remove groups that are completely absent
   .[ , colSums(.) > 0] %>% 
@@ -951,22 +953,161 @@ rm.groups <- sweet.tab %>%
   .[, order(colSums(-.))] %>% 
   bind_cols(sweet.tab %>% select(sample:Lys), .)
 
-#calculate z-scores
-mean.relabund <- rm.groups %>% 
-  select(z, `Proteobacteria _ Alphaproteobacteria _ SAR11_clade`:`Verrucomicrobia _ Opitutae _ RS-B22`) %>% 
+```
+
+# Custom Z-score Table (Top 10 taxa)
+
+```{r}
+#calculate z-scores (value - mean / sd)
+
+value.relabund <- relabund %>% 
+  select(Date, z, `Proteobacteria _ Alphaproteobacteria _ SAR11_clade`:`Proteobacteria _ Gammaproteobacteria _ Salinisphaerales`)
+
+mean.relabund <- relabund  %>% 
+  select(Date, z, `Proteobacteria _ Alphaproteobacteria _ SAR11_clade`:`Proteobacteria _ Gammaproteobacteria _ Salinisphaerales`) %>%
+ group_by(z) %>%
+  summarise_at(vars(`Proteobacteria _ Alphaproteobacteria _ SAR11_clade`:`Proteobacteria _ Gammaproteobacteria _ Salinisphaerales`), mean, na.rm = T) %>% 
+  ungroup() %>%
+  setNames(paste0(names(.), ".ave" )) %>% 
+  mutate(z = z.ave) %>% 
+  select(z, everything(), -z.ave)
+
+sd.relabund <- relabund  %>% 
+  select(Date, z, `Proteobacteria _ Alphaproteobacteria _ SAR11_clade`:`Proteobacteria _ Gammaproteobacteria _ Salinisphaerales`) %>%
   group_by(z) %>% 
-  summarise_at(vars(`Proteobacteria _ Alphaproteobacteria _ SAR11_clade`:`Verrucomicrobia _ Opitutae _ RS-B22`), mean, na.rm = T) 
+  summarise_at(vars(`Proteobacteria _ Alphaproteobacteria _ SAR11_clade`:`Proteobacteria _ Gammaproteobacteria _ Salinisphaerales`), sd, na.rm = T) %>% 
+  ungroup() %>% 
+  setNames(paste0(names(.), ".sd" )) %>% 
+  mutate(z = z.sd) %>% 
+  select(z, everything(), -z.sd)
+
+
+ 
+zscore <- left_join(value.relabund, mean.relabund, by = "z") %>% 
+   pivot_longer(cols = -c(Date,z)) %>% 
+   arrange(Date, z, name) %>% 
+   mutate(name = gsub(".ave", "", name)) %>% 
+   group_by(Date, z, name) %>% 
+   mutate(diff = dplyr::first(value) - dplyr::last(value)) %>% 
+   select(-value) %>% 
+   distinct() %>% 
+   pivot_wider(names_from = name, values_from = diff) %>% 
+   ungroup() %>% 
+   left_join(., sd.relabund, by = "z") %>% 
+   pivot_longer(cols = -c(Date,z)) %>% 
+   arrange(Date, z, name) %>% 
+    mutate(name = gsub(".sd", "", name)) %>% 
+   group_by(Date, z, name) %>% 
+   mutate(zscore = dplyr::first(value)/dplyr::last(value)) %>% 
+   select(-value) %>% 
+   distinct() %>% 
+   pivot_wider(names_from = name, values_from = zscore) 
 ```
 
 
-#ASV Depth Profiles
+# Heatmaps
 
-```{r}
-sar11_1a <- rm.groups %>% 
-  ggplot(aes(x = z, y = `Proteobacteria _ Alphaproteobacteria _ SAR11_clade _ SAR11_Ia`, group = interaction(Date, CampCN))) +
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 16, fig.width = 10, fig.align = "center"}
+
+heat.order <- c("Acidimicrobiales", "Flavobacteriales", "OCS116_clade", "Rhodobacterales", "Rhodospirillales", "Rickettsiales", "SAR11_clade", "Oceanospirillales", "Salinisphaerales", "SAR406_clade*")
+
+
+zheat.data <- zscore %>% 
+  # select(Date, z, `Proteobacteria _ Alphaproteobacteria _ SAR11_clade _ SAR11_Ia`:tail(names(.), 1)) %>%
+  # pivot_longer(., `Proteobacteria _ Alphaproteobacteria _ SAR11_clade _ SAR11_Ia`:tail(names(.), 1), names_to = "taxa", values_to = "relabund")
+  
+ #  #top25 taxa
+ # select(Date, z, `Proteobacteria _ Alphaproteobacteria _ SAR11_clade _ SAR11_Ia`:`Chloroflexi _ SAR202_clade _ SAR202_Clade1 _ SAR202_Clade1`) %>% 
+ #  pivot_longer(., c(`Proteobacteria _ Alphaproteobacteria _ SAR11_clade _ SAR11_Ia`:`Chloroflexi _ SAR202_clade _ SAR202_Clade1 _ SAR202_Clade1`), names_to = "taxa", values_to = "relabund")
+
+  pivot_longer(.,-c(Date,z), names_to = "taxa", values_to = "zscore") %>% 
+  separate(taxa, into = c("p", "c", "o"), sep = " _ ") %>% 
+  mutate(o = ifelse(o == "NA", "SAR406_clade*", o))
+
+
+zheat <- zheat.data %>%
+  ggplot(aes(x = Date, y = factor(o, levels = rev(heat.order)))) +
+  geom_tile(aes(fill = zscore), color = "white") +
+   scale_fill_gradient2(low = "#0db5e6", mid = "white", high = "#d31f2a", midpoint = 0.05 ) +
+  labs(x = "", y = "", fill = "Z-Score") +
+  #scale_fill_gradient(low = "#0db5e6",  high = "#d31f2a") +
+ #scale_fill_gradient(low = "white",high = "#0db5e6") +
+facet_grid(rows = "z") +
+  custom_theme() +
+  theme(axis.text.y = element_blank(),
+        legend.position = "top") +
+   guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) 
+```
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 16, fig.width = 10, fig.align = "center"}
+relaheat.data <- value.relabund %>% 
+  # select(Date, z, `Proteobacteria _ Alphaproteobacteria _ SAR11_clade _ SAR11_Ia`:tail(names(.), 1)) %>%
+  # pivot_longer(., `Proteobacteria _ Alphaproteobacteria _ SAR11_clade _ SAR11_Ia`:tail(names(.), 1), names_to = "taxa", values_to = "relabund")
+  
+ #  #top25 taxa
+ # select(Date, z, `Proteobacteria _ Alphaproteobacteria _ SAR11_clade _ SAR11_Ia`:`Chloroflexi _ SAR202_clade _ SAR202_Clade1 _ SAR202_Clade1`) %>% 
+ #  pivot_longer(., c(`Proteobacteria _ Alphaproteobacteria _ SAR11_clade _ SAR11_Ia`:`Chloroflexi _ SAR202_clade _ SAR202_Clade1 _ SAR202_Clade1`), names_to = "taxa", values_to = "relabund")
+
+  pivot_longer(.,-c(Date,z), names_to = "taxa", values_to = "relabund") %>% 
+  separate(taxa, into = c("p", "c", "o"), sep = " _ ") %>% 
+  mutate(o = ifelse(o == "NA", "SAR406_clade*", o))
+
+
+relaheat <- relaheat.data %>%
+   ggplot(aes(x = Date, y = factor(o, levels = rev(heat.order)))) +
+  geom_tile(aes(fill = relabund), color = "white") +
+   scale_fill_gradient2(low = "#0db5e6", mid = "white", high = "#d31f2a", midpoint = 0.25 ) +
+  labs(x = "", y = "", fill = "Relative Abundance") +
+  #scale_fill_gradient(low = "#0db5e6",  high = "#d31f2a") +
+ #scale_fill_gradient(low = "white",high = "#0db5e6") +
+facet_grid(rows = "z") +
+  custom_theme() +
+  theme(axis.text.y = element_text(size = 12),
+        legend.position = "top") +
+   guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) 
+```
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 16, fig.width = 15, fig.align = "center"}
+
+
+patchwork <- relaheat + zheat
+
+patchwork +  
+  #plot_layout(guides = 'collect') +
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 22)) 
+```
+
+
+# ASV Depth Profiles
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 9, fig.width = 8, fig.align = "center"}
+sar11 <- relabund %>% 
+  ggplot(aes(x = z, y = `Proteobacteria _ Alphaproteobacteria _ SAR11_clade` * 100, group = interaction(Date, CampCN))) +
   geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
   geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("ASV"))), colour = "", fill = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  labs(x = expression(italic(paste(""))), y = expression(italic(paste(""))), colour = "", fill = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+ guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm")) +
+  ggtitle("SAR11")
+
+```
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 9, fig.width = 8, fig.align = "center"}
+sar324 <- relabund %>% 
+  ggplot(aes(x = z, y = relabund$`Proteobacteria _ Deltaproteobacteria _ SAR324_clade(Marine_group_B)` * 100, group = interaction(Date, CampCN))) +
+  geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
+  geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste(""))), y = expression(italic(paste("% Relative Abundance"))), colour = "", fill = "", linetype = "Eddy Location", shape = "Eddy Location") +
   scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
   coord_flip() +
   scale_y_continuous(expand = c(0,0)) +
@@ -977,31 +1118,229 @@ sar11_1a <- rm.groups %>%
   custom_theme() +
   theme(panel.spacing.x = unit(1, "cm"),
         axis.text.x = element_text(angle = 0),
-        legend.key.size = unit(1, "cm"))
+        legend.key.size = unit(1, "cm")) +
+  ggtitle("SAR324")
+
 ```
 
-# Heatmaps
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 9, fig.width = 8, fig.align = "center"}
+sar202 <- relabund %>% 
+  ggplot(aes(x = z, y = relabund$`Chloroflexi _ SAR202_clade _ SAR202_Clade3` * 100, group = interaction(Date, CampCN))) +
+  geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
+  geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste(""))), y = expression(italic(paste("% Relative Abundance"))), colour = "", fill = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+ guides(fill = F, color = F, shape = F, linetype = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm")) +
+  ggtitle("SAR202_clade2")
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 16, fig.width = 18, fig.align = "center"}
-test <- rm.groups %>% 
-  # select(Date, z, `Proteobacteria _ Alphaproteobacteria _ SAR11_clade _ SAR11_Ia`:tail(names(.), 1)) %>%
-  # pivot_longer(., `Proteobacteria _ Alphaproteobacteria _ SAR11_clade _ SAR11_Ia`:tail(names(.), 1), names_to = "taxa", values_to = "relabund")
+```
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 9, fig.width = 8, fig.align = "center"}
+sar406 <- relabund %>% 
+  ggplot(aes(x = z, y = relabund$`Marinimicrobia_(SAR406_clade) _ NA _ NA` * 100, group = interaction(Date, CampCN))) +
+  geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
+  geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste(""))), y = expression(italic(paste("% Relative Abundance"))), colour = "", fill = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+ guides(fill = F, color = F, shape = F, linetype = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm")) +
+  ggtitle("SAR406")
+
+```
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 9, fig.width = 8, fig.align = "center"}
+oceano <- relabund %>% 
+  ggplot(aes(x = z, y = relabund$`Proteobacteria _ Gammaproteobacteria _ Oceanospirillales` * 100, group = interaction(Date, CampCN))) +
+  geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
+  geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste(""))), y = expression(italic(paste(""))), colour = "", fill = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+guides(fill = F, color = F, shape = F, linetype = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm")) +
+  ggtitle("Oceanospirillales")
+
+```
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 9, fig.width = 8, fig.align = "center"}
+flavo <- relabund %>% 
+  ggplot(aes(x = z, y = relabund$`Bacteroidetes _ Flavobacteriia _ Flavobacteriales` * 100, group = interaction(Date, CampCN))) +
+  geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
+  geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste(""))), y = expression(italic(paste(""))), colour = "", fill = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+ guides(fill = F, color = F, shape = F, linetype = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm")) +
+  ggtitle("Flavobacteriales")
   
- #  #top25 taxa
- # select(Date, z, `Proteobacteria _ Alphaproteobacteria _ SAR11_clade _ SAR11_Ia`:`Chloroflexi _ SAR202_clade _ SAR202_Clade1 _ SAR202_Clade1`) %>% 
- #  pivot_longer(., c(`Proteobacteria _ Alphaproteobacteria _ SAR11_clade _ SAR11_Ia`:`Chloroflexi _ SAR202_clade _ SAR202_Clade1 _ SAR202_Clade1`), names_to = "taxa", values_to = "relabund")
 
-select(Date, z, `Proteobacteria _ Alphaproteobacteria _ SAR11_clade`:tail(names(.), 1)) %>%
-  pivot_longer(., `Proteobacteria _ Alphaproteobacteria _ SAR11_clade`:tail(names(.), 1), names_to = "taxa", values_to = "relabund")
+```
 
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 9, fig.width = 8, fig.align = "center"}
+rhodo <- relabund %>% 
+  ggplot(aes(x = z, y = relabund$`Proteobacteria _ Alphaproteobacteria _ Rhodobacterales` * 100, group = interaction(Date, CampCN))) +
+  geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
+  geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste(""))), y = expression(italic(paste(""))), colour = "", fill = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+guides(fill = F, color = F, shape = F, linetype = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm")) +
+  ggtitle("Rhodobacterales")
 
-test %>% 
-  ggplot(aes(x = Date, y = taxa)) +
-  geom_tile(aes(fill = relabund), color = "white") +
-  # scale_fill_gradient2(low = "#0db5e6", mid = "white", high = "#d31f2a", midpoint = 0.05 ) +
-  # scale_fill_gradient(low = "#0db5e6",  high = "#d31f2a") +
-  scale_fill_gradient(low = "white",high = "#0db5e6") +
-facet_grid(~z)
+```
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 9, fig.width = 8, fig.align = "center"}
+salini <- relabund %>% 
+  ggplot(aes(x = z, y = relabund$`Proteobacteria _ Gammaproteobacteria _ Salinisphaerales` * 100, group = interaction(Date, CampCN))) +
+  geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
+  geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("% Relative Abundance"))), colour = "", fill = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+guides(fill = F, color = F, shape = F, linetype = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm")) +
+  ggtitle("Salinisphaerales")
+
+```
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 9, fig.width = 8, fig.align = "center"}
+acidi <- relabund %>% 
+  ggplot(aes(x = z, y = relabund$`Actinobacteria _ Acidimicrobiia _ Acidimicrobiales` * 100, group = interaction(Date, CampCN))) +
+  geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
+  geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste(""))), colour = "", fill = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+guides(fill = F, color = F, shape = F, linetype = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm")) +
+  ggtitle("Acidimicrobiales")
+
+```
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 9, fig.width = 8, fig.align = "center"}
+rick <- relabund %>% 
+  ggplot(aes(x = z, y = relabund$`Proteobacteria _ Alphaproteobacteria _ Rickettsiales` * 100, group = interaction(Date, CampCN))) +
+  geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
+  geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste(""))), y = expression(italic(paste(""))), colour = "", fill = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+guides(fill = F, color = F, shape = F, linetype = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm")) +
+  ggtitle("Rickettsiales")
+
+```
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 9, fig.width = 8, fig.align = "center"}
+rhodosp <- relabund %>% 
+  ggplot(aes(x = z, y = relabund$`Proteobacteria _ Alphaproteobacteria _ Rhodospirillales` * 100, group = interaction(Date, CampCN))) +
+  geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
+  geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste(""))), colour = "", fill = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+guides(fill = F, color = F, shape = F, linetype = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm")) +
+  ggtitle("Rhodospirillales")
+
+```
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 9, fig.width = 8, fig.align = "center"}
+ocs <- relabund %>% 
+  ggplot(aes(x = z, y = relabund$`Proteobacteria _ Alphaproteobacteria _ OCS116_clade` * 100, group = interaction(Date, CampCN))) +
+  geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
+  geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste(""))), y = expression(italic(paste(""))), colour = "", fill = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
+  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+guides(fill = F, color = F, shape = F, linetype = F) +
+  custom_theme() +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm")) +
+  ggtitle("OCS116")
+
+```
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 14, fig.width = 20, fig.align = "center"}
+
+patchwork <- acidi + flavo + ocs + rhodo + rhodosp + rick + sar11 + oceano + salini +  sar406 +  sar324 + sar202
+
+patchwork +  
+  plot_layout(guides = 'collect') +
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 22)) 
 ```
 
 
@@ -1013,29 +1352,25 @@ Let’s make a stacked barplot of Phyla to get a sense of the community composit
 Since this is not a quantitative analysis, and since we have more Phyla in this dataset than we can reasonably distinguish colors, we will prune out low abundance taxa and only include Orders that contribute more than 0.5% of the relative abundance of each sample. Depending on your dataset and the taxonomic level you are depicting, you can adjust this prune parameter. In later analyses, we will of course included these taxa, but for now they will just clutter our plot.
 
 
-```{r}
-# melt to long format (for ggploting) 
-# prune out orders below 0.5% in each sample
-
-stack_sub_ps <- sub_ps %>%
-  tax_glom(taxrank = "Order") %>%                     # agglomerate at phylum level
-  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
-  psmelt() %>%                                         # Melt to long format
-  filter(Abundance >= 0.005) %>%                         # Filter out low abundance taxa
-  arrange(Order)                                      # Sort data frame alphabetically by Order
-```
-
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 14, fig.width = 8, fig.align = "center"}
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 14, fig.width = 16, fig.align = "center"}
 
 # Plot 
-ggplot(stack_sub_ps, aes(x = days, y = Abundance)) + 
+
+stack.data <- value.relabund %>% 
+  select(c(1:12)) %>% 
+  pivot_longer(-c(Date, z), names_to = "taxa", values_to = "relabund") %>% 
+  group_by(Date, z) %>% 
+  mutate(sum = sum(relabund))
+
+stack.data %>% 
+  ggplot(., aes(x =  Date, y = relabund)) + 
   facet_grid(rows = "z") +
-  geom_bar(aes(fill = Order), color = "black", stat = "identity", position = "stack", width = 0.25, stroke = 1) +
+  geom_bar(aes(fill = taxa), color = "black", stat = "identity", position = "stack", width = 0.25, stroke = 1) +
  scale_fill_manual(values = cal_palette("figmtn", n = 19, type = "continuous")) +
   labs(x = "Days") +
   custom_theme() +
   guides(fill = guide_legend(reverse = TRUE, keywidth = 1, kerheight = 1)) +
-  ylab("Relative Abundance (Order > 0.5%) \n") 
+  ylab("Relative Abundance (Top 10 Taxa rep > 88% total community)") 
 ```
 
 
