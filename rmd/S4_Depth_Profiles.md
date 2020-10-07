@@ -25,11 +25,7 @@ library(lmtest)
 library(lmodel2)
 library(rstatix)
 library(ggpubr)
-#for odv type plots
 library(lubridate)
-library(reshape2)
-library(MBA)
-library(mgcv)
 ```
 
 ``` r
@@ -103,10 +99,6 @@ casts <- data %>%
 
 ### NPP
 
-#### Set 1
-
-<img src="S4_Depth_Profiles_files/figure-gfm/unnamed-chunk-10-1.png" style="display: block; margin: auto;" />
-
 ### N
 
 ### DOC
@@ -117,16 +109,10 @@ casts <- data %>%
 
 ### AOU
 
-#### Set 2
-
-<img src="S4_Depth_Profiles_files/figure-gfm/unnamed-chunk-16-1.png" style="display: block; margin: auto;" />
-
 ### BactC
 
 ### BCD
 
 ### µ
 
-#### Set 3
-
-<img src="S4_Depth_Profiles_files/figure-gfm/unnamed-chunk-20-1.png" style="display: block; margin: auto;" />
+<img src="S4_Depth_Profiles_files/figure-gfm/unnamed-chunk-18-1.png" style="display: block; margin: auto;" />

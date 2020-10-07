@@ -175,7 +175,7 @@ chl.plot <-  data %>%
   ggplot(aes(x = z, y = chl, group = interaction(Date, CampCN))) +
   geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
   geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Chl, mg m"^"-3"))), colour = "", fill = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Chl a, mg m"^"-3"))), colour = "", fill = "", linetype = "Eddy Location", shape = "Eddy Location") +
   scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
   coord_flip() +
   scale_y_continuous(expand = c(0,0)) +
@@ -259,7 +259,7 @@ npp.plot <-  npp %>%
   ggplot(aes(x = z, y = npp, group = Date)) +
   geom_line(aes(linetype = eddy, colour = Date), size = 2) +
   # geom_point(aes(fill = Date), size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("Modeled NPP, mmol m"^-3, "d"^-1))), colour = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Modeled NPP, mmol m"^-3, "d"^-1))), colour = "", linetype = "Eddy Location", shape = "Eddy Location") +
   scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
   coord_flip() +
   scale_y_continuous(expand = c(0,0)) +

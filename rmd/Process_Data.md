@@ -149,8 +149,8 @@ dividing bacterial production by bacterial carbon.
 Because there are no BGEs and CCFs associated with AT32, we will apply
 those from AT38 to that cruise.
 
-BCD and specific growth rates will be integrated for the 0-100 m, the
-100-200, and the 200-300 m boxes.
+BCD and specific growth rates will be integrated for the 0-75 m, the
+75-200 m, and the 200-300 m boxes.
 
 ``` r
 #calculate bcd and specific growth rates
@@ -186,18 +186,18 @@ bcd <- interpolated.df %>%
 # Integrations
 
 ``` r
-integ_100 <- bcd %>% 
+integ_75 <- bcd %>% 
   group_by(CampCN) %>% 
-  filter(z <= 100) %>% 
-  mutate(bcd.100 = integrateTrapezoid(z, bcd, type = "A"),
-         bc.100 = integrateTrapezoid(z, bc, type = "A"),
-         doc.100 = integrateTrapezoid(z, doc, type = "A"),
-         phyc.100 = integrateTrapezoid(z, phyc, type = "A"),
-         tdaa.100 = integrateTrapezoid(z, tdaa_c, type = "A")) %>% 
-  mutate_at(vars(contains(".100")), round) %>% 
+  filter(z <= 75) %>% 
+  mutate(bcd.75 = integrateTrapezoid(z, bcd, type = "A"),
+         bc.75 = integrateTrapezoid(z, bc, type = "A"),
+         doc.75 = integrateTrapezoid(z, doc, type = "A"),
+         phyc.75 = integrateTrapezoid(z, phyc, type = "A"),
+         tdaa.75 = integrateTrapezoid(z, tdaa_c, type = "A")) %>% 
+  mutate_at(vars(contains(".75")), round) %>% 
   # depth normalize 
-  mutate_at(vars(contains(".100")), funs(./100)) %>% 
-  select(Cruise, Station, CampCN, contains(".100")) %>% 
+  mutate_at(vars(contains(".75")), funs(./75)) %>% 
+  select(Cruise, Station, CampCN, contains(".75")) %>% 
   # mutate(
   # ######### Estimate BCD:NPP #########
   #        bcd.npp = int.bcd/int.NPP * 100) %>%
@@ -219,18 +219,18 @@ integ_100 <- bcd %>%
     ## This warning is displayed once per session.
 
 ``` r
-integ_200 <- bcd %>% 
+integ_100 <- bcd %>% 
   group_by(CampCN) %>% 
-  filter(between(z, 100, 200)) %>% 
-  mutate(bcd.200 = integrateTrapezoid(z, bcd, type = "A"),
-         bc.200 = integrateTrapezoid(z, bc, type = "A"),
-         doc.200 = integrateTrapezoid(z, doc, type = "A"),
-         phyc.200 = integrateTrapezoid(z, phyc, type = "A"),
-         tdaa.200 = integrateTrapezoid(z, tdaa_c, type = "A")) %>% 
-  mutate_at(vars(contains(".200")), round) %>% 
+  filter(between(z, 75, 100)) %>% 
+  mutate(bcd.100 = integrateTrapezoid(z, bcd, type = "A"),
+         bc.100 = integrateTrapezoid(z, bc, type = "A"),
+         doc.100 = integrateTrapezoid(z, doc, type = "A"),
+         phyc.100 = integrateTrapezoid(z, phyc, type = "A"),
+         tdaa.100 = integrateTrapezoid(z, tdaa_c, type = "A")) %>% 
+  mutate_at(vars(contains(".100")), round) %>% 
   # depth normalize 
-  mutate_at(vars(contains(".200")), funs(./100)) %>% 
-  select(Cruise, Station, CampCN, contains(".200")) %>% 
+  mutate_at(vars(contains(".100")), funs(./25)) %>% 
+  select(Cruise, Station, CampCN, contains(".100")) %>% 
   # mutate(
   # ######### Estimate BCD:NPP #########
   #        bcd.npp = int.bcd/int.NPP * 100) %>% 
@@ -239,7 +239,7 @@ integ_200 <- bcd %>%
 
 integ_300 <- bcd %>% 
   group_by(CampCN) %>% 
-  filter(between(z, 200, 300)) %>% 
+  filter(between(z, 100, 300)) %>% 
   mutate(bcd.300 = integrateTrapezoid(z, bcd, type = "A"),
          bc.300 = integrateTrapezoid(z, bc, type = "A"),
          doc.300 = integrateTrapezoid(z, doc, type = "A"),
@@ -247,7 +247,7 @@ integ_300 <- bcd %>%
          tdaa.300 = integrateTrapezoid(z, tdaa_c, type = "A")) %>% 
   mutate_at(vars(contains(".300")), round) %>% 
   # depth normalize 
-  mutate_at(vars(contains(".300")), funs(./100)) %>% 
+  mutate_at(vars(contains(".300")), funs(./200)) %>% 
   select(Cruise, Station, CampCN, contains(".300")) %>% 
   # mutate(
   # ######### Estimate BCD:NPP #########
@@ -255,46 +255,46 @@ integ_300 <- bcd %>%
   distinct() %>% 
   ungroup()
 
-npp_100 <- npp %>% 
+npp_75 <- npp %>% 
   group_by(Cruise, Station, Date) %>% 
-  filter(z <= 100) %>% 
-  mutate(npp.100 = integrateTrapezoid(z, npp, type = "A")) %>% 
-  mutate_at(vars(contains(".100")), round) %>% 
+  filter(z <= 75) %>% 
+  mutate(npp.75 = integrateTrapezoid(z, npp, type = "A")) %>% 
+  mutate_at(vars(contains(".75")), round) %>% 
   # depth normalize 
-  mutate_at(vars(contains(".100")), funs(./100)) %>% 
-  select(Cruise, Station, Date, contains(".100"))  %>%
+  mutate_at(vars(contains(".75")), funs(./75)) %>% 
+  select(Cruise, Station, Date, contains(".75"))  %>%
   distinct() %>% 
   ungroup()
 
-npp_200 <- npp %>% 
+npp_100 <- npp %>% 
   group_by(Cruise, Station, Date) %>% 
-  filter(between(z, 100, 200)) %>% 
-  mutate(npp.200 = integrateTrapezoid(z, npp, type = "A")) %>% 
-  mutate_at(vars(contains(".200")), round) %>% 
+  filter(between(z, 75, 100)) %>% 
+  mutate(npp.100 = integrateTrapezoid(z, npp, type = "A")) %>% 
+  mutate_at(vars(contains(".100")), round) %>% 
   # depth normalize 
-  mutate_at(vars(contains(".200")), funs(./100)) %>% 
-  select(Cruise, Station, Date, contains(".200"))  %>%
+  mutate_at(vars(contains(".100")), funs(./25)) %>% 
+  select(Cruise, Station, Date, contains(".100"))  %>%
   distinct() %>% 
   ungroup()
 
 npp_300 <- npp %>% 
   group_by(Cruise, Station, Date) %>% 
-  filter(between(z, 201, 300)) %>% 
+  filter(between(z, 100, 300)) %>% 
   mutate(npp.300 = integrateTrapezoid(z, npp, type = "A")) %>% 
   mutate_at(vars(contains(".300")), round) %>% 
   # depth normalize 
-  mutate_at(vars(contains(".300")), funs(./100)) %>% 
+  mutate_at(vars(contains(".300")), funs(./200)) %>% 
   select(Cruise, Station, Date, contains(".300"))  %>%
   distinct() %>% 
   ungroup()
 
 
 
-integrated.df <- left_join(bcd, integ_100) %>% 
-  left_join(., integ_200) %>% 
+integrated.df <- left_join(bcd, integ_75) %>% 
+  left_join(., integ_100) %>% 
   left_join(., integ_300) %>% 
+  left_join(., npp_75) %>% 
   left_join(., npp_100) %>% 
-  left_join(., npp_200) %>% 
   left_join(., npp_300)
 ```
 
