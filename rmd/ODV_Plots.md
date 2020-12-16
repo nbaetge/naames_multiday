@@ -11,23 +11,7 @@ depth)
 
 ``` r
 library(tidyverse) 
-library(rmarkdown)
-library(knitr)
-library(readxl)
-library(data.table) 
-library(scales)
-library(zoo)
-library(oce)
 library(patchwork)
-library(lubridate)
-#rmarkdown tables
-library(stargazer)
-library(pander)
-#stat tests
-library(lmtest)
-library(lmodel2)
-library(rstatix)
-library(ggpubr)
 #for odv type plots
 library(reshape2)
 library(MBA)
@@ -60,17 +44,11 @@ odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe"
 data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
   rename(lat = Latitude)
 
-ctd <- read_rds("~/GITHUB/naames_multiday/Input/ctd/deriv_naames_ctd.rds") %>% 
-  rename(lat = "Latitude [degrees_north]",
-         z = bin_depth) %>% 
-  mutate(bin = round(lat, 1))
+ctd <- read_rds("~/GITHUB/naames_multiday/Input/ctd_data.rds") 
 
 
 #units for npp are mg C / d, we'll convert to µmol C / d
-npp <- read_rds("~/GITHUB/naames_multiday/Input/Z_resolved_model_NPP.rds") %>% 
-  rename(z = depth,
-         npp = NPP) %>% 
-  mutate(npp = round((npp * 10^3)/12)) %>% 
+npp <- read_rds("~/GITHUB/naames_multiday/Input/npp_data.rds") %>% 
   left_join(., data %>% 
               select(Cruise, Station, Date, lat) %>% 
               distinct() %>% 
@@ -83,31 +61,6 @@ npp <- read_rds("~/GITHUB/naames_multiday/Input/Z_resolved_model_NPP.rds") %>%
 ```
 
     ## Joining, by = c("Cruise", "Station", "Date")
-
-``` r
-#markers for multiday stations
-s4_ctd_mark <- ctd %>% 
-  filter(between(z, 0, 300)) %>% 
-  filter(Cruise == "AT34", Station == 4) %>% 
-  select(lat, z) %>% 
-  distinct()
-
-s6_ctd_mark <- ctd %>% 
-  filter(between(z, 0, 300)) %>% 
-  filter(Cruise == "AT38", Station == 6) %>% 
-  select(lat, z) %>% 
-  distinct()
-
-s4_data_mark <- data %>% 
-  filter(between(z, 0, 300)) %>% 
-  filter(Cruise == "AT34", Station == 4) %>% 
-  distinct()
-
-s6_data_mark <- data %>% 
-  filter(between(z, 0, 300)) %>% 
-  filter(Cruise == "AT38", Station == 6) %>% 
-  distinct()
-```
 
 # Plot ODV-style composites
 
@@ -169,12 +122,6 @@ subset <- data %>%
   filter(z >= 0) %>% 
   drop_na(zscore)
 
-s4_mark <- s4_data_mark %>% 
-  drop_na(phyto)
-
-s6_mark <- s6_data_mark %>% 
-  drop_na(phyto)
-
 mba <- mba.surf(subset, no.X = 300, no.Y = 300, extend = F)
 dimnames(mba$xyz.est$z) <- list(mba$xyz.est$x, mba$xyz.est$y)
 mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
@@ -196,18 +143,6 @@ subset <- npp %>%
   mutate(zscore = round(zscore, 2)) %>% 
   filter(z >= 0) %>% 
   drop_na(zscore)
-
-s4_mark <- npp %>% 
-  filter(between(z, 0, 300)) %>% 
-  filter(Cruise == "AT34", Station == 4) %>% 
-  select(lat, z) %>% 
-  distinct() 
-
-s6_mark <- npp %>% 
-  filter(between(z, 0, 300)) %>% 
-  filter(Cruise == "AT38", Station == 6) %>% 
-  select(lat, z) %>% 
-  distinct() 
 
 mba <- mba.surf(subset, no.X = 300, no.Y = 300, extend = F)
 dimnames(mba$xyz.est$z) <- list(mba$xyz.est$x, mba$xyz.est$y)
@@ -231,12 +166,6 @@ subset <- data %>%
   filter(z >= 0) %>% 
   drop_na(zscore)
 
-s4_mark <- s4_data_mark %>% 
-  drop_na(ba)
-
-s6_mark <- s6_data_mark %>% 
-  drop_na(ba)
-
 mba <- mba.surf(subset, no.X = 300, no.Y = 300, extend = F)
 dimnames(mba$xyz.est$z) <- list(mba$xyz.est$x, mba$xyz.est$y)
 mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
@@ -258,12 +187,6 @@ subset <- data %>%
   mutate(zscore = round(zscore, 2)) %>% 
   filter(z >= 0) %>% 
   drop_na(zscore)
-
-s4_mark <- s4_data_mark %>% 
-  drop_na(bcd)
-
-s6_mark <- s6_data_mark %>% 
-  drop_na(bcd)
 
 mba <- mba.surf(subset, no.X = 300, no.Y = 300, extend = F)
 dimnames(mba$xyz.est$z) <- list(mba$xyz.est$x, mba$xyz.est$y)
@@ -287,12 +210,6 @@ subset <- data %>%
   filter(z >= 0) %>% 
   drop_na(zscore)
 
-s4_mark <- s4_data_mark %>% 
-  drop_na(n)
-
-s6_mark <- s6_data_mark %>% 
-  drop_na(n)
-
 mba <- mba.surf(subset, no.X = 300, no.Y = 300, extend = F)
 dimnames(mba$xyz.est$z) <- list(mba$xyz.est$x, mba$xyz.est$y)
 mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
@@ -314,12 +231,6 @@ subset <- data %>%
   mutate(zscore = round(zscore, 2)) %>% 
   filter(z >= 0) %>% 
   drop_na(zscore)
-
-s4_mark <- s4_data_mark %>% 
-  drop_na(doc)
-
-s6_mark <- s6_data_mark %>% 
-  drop_na(doc)
 
 mba <- mba.surf(subset, no.X = 300, no.Y = 300, extend = F)
 dimnames(mba$xyz.est$z) <- list(mba$xyz.est$x, mba$xyz.est$y)
@@ -352,4 +263,11 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 
 ### Patchwork
 
-<img src="ODV_Plots_files/figure-gfm/unnamed-chunk-22-1.png" style="display: block; margin: auto;" />
+``` r
+patchwork <- (beamt.plot / fl.plot / phyto.plot) | (ba.plot / npp.plot / bcd.plot) | (n.plot / doc.plot / aou.plot )
+
+patchwork +  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 22))
+```
+
+![](ODV_Plots_files/figure-gfm/combine%20plots-1.png)<!-- -->

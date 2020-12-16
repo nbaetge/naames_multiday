@@ -10,54 +10,19 @@ output: github_document
 Here, data are processed such that depth-resolved bacterial carbon and specific growth rates are estimated. Integrated and depth-normalized values are also calculated for the 0-100, 100-200, and 200-300 m bins.
 
 
-```{r message = F, warning = F}
+```{r load libraries, message=FALSE, warning=FALSE}
 library(tidyverse) 
-library(rmarkdown)
-library(knitr)
-library(readxl)
-library(data.table) 
-library(scales)
+library(lubridate)
 library(zoo)
 library(oce)
-library(patchwork)
-#rmarkdown tables
-library(stargazer)
-library(pander)
-#stat tests
-library(lmtest)
-library(lmodel2)
-library(rstatix)
-library(ggpubr)
-#for odv type plots
-library(lubridate)
-library(reshape2)
-library(MBA)
-library(mgcv)
-```
 
-```{r message = F, warning = F}
-custom_theme <- function() {
-  theme_test(base_size = 30) %+replace%
-    theme(legend.position = "top",
-          legend.spacing.x = unit(0.5,"cm"),
-          legend.background = element_rect(fill = "transparent",colour = NA),
-          legend.key = element_rect(fill = "transparent",colour = NA),
-          panel.background = element_rect(fill = "transparent",colour = NA),
-          plot.background = element_rect(fill = "transparent",colour = NA)) 
-}
-
-custom.colors <- c("AT39" = "#377EB8", "AT34" = "#4DAF4A", "AT38" = "#E41A1C", "AT32" = "#FF7F00", "Temperate" = "#A6CEE3", "Subpolar" = "#377EB8", "Subtropical" = "#FB9A99", "GS/Sargasso" = "#E41A1C", "Early Spring" = "#377EB8", "Late Spring" = "#4DAF4A","Early Autumn" = "#E41A1C", "Summer" = "#E41A1C", "Late Autumn" = "#FF7F00", "Gv2_2019" = "#377EB8", "WOA18_MN" = "#4DAF4A", "WOA18_AN" = "#E41A1C")
-
-levels = c("GS/Sargasso", "Subtropical", "Temperate", "Subpolar",  "AT39-6", "AT34", "AT38", "AT32","South", "North", "Early Spring", "Late Spring","Early Autumn",  "Summer", "Late Autumn", "Gv2_2019", "WOA18_MN", "WOA18_AN","Nov", "Nov sd", "Dec", "Dec sd", "Jan", "Jan sd", "Feb", "Feb sd", "Mar", "Mar sd", "Apr", "Apr sd",  "Cruise", "ARGO")
-
-bar.colors <- c("100 m" = "white", "CM" = "#4DAF4A",  "PAM" = "#377EB8")
 ```
 
 
 # Import Data
 
-```{r message = F}
-bf <- read_rds("~/GITHUB/naames_multiday/Input/export_ms/processed_bf.8.2020.rds") %>%  
+```{r import data, message=FALSE}
+bf <- read_rds("~/GITHUB/naames_multiday/Input/master/processed_bf.8.2020.rds") %>%  
   select(Cruise:degree_bin, CampCN, Z_MLD, Target_Z, interp_DOC, DOC_sd, interp_TDAA, interp_tdaa_c, TDAA_sd, Asp:Lys, interp_O2_Winkler, O2_Winkler_sd, interp_N_N, N_N_sd,  interp_Chl_a_Fluor,interp_Pro_Influx:interp_Nano_Influx, interp_BactProd_C, BactProd_C_sd, interp_BactAbund, BactAbund_sd) %>%
   rename(bp = interp_BactProd_C, 
          sd_bp = BactProd_C_sd, 
@@ -86,31 +51,44 @@ bf <- read_rds("~/GITHUB/naames_multiday/Input/export_ms/processed_bf.8.2020.rds
          rel.nano = nano/phyto) %>% 
   mutate_all(~ replace(., is.nan(.), NA)) %>% 
   mutate_at(vars(Station), as.numeric) %>% 
-  left_join(., read_csv("~/GITHUB/naames_multiday/Input/phytoC.csv") %>% 
+  left_join(., read_csv("~/GITHUB/naames_multiday/Input/master/phytoC.csv") %>% 
               select(Cruise, Station, CampCN, Target_Z, PhytoC, sd_PhytoC)) %>% 
   #convert phytoC from ug C / L to µmol C / m3
   mutate(PhytoC = PhytoC * (10^3/12),
-         sd_PhytoC = sd_PhytoC * (10^3/12))
+         sd_PhytoC = sd_PhytoC * (10^3/12)) 
+saveRDS(bf, "~/GITHUB/naames_multiday/Input/bottle_data.rds")
 
-ctd <- read_rds("~/GITHUB/naames_multiday/Input/ctd/deriv_naames_ctd.rds")
+ctd <- read_rds("~/GITHUB/naames_multiday/Input/master/deriv_naames_ctd.rds") %>% 
+    rename(lat = "Latitude [degrees_north]",
+         z = bin_depth) %>% 
+  mutate(bin = round(lat, 1),
+         Date = ymd_hm(`yyyy-mm-ddThh:mm:ss.sss`),
+         Date = as_date(round_date(Date, unit = "day")))
+#lol, measured surface par but not par
+saveRDS(ctd, "~/GITHUB/naames_multiday/Input/ctd_data.rds")
 
-bge <- read_rds("~/GITHUB/naames_multiday/Input/bioav_ms/processed_bge.rds")
+bge <- read_rds("~/GITHUB/naames_multiday/Input/master/processed_bge_summary.rds") %>% 
+  select(Season, Station, ave_bge_station, ave_bge_cruise, ave_ccf_station, ave_ccf_cruise) %>% 
+  distinct() %>% 
+  filter(!Station %in% c("S2RD", "S2RF")) %>% 
+  mutate_at(vars(Station), as.numeric)
+saveRDS(bge, "~/GITHUB/naames_multiday/Input/bge_data.rds") 
 
 #units for npp are mg C / d, we'll convert to µmol C / d
-npp <- read_rds("~/GITHUB/naames_multiday/Input/Z_resolved_model_NPP.rds") %>% 
+npp <- read_rds("~/GITHUB/naames_multiday/Input/master/Z_resolved_model_NPP.rds") %>% 
   rename(z = depth,
          npp = NPP) %>% 
   mutate(npp = round((npp * 10^3)/12))
+saveRDS(npp, "~/GITHUB/naames_multiday/Input/npp_data.rds")
 
 ```
 
 # Interpolate Phytoplankton Carbon
 
-```{r warning = FALSE, message = FALSE}
+```{r interpolate, message=FALSE, warning=FALSE}
 
 #split the df by CampCN  
 bf.list <- split(bf, bf$CampCN)
-
 
 #create a function that will linearly interpolate each VOI according to the depth intervals of the casts 
 interpolate.func <- function(casper) {
@@ -143,29 +121,28 @@ interpolated.df <- left_join(bf, interpolations.df) %>%
 
 # Estimate BCD and Specific Growth Rates
 
-We'll estimate BCD for each cast of each station of all the cruises using bacterial production and the seasonal averages of BGE. Station specific BGEs are not used because they could not be computed for N2S4, where ∆DOC was NR. We'll also estimate specific growth rates (mew) by first converting bacterial abundance to bacterial carbon using seasonal  averages of CCFs (from POC taken from initial population) and then dividing bacterial production by bacterial carbon. 
+We'll estimate BCD for each cast of each station of all the cruises using bacterial production and the station averages of BGE. Otherwise, they are calculated using the cruise average bge. We'll also estimate specific growth rates (mew) by first converting bacterial abundance to bacterial carbon using station or seasonal  averages of CCFs (from POC taken from initial population) and then dividing bacterial production by bacterial carbon. 
 
 Because there are no BGEs and CCFs associated with AT32, we will apply those from AT38 to that cruise.
 
 BCD and specific growth rates will be integrated for the 0-75 m, the 75-200 m, and the 200-300 m boxes.
 
-```{r message = F}
+```{r derived vars, message = F}
 #calculate bcd and specific growth rates
 bcd <- interpolated.df %>% 
-  full_join(.,   bge %>%
-              select(Season, season_bge,  ave_initial_ccf) %>%
-              distinct()) %>% 
+  full_join(.,   bge) %>% 
   mutate(Season2 = ifelse(Season %in% c("Early Autumn", "Late Autumn"), "Autumn", "Spring")) %>% 
   group_by(Season2) %>%
-  fill(season_bge:ave_initial_ccf, .direction = "updown") %>% 
+  fill(c(ave_bge_cruise, ave_ccf_cruise), .direction = "updown") %>% 
   ungroup() %>% 
   select(-Season2) %>% 
-  mutate_at(vars(ave_initial_ccf), round) %>% 
-  rename(ccf = ave_initial_ccf) %>% 
+  mutate(bge = ifelse(!is.na(ave_bge_station), ave_bge_station, ave_bge_cruise), 
+         ccf = ifelse(!is.na(ave_ccf_station), ave_ccf_station, ave_ccf_cruise)) %>% 
+ mutate_at(vars(ccf), round) %>% 
   mutate(###########BCD##################
          #units are  µmol C / m3 / d 
          #bp in nmol C / L / d is equivalent to  µmol C / m3 / d 
-         bcd = round(bp/season_bge),
+         bcd = round(bp/bge),
          
          ##########Bacterial Carbon###########
          # bact carbon in µmol C/m3
@@ -183,7 +160,7 @@ bcd <- interpolated.df %>%
 
 # Integrations 
 
-```{r message = F}
+```{r integrate, message=FALSE, warning=FALSE}
 
 integ_75 <- bcd %>% 
   group_by(CampCN) %>% 

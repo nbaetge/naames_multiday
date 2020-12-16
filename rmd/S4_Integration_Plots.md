@@ -8,24 +8,9 @@ Nicholas Baetge
 Here, we plot the integrated from the multiday NAAMES station, N2S4.
 
 ``` r
-library(tidyverse) 
-library(rmarkdown)
-library(knitr)
-library(readxl)
-library(data.table) 
-library(scales)
-library(zoo)
-library(oce)
-library(patchwork)
-#rmarkdown tables
-library(stargazer)
-library(pander)
-#stat tests
-library(lmtest)
-library(lmodel2)
-library(rstatix)
-library(ggpubr)
+library(tidyverse)
 library(lubridate)
+library(patchwork)
 ```
 
 ``` r
@@ -52,13 +37,12 @@ odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe"
 
 ``` r
 data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
-  filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station == 6) %>% 
-  filter(Cruise == "AT34") %>% 
+  filter(Cruise == "AT34" & Station == 4) %>% 
   mutate(time = ymd_hms(datetime),
          interv = interval(first(time), time),
          dur = as.duration(interv),
          days = as.numeric(dur, "days"),
-         eddy = ifelse(Date != "2016-05-27" & Station != 6, "Core", "Outside")) %>% 
+         eddy = ifelse(Date != "2016-05-27", "Core", "Outside")) %>% 
   select(Cruise, Station, Date, eddy, time:days, bcd.75:npp.300) %>% 
   distinct() %>% 
   mutate_at(vars(contains(c("phyc", "npp", "bc"))), function(x) (x / 1000)) %>%
@@ -71,19 +55,6 @@ data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>%
          ) %>% 
    mutate_at(vars(contains("tdaa")), funs(. / 10^3)) #nM to mmol/m3
 ```
-
-    ## Warning: funs() is soft deprecated as of dplyr 0.8.0
-    ## Please use a list of either functions or lambdas: 
-    ## 
-    ##   # Simple named list: 
-    ##   list(mean = mean, median = median)
-    ## 
-    ##   # Auto named with `tibble::lst()`: 
-    ##   tibble::lst(mean, median)
-    ## 
-    ##   # Using lambdas
-    ##   list(~ mean(., trim = .2), ~ median(., na.rm = TRUE))
-    ## This warning is displayed once per session.
 
 # Pivot data
 
@@ -163,4 +134,4 @@ pivoted <- left_join(pivot_phyc_data, pivot_npp_data) %>%
 
 ### TDAA
 
-<img src="S4_Integration_Plots_files/figure-gfm/unnamed-chunk-11-1.png" style="display: block; margin: auto;" />
+![](S4_Integration_Plots_files/figure-gfm/combine%20plots-1.png)<!-- -->

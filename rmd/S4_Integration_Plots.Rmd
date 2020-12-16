@@ -9,30 +9,13 @@ output: github_document
 
 Here, we plot the integrated from the multiday NAAMES station, N2S4.
 
-```{r message = F, warning = F}
-library(tidyverse) 
-library(rmarkdown)
-library(knitr)
-library(readxl)
-library(data.table) 
-library(scales)
-library(zoo)
-library(oce)
-library(patchwork)
-#rmarkdown tables
-library(stargazer)
-library(pander)
-#stat tests
-library(lmtest)
-library(lmodel2)
-library(rstatix)
-library(ggpubr)
+```{r load packages, message = F, warning = F}
+library(tidyverse)
 library(lubridate)
-
-
+library(patchwork)
 ```
 
-```{r}
+```{r aesthetics}
 custom_theme <- function() {
   theme_test(base_size = 30) %+replace%
     theme(legend.position = "right",
@@ -53,18 +36,16 @@ odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe"
 ```
 
 
-
 # Import Data
 
-```{r}
+```{r import data, message=FALSE, warning=FALSE}
 data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
-  filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station == 6) %>% 
-  filter(Cruise == "AT34") %>% 
+  filter(Cruise == "AT34" & Station == 4) %>% 
   mutate(time = ymd_hms(datetime),
          interv = interval(first(time), time),
          dur = as.duration(interv),
          days = as.numeric(dur, "days"),
-         eddy = ifelse(Date != "2016-05-27" & Station != 6, "Core", "Outside")) %>% 
+         eddy = ifelse(Date != "2016-05-27", "Core", "Outside")) %>% 
   select(Cruise, Station, Date, eddy, time:days, bcd.75:npp.300) %>% 
   distinct() %>% 
   mutate_at(vars(contains(c("phyc", "npp", "bc"))), function(x) (x / 1000)) %>%
@@ -81,7 +62,7 @@ data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>%
 
 # Pivot data
 
-```{r message = F}
+```{r pivot data, message=FALSE, warning=FALSE}
 pivot_phyc_data <- data %>% 
   select(Cruise:days,  phyc.75, phyc.100, phyc.300) %>% 
   pivot_longer(phyc.75:phyc.300, names_to = "depth_interval", names_prefix = "phyc.", values_to = "phyc") %>% 
@@ -148,7 +129,7 @@ pivoted <- left_join(pivot_phyc_data, pivot_npp_data) %>%
 
 ### Phyto Carbon
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center", warning = FALSE}
+```{r phyC plot, echo = FALSE, warning = FALSE, message = FALSE}
 phyc.plot <-  pivoted %>% 
   drop_na(phyc) %>% 
   ggplot(aes(x = days, y = phyc)) +
@@ -158,10 +139,10 @@ phyc.plot <-  pivoted %>%
             fill = "light grey", alpha = 0.1) +
   geom_rect( aes(xmin = 2.5, xmax = 3, ymin = -Inf, ymax = Inf),
             fill = "light grey", alpha = 0.1) +
-   geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 0.7) +
+   geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(shape = eddy, fill = factor(depth_interval, levels = levels)), size = 6, color = "black", stroke = 1) + 
   labs(x = expression(italic(paste(""))), y = expression(italic(paste("Phytoplankton Carbon, mmol m"^"-3"))), colour = "") +
-  scale_y_continuous(expand = c(0,0)) +
+  expand_limits(y = c(0.5,3)) +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   scale_fill_manual(values = custom.colors) +
   scale_color_manual(values = custom.colors) +
@@ -174,7 +155,7 @@ phyc.plot <-  pivoted %>%
 
 ### Bact Carbon
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center", warning = FALSE}
+```{r bactC plot, echo = FALSE, warning = FALSE, message = FALSE}
 bc.plot <-  pivoted %>% 
   drop_na(bc) %>% 
   ggplot(aes(x = days, y = bc)) +
@@ -184,10 +165,10 @@ bc.plot <-  pivoted %>%
             fill = "light grey", alpha = 0.1) +
   geom_rect( aes(xmin = 2.5, xmax = 3, ymin = -Inf, ymax = Inf),
             fill = "light grey", alpha = 0.1) +
-  geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 0.7) +
+  geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(shape = eddy, fill = factor(depth_interval, levels = levels)), size = 6, color = "black", stroke = 1) +  
   labs(x = expression(italic(paste(""))), y = expression(italic(paste("Bacterioplankton Carbon, mmol m"^"-3"))), colour = "") +
-  scale_y_continuous(expand = c(0,0)) +
+  expand_limits(y = c(0.5,3)) +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   scale_fill_manual(values = custom.colors) +
   scale_color_manual(values = custom.colors) +
@@ -200,7 +181,7 @@ bc.plot <-  pivoted %>%
 
 ### BCD
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center", warning = FALSE}
+```{r bcd plot, echo = FALSE, warning = FALSE, message = FALSE}
 bcd.plot <-  pivoted %>% 
   drop_na(bcd) %>% 
   ggplot(aes(x = days, y = bcd)) +
@@ -210,10 +191,9 @@ bcd.plot <-  pivoted %>%
             fill = "light grey", alpha = 0.1) +
   geom_rect( aes(xmin = 2.5, xmax = 3, ymin = -Inf, ymax = Inf),
             fill = "light grey", alpha = 0.1) +
-   geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 0.7) +
+   geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(shape = eddy, fill = factor(depth_interval, levels = levels)), size = 6, color = "black", stroke = 1) +  
   labs(x = expression(italic(paste(""))), y = expression(italic(paste("BCD, mmol m"^"-3", "d"^-1))), colour = "") +
-  scale_y_continuous(expand = c(0,0)) +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   scale_fill_manual(values = custom.colors) +
   scale_color_manual(values = custom.colors) +
@@ -226,7 +206,7 @@ bcd.plot <-  pivoted %>%
 
 ### BC : PhyC
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center", warning = FALSE}
+```{r bcd:phyc plot, echo = FALSE, warning = FALSE, message = FALSE}
 bc_phyc.plot <-  pivoted %>% 
   drop_na(bc.phyc) %>% 
   ggplot(aes(x = days, y = bc.phyc)) +
@@ -236,10 +216,9 @@ bc_phyc.plot <-  pivoted %>%
             fill = "light grey", alpha = 0.1) +
   geom_rect( aes(xmin = 2.5, xmax = 3, ymin = -Inf, ymax = Inf),
             fill = "light grey", alpha = 0.1) +
-   geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 0.7) +
+   geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(shape = eddy, fill = factor(depth_interval, levels = levels)), size = 6, color = "black", stroke = 1) +  
   labs(x = expression(italic(paste(""))), y = expression(italic(paste("Bacterioplankton: Phytoplankton Carbon"))), colour = "") +
-  scale_y_continuous(expand = c(0,0)) +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   scale_fill_manual(values = custom.colors) +
   scale_color_manual(values = custom.colors) +
@@ -250,7 +229,7 @@ bc_phyc.plot <-  pivoted %>%
 
 ### DOC
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center", warning = FALSE}
+```{r doc plot, echo = FALSE, warning = FALSE, message = FALSE}
 doc.plot <-  pivoted %>% 
   drop_na(doc) %>% 
   ggplot(aes(x = days, y = doc)) +
@@ -260,10 +239,9 @@ doc.plot <-  pivoted %>%
             fill = "light grey", alpha = 0.1) +
   geom_rect( aes(xmin = 2.5, xmax = 3, ymin = -Inf, ymax = Inf),
             fill = "light grey", alpha = 0.1) +
-  geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 0.7) +
+  geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(shape = eddy, fill = factor(depth_interval, levels = levels)), size = 6, color = "black", stroke = 1) +  
   labs(x = expression(italic(paste("Days on Station"))), y = expression(italic(paste("DOC, mmol m"^"-3"))), colour = "", fill = "Depth Interval", linetype = "Eddy Location", shape = "Eddy Location") +
-  scale_y_continuous(expand = c(0,0)) +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   scale_fill_manual(values = custom.colors) +
   scale_color_manual(values = custom.colors) +
@@ -277,7 +255,7 @@ doc.plot <-  pivoted %>%
 
 ### TDAA
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center", warning = FALSE}
+```{r tdaa plot, echo = FALSE, warning = FALSE, message = FALSE}
 tdaa.plot <-  pivoted %>% 
   drop_na(tdaa) %>% 
   ggplot(aes(x = days, y = tdaa)) +
@@ -287,10 +265,9 @@ tdaa.plot <-  pivoted %>%
             fill = "light grey", alpha = 0.1) +
   geom_rect( aes(xmin = 2.5, xmax = 3, ymin = -Inf, ymax = Inf),
             fill = "light grey", alpha = 0.1) +
-  geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 0.7) +
+  geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(shape = eddy, fill = factor(depth_interval, levels = levels)), size = 6, color = "black", stroke = 1) +  
   labs(x = expression(italic(paste(""))), y = expression(italic(paste("TDAA, mmol m"^"-3"))), colour = "") +
-  scale_y_continuous(expand = c(0,0)) +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   scale_fill_manual(values = custom.colors) +
   scale_color_manual(values = custom.colors) +
@@ -302,7 +279,7 @@ tdaa.plot <-  pivoted %>%
 
 
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 18, fig.width = 24, fig.align = "center", warning = FALSE}
+```{r combine plots, echo = FALSE, warning = FALSE, message = FALSE, fig.height = 18, fig.width = 24}
 
 patchwork <- (phyc.plot + bc.plot + bc_phyc.plot) / (bcd.plot + doc.plot + tdaa.plot)
 

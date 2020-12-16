@@ -9,30 +9,12 @@ output: github_document
 
 Here, we plot the profiles from the multiday NAAMES station, N2S4.
 
-```{r message = F, warning = F}
+```{r load libraries, message=FALSE, warning=FALSE}
 library(tidyverse) 
-library(rmarkdown)
-library(knitr)
-library(readxl)
-library(data.table) 
-library(scales)
-library(zoo)
-library(oce)
 library(patchwork)
-#rmarkdown tables
-library(stargazer)
-library(pander)
-#stat tests
-library(lmtest)
-library(lmodel2)
-library(rstatix)
-library(ggpubr)
-library(lubridate)
-
-
 ```
 
-```{r}
+```{r aesthetics, message=FALSE, warning=FALSE}
 custom_theme <- function() {
   theme_test(base_size = 30) %+replace%
     theme(legend.position = "right",
@@ -54,31 +36,23 @@ odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe"
 
 # Import Data
 
-```{r message = F, warning = F}
+```{r import data, message=FALSE, warning=FALSE}
 data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
-  filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station == 6) %>% 
+  filter(Cruise == "AT34" & Station == 4) %>% 
   mutate_at(vars(contains("tdaa"), Asp:Lys), funs(. / 10^3)) %>% #nM to mmol/m3
   mutate(tdaa_yield = round((tdaa_c/doc)*100, 2),
          eddy = ifelse(Date != "2016-05-27" & Station != 6, "Core", "Outside")) 
 
-npp <- read_rds("~/GITHUB/naames_multiday/Input/Z_resolved_model_NPP.rds") %>% 
-  rename(z = depth,
-         npp = NPP) %>% 
-  mutate(npp = round((npp * 10^3)/12),
-         eddy = ifelse(Date != "2016-05-27" & Station != 6, "Core", "Outside")) %>% 
-  filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station == 6)  
+npp <- read_rds("~/GITHUB/naames_multiday/Input/npp_data.rds") %>% 
+  mutate(eddy = ifelse(Date != "2016-05-27" & Station != 6, "Core", "Outside")) %>% 
+  filter(Cruise == "AT34" & Station == 4)  
 
-ctd <-  read_rds("~/GITHUB/naames_multiday/Input/ctd/deriv_naames_ctd.rds") %>% 
-  rename(lat = "Latitude [degrees_north]",
-         z = bin_depth) %>% 
-  mutate(bin = round(lat, 1),
-         Date = ymd_hm(`yyyy-mm-ddThh:mm:ss.sss`),
-         Date = as_date(round_date(Date, unit = "day")),
-         eddy = ifelse(Date != "2016-05-27" & Station != 6, "Core", "Outside")) %>% 
-  filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station == 6)
+ctd <-  read_rds("~/GITHUB/naames_multiday/Input/ctd_data.rds") %>% 
+  mutate(eddy = ifelse(Date != "2016-05-27" & Station != 6, "Core", "Outside")) %>% 
+  filter(Cruise == "AT34" & Station == 4)
 
 casts <- data %>% 
-  filter(Cruise == "AT34", Date != "2016-05-27") %>% 
+  filter(Cruise == "AT34", Date != "2016-05-27") %>%
   distinct(CampCN) %>% 
   as_vector()
 
@@ -88,77 +62,22 @@ casts <- data %>%
 
 ## Plot MLDs
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center"}
+```{r mld plot, message=FALSE, warning=FALSE, echo = FALSE}
 mld.plot <-  data %>% 
-  filter(Cruise == "AT34") %>% 
   drop_na(mld) %>% 
-  # group_by(Date) %>% 
-  # mutate(mean_mld = mean(mld, na.rm = T),
-  #        sd_mld = sd(mld, na.rm = T)) %>% 
-  # µg / L = mg / m3
   ggplot(aes(x = datetime, y = mld)) +
   geom_line(aes(linetype = eddy), size = 0.7) +
   geom_point(aes(shape = eddy), size = 6, fill = "white", color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = expression(italic(paste(""))), y = expression(italic(paste("MLD, m"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location") +
   guides(linetype = F, shape = F) +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
-  scale_y_reverse(breaks = pretty_breaks()) +
+  expand_limits(y = 300) +
+  scale_y_reverse() +
   custom_theme() +
   theme(panel.spacing.x = unit(1, "cm"),
         axis.text.x = element_text(angle = 0),
         legend.key.size = unit(1, "cm"))
-  
-  mld.plot
 
-```
-
-## Plot T/S
-
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 7, fig.width = 18, fig.align = "center"}
-
-ts.data <- ctd %>% 
-  filter(Cruise == "AT34" & CampCN <= 66) %>% 
-  select(Date, CampCN, z, deriv_potT_c, ave_sal_psu) %>% 
-  arrange(CampCN, z) %>% 
-  filter(z <= 300) %>% 
-  rename(sal = ave_sal_psu,
-         pot.temp = deriv_potT_c)
-
-# make TS long table
-TS <- expand.grid(sal = seq(floor(min(ts.data$sal, na.rm = TRUE)), ceiling(max(ts.data$sal, na.rm = TRUE)), length.out = 100),
-                   pot.temp = seq(floor(min(ts.data$pot.temp, na.rm = TRUE)), ceiling(max(ts.data$pot.temp, na.rm = TRUE)), length.out = 100)
-  )
-TS$density <- gsw_rho_t_exact(SA = TS$sal, t = TS$pot.temp, p = 0) - 1000 # the function calculates in-situ density, but because potential temperature and a single reference pressure is used the result equals potential density at reference pressure
-
-# vertical isopycnal labels
-v.isopycnals <- subset(TS, # make a df for labeling vertical isopycnals
-                       pot.temp == ceiling(max(TS$pot.temp)) & # selects all rows where "sal" is the max limit of the x axis
-                         round(density,1) %in% seq(min(round(TS$density*2)/2),
-                                                   max(round(TS$density*2)/2),
-                                                   by = .5)) # selects any line where the rounded denisty is equal to density represented by any isopycnal in the plot
-v.isopycnals$density <- round(v.isopycnals$density, 1) # rounds the density
-v.isopycnals <- aggregate(sal~density, v.isopycnals, mean) # reduces number of "pot.temp" values to 1 per each unique "density" value
-
- 
-ts.plot <- ggplot() +
-  geom_contour(data = TS, aes(x = sal, y = pot.temp, z = density), col = "grey", linetype = "dashed", breaks = seq(min(round(TS$density*2)/2, na.rm = TRUE), # taking density times 2, rounding and dividing by 2 rounds it to the neares 0.5
-max(round(TS$density*2)/2, na.rm = TRUE),  by = .25)) +
-  geom_point(data = ts.data, # plot only the points that have a z value in color according to z 
-             aes(sal, pot.temp, color = z)) +
-  annotate(geom = "text", x = floor(min(TS$sal, na.rm = TRUE)), y = ceiling(max(TS$pot.temp, na.rm = TRUE)), hjust = "inward", vjust = "inward", color = "grey60", size = 14, label = paste0('sigma',"[",0,"]"), parse = T) +
-  scale_x_continuous(expand = c(0,0), limits = c(floor(min(TS$sal, na.rm = TRUE)), ceiling(max(TS$sal, na.rm = TRUE)))) + # use range of "sal" for x axis
-  scale_y_continuous(limits = c(floor(min(TS$pot.temp, na.rm = TRUE)), ceiling(max(TS$pot.temp, na.rm = TRUE)))) + # use range of "pot.temp" for y axis
-  scale_color_gradientn(colors = odv.colors) +
-  labs(x = expression(italic(paste("Salinity, psu"))), y = expression(italic(paste("Potential Temperature, ˚C"))), color = "Depth, m") +
-  custom_theme() + 
-  facet_grid(~Date) +
-  theme(panel.spacing = unit(4, "lines"),
-        legend.spacing.y = unit(0.5, 'cm')) +
-  guides(color = guide_colorbar(frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1))
-
-
-ts.plot + geom_text(data = v.isopycnals, aes(x = sal, y = ceiling(max(TS$pot.temp)), label = density), vjust = "inward", hjust = 0, col = "grey")
-  
 ```
 
 
@@ -166,9 +85,8 @@ ts.plot + geom_text(data = v.isopycnals, aes(x = sal, y = ceiling(max(TS$pot.tem
 
 ### Chl
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+```{r chl plot, echo = FALSE, warning = FALSE, message = FALSE}
 chl.plot <-  data %>% 
-  filter(Cruise == "AT34") %>% 
   drop_na(chl) %>% 
   # µg / L = mg / m3
   filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
@@ -176,9 +94,9 @@ chl.plot <-  data %>%
   geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
   geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Chl a, mg m"^"-3"))), colour = "", fill = "", linetype = "Eddy Location", shape = "Eddy Location") +
-  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  expand_limits(x = 300) +
+  scale_x_reverse() +
   coord_flip() +
-  scale_y_continuous(expand = c(0,0)) +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
   scale_color_date(low = "#0db5e6", high = "#d31f2a") +
@@ -192,9 +110,8 @@ chl.plot <-  data %>%
 
 ### Phyto Cells
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+```{r phyto plot, echo = FALSE, warning = FALSE, message = FALSE}
 phyto.plot <-  data %>% 
-  filter(Cruise == "AT34") %>% 
   drop_na(phyto) %>% 
   mutate(phyto = phyto * 10^3) %>% 
   group_by(Date, z) %>% 
@@ -206,9 +123,9 @@ phyto.plot <-  data %>%
   geom_line(aes(linetype = eddy, colour = Date), size = 0.7) +
   geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Phytoplankton Cells, m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location") +
-  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  expand_limits(x = 300) +
+  scale_x_reverse() +
   coord_flip() +
-  scale_y_continuous(expand = c(0,0)) +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
   scale_color_date(low = "#0db5e6", high = "#d31f2a") +
@@ -222,9 +139,8 @@ phyto.plot <-  data %>%
 
 ### PhytoC
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+```{r phytoC plot, echo = FALSE, warning = FALSE, message = FALSE}
 phyc.plot <-  data %>% 
-  filter(Cruise == "AT34") %>% 
   drop_na(phyc) %>%
  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
   group_by(Date, z) %>% 
@@ -237,9 +153,9 @@ phyc.plot <-  data %>%
   geom_line(aes(linetype = eddy, colour = Date), size = 0.7) +
   geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Phytoplankton Carbon, mmol m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location") +
-  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  expand_limits(x = 300) +
+  scale_x_reverse() +
   coord_flip() +
-  scale_y_continuous(expand = c(0,0)) +
   scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
   scale_color_date(low = "#0db5e6", high = "#d31f2a") +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
@@ -252,17 +168,15 @@ phyc.plot <-  data %>%
 
 ### NPP
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+```{r npp plot, echo = FALSE, warning = FALSE, message = FALSE}
 npp.plot <-  npp %>% 
-  filter(Cruise == "AT34") %>% 
   mutate(npp = npp/10^3) %>% 
   ggplot(aes(x = z, y = npp, group = Date)) +
   geom_line(aes(linetype = eddy, colour = Date), size = 2) +
-  # geom_point(aes(fill = Date), size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Modeled NPP, mmol m"^-3, "d"^-1))), colour = "", linetype = "Eddy Location", shape = "Eddy Location") +
-  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  expand_limits(x = 300) +
+  scale_x_reverse() +
   coord_flip() +
-  scale_y_continuous(expand = c(0,0)) +
   scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
   scale_color_date(low = "#0db5e6", high = "#d31f2a") +
   guides(colour = F, fill = F, shape = F, linetype = F) +
@@ -272,13 +186,10 @@ npp.plot <-  npp %>%
 
 ```
 
-
-
 ### N
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+```{r n plot, echo = FALSE, warning = FALSE, message = FALSE}
 n.plot <-  data %>% 
-  filter(Cruise == "AT34") %>% 
   drop_na(n) %>% 
   filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
   ggplot(aes(x = z, y = n, group = interaction(Date, CampCN))) +
@@ -286,9 +197,8 @@ n.plot <-  data %>%
   geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
   geom_point(aes(shape = eddy, fill = Date), size = 6,  color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = expression(italic(paste(""))), y = expression(italic(paste("N + N, mmol m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "") +
-  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  scale_x_reverse() +
   coord_flip() +
-  scale_y_continuous(expand = c(0,0)) +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
   scale_color_date(low = "#0db5e6", high = "#d31f2a") +
@@ -303,9 +213,8 @@ n.plot <-  data %>%
 
 ### DOC
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+```{r doc plot, echo = FALSE, warning = FALSE, message = FALSE}
 doc.plot <-  data %>% 
-  filter(Cruise == "AT34") %>% 
   drop_na(doc) %>% 
   filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
   ggplot(aes(x = z, y = doc, group = interaction(Date, CampCN))) +
@@ -313,9 +222,8 @@ doc.plot <-  data %>%
   geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
   geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = expression(italic(paste(""))), y = expression(italic(paste("DOC, mmol m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location") +
-  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  scale_x_reverse() +
   coord_flip() +
-  scale_y_continuous(expand = c(0,0)) +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
   scale_color_date(low = "#0db5e6", high = "#d31f2a") +
@@ -329,9 +237,8 @@ doc.plot <-  data %>%
 
 ### TDAA
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+```{r tdaa plot, echo = FALSE, warning = FALSE, message = FALSE}
 tdaa.plot <-  data %>% 
-  filter(Cruise == "AT34") %>% 
   drop_na(tdaa_c) %>% 
   filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
   ggplot(aes(x = z, y = tdaa_c, group = interaction(Date, CampCN))) +
@@ -339,9 +246,8 @@ tdaa.plot <-  data %>%
   geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
   geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = expression(italic(paste(""))), y = expression(italic(paste("TDAA, mmol C m"^-3))), colour = "", linetype = "Eddy Location", shape = "Eddy Location") +
-  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  scale_x_reverse() +
   coord_flip() +
-  scale_y_continuous(expand = c(0,0)) +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
   scale_color_date(low = "#0db5e6", high = "#d31f2a") +
@@ -356,18 +262,16 @@ tdaa.plot <-  data %>%
 
 ### TDAA Yield
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+```{r tdaa yield plot, echo = FALSE, warning = FALSE, message = FALSE}
 tdaaY.plot <-  data %>% 
-  filter(Cruise == "AT34") %>% 
   drop_na(tdaa_yield) %>% 
   filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
   ggplot(aes(x = z, y = tdaa_yield, group = interaction(Date, CampCN))) +
   geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
   geom_point(aes(shape = eddy, fill = Date), size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = expression(italic(paste(""))), y = expression(italic(paste("TDAA Yield, %"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location") +
-  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  scale_x_reverse() +
   coord_flip() +
-  scale_y_continuous(expand = c(0,0)) +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
   scale_color_date(low = "#0db5e6", high = "#d31f2a") +
@@ -379,14 +283,11 @@ tdaaY.plot <-  data %>%
 
 ```
 
-
-
-
 ### AOU
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+```{r aou plot, echo = FALSE, warning = FALSE, message = FALSE}
 aou.plot <-  ctd %>% 
-  filter(Cruise == "AT34", Date != "2016-05-28") %>% 
+  filter(Cruise == "AT34", Date != "2016-05-28") %>%
   filter(z <= 300) %>% 
   group_by(Date, z) %>% 
   mutate(ave_aou = mean(deriv_aou_umol_kg, na.rm = T),
@@ -396,9 +297,8 @@ aou.plot <-  ctd %>%
   geom_ribbon(aes(ymin = ave_aou - sd_aou, ymax = ave_aou + sd_aou, fill = Date, linetype = eddy), alpha = 0.1) +
   geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
   labs(x = expression(italic(paste(""))), y = expression(italic(paste("AOU, mmol m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location") +
-  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  scale_x_reverse() +
   coord_flip() +
-  scale_y_continuous(expand = c(0,0)) +
   scale_color_date(low = "#0db5e6", high = "#d31f2a") +
   scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
   guides(colour = F, fill = F, shape = F, linetype = F) +
@@ -409,12 +309,9 @@ aou.plot <-  ctd %>%
 
 ```
 
-
-
-
 ### BactC
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+```{r bactC plot, echo = FALSE, warning = FALSE, message = FALSE}
 bc.plot <-  data %>% 
   filter(Cruise == "AT34") %>% 
   drop_na(bc) %>% 
@@ -426,9 +323,8 @@ bc.plot <-  data %>%
   geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
   geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = expression(italic(paste(""))), y = expression(italic(paste("BC, mmol C m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "") +
-  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  scale_x_reverse() +
   coord_flip() +
-  scale_y_continuous(expand = c(0,0)) +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
   scale_color_date(low = "#0db5e6", high = "#d31f2a") +
@@ -442,9 +338,8 @@ bc.plot <-  data %>%
 
 ### BCD
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
+```{r bcd plot, echo = FALSE, warning = FALSE, message = FALSE}
 bcd.plot <-  data %>% 
-  filter(Cruise == "AT34") %>% 
   drop_na(bcd) %>% 
   filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
   mutate(bcd = bcd/10^3,
@@ -454,9 +349,8 @@ bcd.plot <-  data %>%
   geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
   geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = expression(italic(paste(""))), y = expression(italic(paste("BCD, mmol C m"^"-3","d"^-1))), colour = "", linetype = "Eddy Location", shape = "Eddy Location") +
-  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
+  scale_x_reverse() +
   coord_flip() +
-  scale_y_continuous(expand = c(0,0)) +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
   scale_color_date(low = "#0db5e6", high = "#d31f2a") +
@@ -468,33 +362,8 @@ bcd.plot <-  data %>%
 
 ```
 
-### µ
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 20, fig.align = "center", warning = FALSE}
-mew.plot <-  data %>% 
-  filter(Cruise == "AT34") %>% 
-  drop_na(mew) %>% 
-  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
-  ggplot(aes(x = z, y = mew, group = interaction(Date, CampCN))) +
-  geom_errorbar(aes(x = z, ymin = mew - mew.error, ymax = mew + mew.error)) +
-  geom_line(aes(color = Date), size = 0.7) +
-  geom_point(aes(fill = Date), size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("µ, d"^-1))), colour = "") +
-  scale_x_reverse(breaks = pretty_breaks(), expand = c(0,0)) +
-  coord_flip() +
-  scale_y_continuous(expand = c(0,0)) +
-  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
-  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
-  guides(colour = F, fill = F, shape = F, linetype = F) +
-  custom_theme() +
-  theme(panel.spacing.x = unit(1, "cm"),
-        axis.text.x = element_text(angle = 0),
-        legend.title = element_blank())
-
-```
-
-
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 20, fig.width = 22, fig.align = "center"}
+```{r combine plots, echo = FALSE, warning = FALSE, message = FALSE, fig.height = 20, fig.width = 22}
 
 patchwork <- (mld.plot  / chl.plot / phyc.plot / phyto.plot ) | (npp.plot / n.plot / aou.plot / doc.plot ) | (tdaa.plot / tdaaY.plot / bc.plot / bcd.plot)
 
