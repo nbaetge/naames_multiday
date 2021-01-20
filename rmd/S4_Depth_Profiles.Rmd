@@ -11,27 +11,19 @@ Here, we plot the profiles from the multiday NAAMES station, N2S4.
 
 ```{r load libraries, message=FALSE, warning=FALSE}
 library(tidyverse) 
+library(lubridate)
 library(patchwork)
+library(ggpubr)
 ```
 
 ```{r aesthetics, message=FALSE, warning=FALSE}
-custom_theme <- function() {
-  theme_test(base_size = 30) %+replace%
-    theme(legend.position = "right",
-          legend.spacing.x = unit(0.5,"cm"),
-          legend.title = element_text(size = 14),
-          legend.text = element_text(size = 14),
-          legend.background = element_rect(fill = "transparent",colour = NA),
-          legend.key = element_rect(fill = "transparent",colour = NA),
-          panel.background = element_rect(fill = "transparent",colour = NA),
-          plot.background = element_rect(fill = "transparent",colour = NA)) 
-}
 
 custom.colors <- c("AT39" = "#377EB8", "AT34" = "#4DAF4A", "AT38" = "#E41A1C", "AT32" = "#FF7F00", "Temperate" = "#A6CEE3", "Subpolar" = "#377EB8", "Subtropical" = "#FB9A99", "GS/Sargasso" = "#E41A1C", "Early Spring" = "#377EB8", "Late Spring" = "#4DAF4A","Early Autumn" = "#E41A1C", "Late Autumn" = "#FF7F00")
 
 levels = c("GS/Sargasso", "Subtropical", "Temperate", "Subpolar",  "AT39-6", "AT34", "AT38", "AT32","South", "North", "Early Spring", "Late Spring","Early Autumn",  "Late Autumn")
 
-odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe", "#d16cfa")
+# odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe", "#d16cfa")
+odv.colors <- c( "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe", "#d16cfa")
 ```
 
 # Import Data
@@ -40,15 +32,25 @@ odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe"
 data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
   filter(Cruise == "AT34" & Station == 4) %>% 
   mutate_at(vars(contains("tdaa"), Asp:Lys), funs(. / 10^3)) %>% #nM to mmol/m3
-  mutate(tdaa_yield = round((tdaa_c/doc)*100, 2),
-         eddy = ifelse(Date != "2016-05-27" & Station != 6, "Core", "Outside")) 
+  mutate(time = ymd_hms(datetime),
+         interv = interval(first(time), time),
+         dur = as.duration(interv),
+         days = as.numeric(dur, "days"),
+         eddy = ifelse(Date != "2016-05-27", "Core", "Outside"),
+         tdaa_yield = round((tdaa_c/doc)*100, 2))
 
 npp <- read_rds("~/GITHUB/naames_multiday/Input/npp_data.rds") %>% 
-  mutate(eddy = ifelse(Date != "2016-05-27" & Station != 6, "Core", "Outside")) %>% 
+  mutate(interv = interval(ymd("2016-05-24"), Date),
+         dur = as.duration(interv),
+         days = as.numeric(dur, "days"),
+         eddy = ifelse(Date != "2016-05-27" & Station != 6, "Core", "Outside")) %>% 
   filter(Cruise == "AT34" & Station == 4)  
 
 ctd <-  read_rds("~/GITHUB/naames_multiday/Input/ctd_data.rds") %>% 
-  mutate(eddy = ifelse(Date != "2016-05-27" & Station != 6, "Core", "Outside")) %>% 
+  mutate(interv = interval(ymd("2016-05-24"), Date),
+         dur = as.duration(interv),
+         days = as.numeric(dur, "days"),
+         eddy = ifelse(Date != "2016-05-27" & Station != 6, "Core", "Outside")) %>% 
   filter(Cruise == "AT34" & Station == 4)
 
 casts <- data %>% 
@@ -73,8 +75,9 @@ mld.plot <-  data %>%
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   expand_limits(y = 300) +
   scale_y_reverse() +
-  custom_theme() +
-  theme(panel.spacing.x = unit(1, "cm"),
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
         axis.text.x = element_text(angle = 0),
         legend.key.size = unit(1, "cm"))
 
@@ -91,18 +94,21 @@ chl.plot <-  data %>%
   # µg / L = mg / m3
   filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
   ggplot(aes(x = z, y = chl, group = interaction(Date, CampCN))) +
-  geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
-  geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Chl a, mg m"^"-3"))), colour = "", fill = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  geom_line(aes(linetype = eddy, color = days), size = 0.7) +
+  geom_point(aes(shape = eddy, fill = days), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Chl a, mg m"^"-3"))), colour = "", fill = "Days", linetype = "Eddy Location", shape = "Eddy Location") +
   expand_limits(x = 300) +
   scale_x_reverse() +
   coord_flip() +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
-  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
-  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_fill_gradientn(colors = odv.colors) +
+  scale_color_gradientn(colors = odv.colors) +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) +
-  custom_theme() +
-  theme(panel.spacing.x = unit(1, "cm"),
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
         axis.text.x = element_text(angle = 0),
         legend.key.size = unit(1, "cm"))
 
@@ -114,26 +120,29 @@ chl.plot <-  data %>%
 phyto.plot <-  data %>% 
   drop_na(phyto) %>% 
   mutate(phyto = phyto * 10^3) %>% 
-  group_by(Date, z) %>% 
+  group_by(days, z) %>% 
   mutate_at(vars(pro:nano, phyto:rel.nano), mean) %>% 
-  select(Date,  z, phyto, eddy) %>% 
+  select(days,  z, phyto, eddy) %>% 
   distinct() %>% 
   filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
-  ggplot(aes(x = z, y = phyto, group = interaction(Date))) +
-  geom_line(aes(linetype = eddy, colour = Date), size = 0.7) +
-  geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Phytoplankton Cells, m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  ggplot(aes(x = z, y = phyto, group = interaction(days))) +
+  geom_line(aes(linetype = eddy, colour = days), size = 0.7) +
+  geom_point(aes(shape = eddy, fill = days), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Phytoplankton Cells, m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
   expand_limits(x = 300) +
   scale_x_reverse() +
   coord_flip() +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
-  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
-  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_fill_gradientn(colors = odv.colors) +
+  scale_color_gradientn(colors = odv.colors) +
   guides(colour = F, fill = F, shape = F, linetype = F) +
-  custom_theme() +
-  theme(panel.spacing.x = unit(1, "cm"),
-        axis.text.x = element_text(angle = 0),
-        legend.key.size = unit(1, "cm")) 
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 45, vjust = 0.5),
+        legend.key.size = unit(1, "cm"))
 ```
 
 
@@ -149,20 +158,24 @@ phyc.plot <-  data %>%
          sd_phyc = sd(phyc, na.rm = T)) %>%
   ungroup() %>% 
   ggplot(aes(x = z, y = ave_phyc, group = interaction(Date, CampCN))) +
-  geom_errorbar(aes(ymin = ave_phyc - sd_phyc, ymax = ave_phyc + sd_phyc, color = Date), width = 1.5, alpha = 0.7) +
-  geom_line(aes(linetype = eddy, colour = Date), size = 0.7) +
-  geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Phytoplankton Carbon, mmol m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  geom_errorbar(aes(ymin = ave_phyc - sd_phyc, ymax = ave_phyc + sd_phyc, color = days), width = 1.5, alpha = 0.7) +
+  geom_line(aes(linetype = eddy, colour = days), size = 0.7) +
+  geom_point(aes(shape = eddy, fill = days), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Phytoplankton Carbon, mmol m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
   expand_limits(x = 300) +
   scale_x_reverse() +
   coord_flip() +
-  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
-  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_fill_gradientn(colors = odv.colors) +
+  scale_color_gradientn(colors = odv.colors) +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   guides(colour = F, fill = F, shape = F, linetype = F) +
-  custom_theme() +
-  theme(panel.spacing.x = unit(1, "cm"),
-        axis.text.x = element_text(angle = 0))
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm"))
 
 ```
 
@@ -171,18 +184,22 @@ phyc.plot <-  data %>%
 ```{r npp plot, echo = FALSE, warning = FALSE, message = FALSE}
 npp.plot <-  npp %>% 
   mutate(npp = npp/10^3) %>% 
-  ggplot(aes(x = z, y = npp, group = Date)) +
-  geom_line(aes(linetype = eddy, colour = Date), size = 2) +
-  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Modeled NPP, mmol m"^-3, "d"^-1))), colour = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  ggplot(aes(x = z, y = npp, group = days)) +
+  geom_line(aes(linetype = eddy, colour = days), size = 2) +
+  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Modeled NPP, mmol m"^-3, "d"^-1))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
   expand_limits(x = 300) +
   scale_x_reverse() +
   coord_flip() +
-  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
-  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_fill_gradientn(colors = odv.colors) +
+  scale_color_gradientn(colors = odv.colors) +
   guides(colour = F, fill = F, shape = F, linetype = F) +
-  custom_theme() +
-  theme(panel.spacing.x = unit(1, "cm"),
-        axis.text.x = element_text(angle = 0))
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm"))
 
 ```
 
@@ -194,17 +211,20 @@ n.plot <-  data %>%
   filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
   ggplot(aes(x = z, y = n, group = interaction(Date, CampCN))) +
   geom_errorbar(aes(x = z, ymin = n - sd_n, ymax = n + sd_n)) +
-  geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
-  geom_point(aes(shape = eddy, fill = Date), size = 6,  color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("N + N, mmol m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "") +
+  geom_line(aes(linetype = eddy, color = days), size = 0.7) +
+  geom_point(aes(shape = eddy, fill = days), size = 6,  color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste(""))), y = expression(italic(paste("N + N, mmol m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
   scale_x_reverse() +
   coord_flip() +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
-  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
-  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_fill_gradientn(colors = odv.colors) +
+  scale_color_gradientn(colors = odv.colors) +
   guides(colour = F, fill = F, shape = F, linetype = F) +
-  custom_theme() +
-  theme(panel.spacing.x = unit(1, "cm"),
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
         axis.text.x = element_text(angle = 0),
         legend.key.size = unit(1, "cm"))
 
@@ -218,20 +238,23 @@ doc.plot <-  data %>%
   drop_na(doc) %>% 
   filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
   ggplot(aes(x = z, y = doc, group = interaction(Date, CampCN))) +
-  geom_errorbar(aes(x = z, ymin = doc - sd_doc, ymax = doc + sd_doc, color = Date)) +
-  geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
-  geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("DOC, mmol m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  geom_errorbar(aes(x = z, ymin = doc - sd_doc, ymax = doc + sd_doc, color = days)) +
+  geom_line(aes(linetype = eddy, color = days), size = 0.7) +
+  geom_point(aes(shape = eddy, fill = days), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste(""))), y = expression(italic(paste("DOC, mmol m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
   scale_x_reverse() +
   coord_flip() +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
-  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
-  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_fill_gradientn(colors = odv.colors) +
+  scale_color_gradientn(colors = odv.colors) +
   guides(fill = F, color = F, linetype = F, shape = F) +
-  custom_theme() +
-  theme(panel.spacing.x = unit(1, "cm"),
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
         axis.text.x = element_text(angle = 0),
-        legend.title = element_blank())
+        legend.key.size = unit(1, "cm"))
 
 ```
 
@@ -242,20 +265,23 @@ tdaa.plot <-  data %>%
   drop_na(tdaa_c) %>% 
   filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
   ggplot(aes(x = z, y = tdaa_c, group = interaction(Date, CampCN))) +
-  geom_errorbar(aes(x = z, ymin = tdaa_c - sd_tdaa, ymax = tdaa_c + sd_tdaa, color = Date)) +
-  geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
-  geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("TDAA, mmol C m"^-3))), colour = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  geom_errorbar(aes(x = z, ymin = tdaa_c - sd_tdaa, ymax = tdaa_c + sd_tdaa, color = days)) +
+  geom_line(aes(linetype = eddy, color = days), size = 0.7) +
+  geom_point(aes(shape = eddy, fill = days), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste(""))), y = expression(italic(paste("TDAA, mmol C m"^-3))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
   scale_x_reverse() +
   coord_flip() +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
-  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
-  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_fill_gradientn(colors = odv.colors) +
+  scale_color_gradientn(colors = odv.colors) +
   guides(fill = F, color = F, linetype = F, shape = F) +
-  custom_theme() +
-  theme(panel.spacing.x = unit(1, "cm"),
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
         axis.text.x = element_text(angle = 0),
-        legend.title = element_blank())
+        legend.key.size = unit(1, "cm"))
 
 ```
 
@@ -267,19 +293,22 @@ tdaaY.plot <-  data %>%
   drop_na(tdaa_yield) %>% 
   filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
   ggplot(aes(x = z, y = tdaa_yield, group = interaction(Date, CampCN))) +
-  geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
-  geom_point(aes(shape = eddy, fill = Date), size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("TDAA Yield, %"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  geom_line(aes(linetype = eddy, color = days), size = 0.7) +
+  geom_point(aes(shape = eddy, fill = days), size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste(""))), y = expression(italic(paste("TDAA Yield, %"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
   scale_x_reverse() +
   coord_flip() +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
-  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
-  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_fill_gradientn(colors = odv.colors) +
+  scale_color_gradientn(colors = odv.colors) +
   guides(fill = F, color = F, linetype = F, shape = F) +
-  custom_theme() +
-  theme(panel.spacing.x = unit(1, "cm"),
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
         axis.text.x = element_text(angle = 0),
-        legend.title = element_blank())
+        legend.key.size = unit(1, "cm"))
 
 ```
 
@@ -294,43 +323,47 @@ aou.plot <-  ctd %>%
          sd_aou = sd(deriv_aou_umol_kg, na.rm = T)) %>% 
   ungroup() %>% 
   ggplot(aes(x = z, y = ave_aou, group = interaction(Date, CampCN))) +
-  geom_ribbon(aes(ymin = ave_aou - sd_aou, ymax = ave_aou + sd_aou, fill = Date, linetype = eddy), alpha = 0.1) +
-  geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("AOU, mmol m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  geom_ribbon(aes(ymin = ave_aou - sd_aou, ymax = ave_aou + sd_aou, fill = days, linetype = eddy), alpha = 0.1) +
+  geom_line(aes(linetype = eddy, color = days), size = 0.7) +
+  labs(x = expression(italic(paste(""))), y = expression(italic(paste("AOU, mmol m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
   scale_x_reverse() +
   coord_flip() +
-  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
-  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_fill_gradientn(colors = odv.colors) +
+  scale_color_gradientn(colors = odv.colors) +
   guides(colour = F, fill = F, shape = F, linetype = F) +
-  custom_theme() +
-  theme(panel.spacing.x = unit(1, "cm"),
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
         axis.text.x = element_text(angle = 0),
-        legend.title = element_blank())
+        legend.key.size = unit(1, "cm"))
 
 ```
 
-### BactC
+### BactA
 
 ```{r bactC plot, echo = FALSE, warning = FALSE, message = FALSE}
-bc.plot <-  data %>% 
+ba.plot <-  data %>% 
   filter(Cruise == "AT34") %>% 
-  drop_na(bc) %>% 
-  mutate(bc = bc / 10^3,
-         sd_bc = sd_bc/10^3) %>% 
+  drop_na(ba) %>% 
   filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
-  ggplot(aes(x = z, y = bc, group = interaction(Date, CampCN))) +
-  geom_errorbar(aes(x = z, ymin = bc - sd_bc, ymax = bc + sd_bc, color = Date)) +
-  geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
-  geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("BC, mmol C m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "") +
+  ggplot(aes(x = z, y = ba, group = interaction(Date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = ba - sd_ba, ymax = ba + sd_ba, color = days)) +
+  geom_line(aes(linetype = eddy, color = days), size = 0.7) +
+  geom_point(aes(shape = eddy, fill = days), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste(""))), y = expression(italic(paste("Bacterioplankton Cells, m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
   scale_x_reverse() +
   coord_flip() +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
-  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
-  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_fill_gradientn(colors = odv.colors) +
+  scale_color_gradientn(colors = odv.colors) +
   guides(colour = F, fill = F, shape = F, linetype = F) +
-  custom_theme() +
-  theme(panel.spacing.x = unit(1, "cm"),
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
         axis.text.x = element_text(angle = 0),
         legend.key.size = unit(1, "cm"))
 
@@ -345,27 +378,30 @@ bcd.plot <-  data %>%
   mutate(bcd = bcd/10^3,
          sd_bcd = sd_bp/10^3) %>% 
   ggplot(aes(x = z, y = bcd, group = interaction(Date, CampCN))) +
-  geom_errorbar(aes(x = z, ymin = bcd - sd_bcd, ymax = bcd + sd_bcd, color = Date)) +
-  geom_line(aes(linetype = eddy, color = Date), size = 0.7) +
-  geom_point(aes(shape = eddy, fill = Date), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("BCD, mmol C m"^"-3","d"^-1))), colour = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  geom_errorbar(aes(x = z, ymin = bcd - sd_bcd, ymax = bcd + sd_bcd, color = days)) +
+  geom_line(aes(linetype = eddy, color = days), size = 0.7) +
+  geom_point(aes(shape = eddy, fill = days), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = expression(italic(paste(""))), y = expression(italic(paste("BCD, mmol C m"^"-3","d"^-1))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
   scale_x_reverse() +
   coord_flip() +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
-  scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
-  scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  scale_fill_gradientn(colors = odv.colors) +
+  scale_color_gradientn(colors = odv.colors) +
   guides(fill = F, color = F, linetype = F, shape = F) +
-  custom_theme() +
-  theme(panel.spacing.x = unit(1, "cm"),
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
         axis.text.x = element_text(angle = 0),
-        legend.title = element_blank())
+        legend.key.size = unit(1, "cm"))
 
 ```
 
 
 ```{r combine plots, echo = FALSE, warning = FALSE, message = FALSE, fig.height = 20, fig.width = 22}
 
-patchwork <- (mld.plot  / chl.plot / phyc.plot / phyto.plot ) | (npp.plot / n.plot / aou.plot / doc.plot ) | (tdaa.plot / tdaaY.plot / bc.plot / bcd.plot)
+patchwork <- (mld.plot  / chl.plot / phyc.plot / phyto.plot ) | (npp.plot / n.plot / aou.plot / doc.plot ) | (tdaa.plot / tdaaY.plot / ba.plot / bcd.plot)
 
 patchwork +  
   plot_layout(guides = 'collect') +

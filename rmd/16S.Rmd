@@ -9,97 +9,81 @@ output: github_document
 
 Here, the NAAMES cast 16S sequences processed by Luis Bolanos in the Giovannoni group are explored
 
-```{r message = F, warning = F}
+```{r load packages, message=FALSE, warning=FALSE}
 library(tidyverse) 
 library(rmarkdown)
-library(knitr)
-library(readxl)
-library(data.table) 
-library(scales)
-library(zoo)
-library(oce)
 library(patchwork)
-#rmarkdown tables
-library(stargazer)
-library(pander)
-#stat tests
-library(lmtest)
-library(lmodel2)
-library(rstatix)
-library(ggpubr)
-#for odv type plots
 library(lubridate)
-library(reshape2)
-library(MBA)
-library(mgcv)
-#phyloseq
 library(phyloseq)
 library(RColorBrewer)
-
-
+library(ggpubr)
 ```
-```{r}
-custom_theme <- function() {
-  theme_test(base_size = 30) %+replace%
-    theme(legend.position = "right",
-          legend.spacing.x = unit(0.5,"cm"),
-          legend.title = element_text(size = 14),
-          legend.text = element_text(size = 14),
-          legend.background = element_rect(fill = "transparent",colour = NA),
-          legend.key = element_rect(fill = "transparent",colour = NA),
-          panel.background = element_rect(fill = "transparent",colour = NA),
-          plot.background = element_rect(fill = "transparent",colour = NA)) 
-}
-
-custom.colors <- c("AT39" = "#377EB8", "AT34" = "#4DAF4A", "AT38" = "#E41A1C", "AT32" = "#FF7F00", "Temperate" = "#A6CEE3", "Subpolar" = "#377EB8", "Subtropical" = "#FB9A99", "GS/Sargasso" = "#E41A1C", "Early Spring" = "#377EB8", "Late Spring" = "#4DAF4A","Early Autumn" = "#E41A1C", "Summer" = "#E41A1C", "Late Autumn" = "#FF7F00", "Gv2_2019" = "#377EB8", "WOA18_MN" = "#4DAF4A", "WOA18_AN" = "#E41A1C")
-
-levels = c("GS/Sargasso", "Subtropical", "Temperate", "Subpolar",  "AT39-6", "AT34", "AT38", "AT32","South", "North", "Early Spring", "Late Spring","Early Autumn",  "Summer", "Late Autumn", "Gv2_2019", "WOA18_MN", "WOA18_AN","Nov", "Nov sd", "Dec", "Dec sd", "Jan", "Jan sd", "Feb", "Feb sd", "Mar", "Mar sd", "Apr", "Apr sd",  "Cruise", "ARGO", "5-100 m", "150-200 m", "300 m", "> 300 m", "0", "1", "2", "3")
 
 
-bar.colors <- c("100 m" = "white", "CM" = "#4DAF4A",  "PAM" = "#377EB8")
+```{r aesthetics}
+custom.colors <- c("AT39" = "#377EB8", "AT34" = "#4DAF4A", "AT38" = "#E41A1C", "AT32" = "#FF7F00", "Temperate" = "#A6CEE3", "Subpolar" = "#377EB8", "Subtropical" = "#FB9A99", "GS/Sargasso" = "#E41A1C", "Early Spring" = "#377EB8", "Late Spring" = "#4DAF4A","Early Autumn" = "#E41A1C", "Late Autumn" = "#FF7F00",  "5-75 m" = "#27ab19", "100-200 m" = "#feb483", "300 m" = "#d16cfa")
 
-odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe", "#d16cfa")
+levels = c("GS/Sargasso", "Subtropical", "Temperate", "Subpolar",  "AT39-6", "AT34", "AT38", "AT32","South", "North", "Early Spring", "Late Spring","Early Autumn",  "Late Autumn", "5-75 m", "100-200 m", "300 m")
+
+#odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe", "#d16cfa")
+odv.colors <- c( "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe", "#d16cfa")
 ```
 
 # Import Data 
 
-```{r message = F}
+```{r load data, message=FALSE, warning=FALSE}
 
 count.tab <- read.table("~/GITHUB/naames_multiday/Input/16s/HetV1OTU.txt", header = T, row.names = 1, check.names = F)
 
 tax.tab <- as.matrix(read.table("~/GITHUB/naames_multiday/Input/16s/HetV1TUtax.txt", header = T, row.names = 1, check.names = F, na.strings = "", sep = "\t"))
 
 
-ctd <-  readRDS("~/GITHUB/naames_multiday/Input/ctd/deriv_naames_ctd.rds") %>%
-              select(Cruise, Station, CampCN,  bin_depth, deriv_o2_umol_l, fl_mg_m3, ave_temp_c, ave_sal_psu) %>% 
-              mutate(Cruise = ifelse(Cruise == "AT39", "AT39-6", Cruise)) %>% 
-              rename(z = bin_depth,
-                     o2 = deriv_o2_umol_l,
-                     fl = fl_mg_m3,
-                     temp = ave_temp_c,
-                     sal = ave_sal_psu) 
+ctd <-  readRDS("~/GITHUB/naames_multiday/Input/ctd_data.rds") %>%
+  select(Cruise, Station, CampCN,  z, deriv_o2_umol_l, deriv_aou_umol_l, fl_mg_m3, ave_temp_c, ave_sal_psu, ave_dens_kg_m3, beamT_perc ) %>%
+  mutate(Cruise = ifelse(Cruise == "AT39", "AT39-6", Cruise)) %>%
+  rename(o2 = deriv_o2_umol_l,
+         aou = deriv_aou_umol_l,
+         fl = fl_mg_m3,
+         temp = ave_temp_c,
+         sal = ave_sal_psu,
+         dens = ave_dens_kg_m3,
+         beamt = beamT_perc) %>% 
+  mutate_at(vars(Station), as.character) %>% 
+  mutate(Station = ifelse(Cruise == "AT38" & Station == 0, "1A", Station)) 
+  
 
 
-npp <- read_rds("~/GITHUB/naames_multiday/Input/Z_resolved_model_NPP.rds") %>% 
-  rename(z = depth,
-         npp = NPP)
+npp <- read_rds("~/GITHUB/naames_multiday/Input/npp_data.rds")
 
-sample.tab <- read_rds("~/GITHUB/naames_multiday/Input/export_ms/processed_bf.2.2020.rds") %>% 
+sample.tab <- read_rds("~/GITHUB/naames_multiday/Input/master/processed_bf.8.2020.rds") %>% 
   select(Cruise:CampCN, Target_Z, DNA_ID) %>% 
   drop_na(DNA_ID) %>% 
   rename(z = Target_Z) %>% 
   left_join(., read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>%
-              select(Cruise, Station, Date,  CampCN, mld, z,  doc, n, phyc, bc, bcd ) %>% 
+              select(Cruise, Station, Date,  CampCN, mld, z, ba, doc, tdaa, n, phyc, bcd ) %>% 
               distinct() %>% 
+              mutate_at(vars(Station), as.character) %>% 
+              mutate(Station = ifelse(Cruise == "AT38" & Station == 0, "1A", Station)) %>% 
               mutate_at(vars(phyc:bcd), function(x)(x/10^3))) %>% 
-  mutate(`Depth Interval` = ifelse(z <= 100, "5-100 m", "150-200 m"),
-         `Depth Interval` = ifelse(z == 300, "300 m", `Depth Interval`),
-         `Depth Interval` = ifelse(z > 300, "> 300 m", `Depth Interval`)) %>% 
-  select(Cruise:z, `Depth Interval`, everything()) %>% 
+  mutate(z_interv = ifelse(z <= 75, "5-75 m", NA),
+         z_interv = ifelse(z > 75 & z <= 200 , "100-200 m", z_interv),
+         z_interv = ifelse(z == 300, "300 m", z_interv)) %>% 
+  select(Cruise:z,  z_interv, everything()) %>% 
   left_join(., ctd) %>% 
-  left_join(., npp) %>% 
+  left_join(., npp %>% mutate_at(vars(Station), as.character)) %>% 
   rename(latitude = Latitude) %>% 
-  column_to_rownames(var = "DNA_ID") 
+  mutate(eddy = ifelse(Cruise == "AT34" & Station == 4, "Core", NA),
+         eddy = ifelse(Date == "2016-05-27", "Outside", eddy)) %>% 
+  group_by(Cruise, Station) %>% 
+  mutate(time = ymd_hms(datetime),
+         interv = interval(first(time), time),
+         dur = as.duration(interv),
+         hours = round(as.numeric(dur, "days")/3600),
+         days = round(as.numeric(dur, "days")/86400)) %>% 
+  ungroup() %>% 
+  column_to_rownames(var = "DNA_ID") %>% 
+  select(Cruise:CampCN, eddy, hours, days, everything()) %>% 
+  select(-c(time:dur))
 
 ```
 
@@ -113,7 +97,7 @@ TAX = tax_table(tax.tab)
 SAM = sample_data(sample.tab)
 ps = phyloseq(OTU,TAX,SAM) 
 
-sample_data(ps)$`Depth.Interval` <- factor(sample_data(ps)$`Depth.Interval`, levels = levels)
+sample_data(ps)$z_interv <- factor(sample_data(ps)$z_interv, levels = levels)
 sample_data(ps)$Season <- factor(sample_data(ps)$Season, levels = levels)
 
 ```
@@ -124,13 +108,10 @@ We will filter out  chloroplasts and mitochondria, because we only intended to a
 
 ```{r}
 sub_ps <- ps %>%
-  subset_samples(z %in% c(5, 25, 50, 75, 100, 150, 200, 300)) %>%
+  subset_samples(z %in% c(5, 25, 50, 75, 100, 150, 200)) %>%
   subset_taxa(
     Family  != "mitochondria" &
-    Class   != "Chloroplast"
-  )
-
-
+    Order   != "Chloroplast")
 ```
 
 # Sample Summary
@@ -147,50 +128,17 @@ ggplot(sample_sum_df, aes(x = sum)) +
   ggtitle("Distribution of sample sequencing depth") + 
   xlab("Read counts") +
   theme(axis.title.y = element_blank()) +
-  custom_theme()
+  theme_classic2(base_size = 16)
 ```
 
 ```{r}
 # mean, max and min of sample read counts
-smin <- min(sample_sums(sub_ps)) #3944
-smean <- mean(sample_sums(sub_ps)) #85824.59
-smax <- max(sample_sums(sub_ps)) #251468
+smin <- min(sample_sums(sub_ps)) 
+smean <- mean(sample_sums(sub_ps)) 
+smax <- max(sample_sums(sub_ps)) 
 ```
 
-# Stacked Barplots
 
-Let’s make a stacked barplot of Phyla to get a sense of the community composition in these samples.
-
-Since this is not a quantitative analysis, and since we have more Phyla in this dataset than we can reasonably distinguish colors, we will prune out low abundance taxa and only include Phyla that contribute more than 2% of the relative abundance of each sample. Depending on your dataset and the taxonomic level you are depicting, you can adjust this prune parameter. In later analyses, we will of course included these taxa, but for now they will just clutter our plot.
-
-
-```{r}
-# melt to long format (for ggploting) 
-# prune out phyla below 2% in each sample
-
-sub_ps_phylum <- sub_ps %>%
-  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
-  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
-  psmelt() %>%                                         # Melt to long format
-  filter(Abundance > 0.01) %>%                         # Filter out low abundance taxa
-  arrange(Phylum)                                      # Sort data frame alphabetically by phylum
-```
-
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 16, fig.width = 18, fig.align = "center"}
-
-phylum.colors <- colorRampPalette(brewer.pal(10, "Accent"))(length(unique(sub_ps_phylum$Phylum)))
-
-# Plot 
-ggplot(sub_ps_phylum, aes(x = latitude, y = Abundance, fill = Phylum)) + 
-  facet_grid(z~Season) +
-  geom_bar(stat = "identity", position = "stack", width = 0.5, alpha = 0.7) +
-  scale_fill_manual(values = phylum.colors) +
-  labs(x = "Latitude, ˚N") +
-  custom_theme() +
-  guides(fill = guide_legend(reverse = TRUE, keywidth = 1, keyheight = 1)) +
-  ylab("Relative Abundance (Phyla > 1%) \n") +
-  ggtitle("Phylum Composition of Bacterial Communities")
-```
 # Beta Diversity
 
 Beta diversity involves calculating metrics such as distances or dissimilarities based on pairwise comparisons of samples – they don’t exist for a single sample, but rather only as metrics that relate samples to each other. i.e. beta diversity =  patterns in community structure between samples
@@ -199,7 +147,7 @@ Since differences in sampling depths between samples can influence distance/diss
 
 ## Subsample
 
-We will rarefy (random subsample with replacement) the read depth of the samples first (scale to the smallest library size).
+We will rarefy (random subsample with replacement) the read depth of the samples first (scale to the smallest library size) according to Bolaños et al 2021.
 
 [Case for not subsampling]( https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1003531)
 
@@ -218,54 +166,35 @@ Examples:
 - mean reads before = 2k, mean reads after = 1k, small effect.
 
 
-We will subsample  three ways (depths of 5000, minimum read depth of all samples, and no subsampling) and compare resulting patterns, inluding:
-
-- How environmental patterns in alpha diversity change
-- How absolute alpha diversity changes
-- How patterns among samples change (compare distance matrices, or compare PERMANOVA results)
+We will subsample to the minimum read depth of all samples and not subsample. We'll then compare the mean reads pre- and post-subsampling and also compare beta diversity patterns
 
 ```{r}
 
-ps_min <-  rarefy_even_depth(sub_ps, sample.size = min(sample_sums(sub_ps)), rngseed = 532898)
-ps_5000 <-  rarefy_even_depth(sub_ps, sample.size = 5000, rngseed = 532898)
-
-#mean read depth before and after random subsampling, larger differential = greater "effect" on beta diversity
-mean(sample_sums(sub_ps)) #85856
-min(sample_sums(sub_ps)) #9702
-
+ps_min <-  rarefy_even_depth(sub_ps, sample.size = smin, rngseed = 532898)
 
 ```
+
+We can also subset the N2 and the N2S4 data here
+
+
+```{r}
+n2 <- ps_min %>% 
+  subset_samples(Cruise == "AT34")
+
+n2s4 <- ps_min %>% 
+  subset_samples(Cruise == "AT34" & Station == 4)
+```
+
+
+Based on the mean reads pre- and post-subsampling, subsampling here could have a major effect on our beta diversity patterns
 
 ## Unconstrained Ordination
 
 One of the best exploratory analyses for amplicon data is unconstrained ordinations. Here we will look at ordinations of our full community samples. We will rarfy the samples first (scale to the smallest library size).
 
-
-### PCoA
-
-```{r}
-pcoa <- ordinate(ps_min, method = "PCoA", distance = "bray")
-```
-
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 22, fig.align = "center"}
-
-pcoa.plot <- plot_ordination(ps_min, pcoa,  title = "Bray Curtis PCoA") +
-  geom_hline(yintercept = 0, linetype = 2) +
-  geom_point(aes(fill = latitude, shape = Depth.Interval), alpha = 0.6, stroke = 2, size = 4) +
-  scale_shape_manual(values = c(21, 22, 23)) +
-  scale_fill_gradientn(colors = odv.colors) +
-  custom_theme()  
-#removing one of the plotting layers (there are points within points)
-pcoa.plot$layers <- pcoa.plot$layers[-1]
-
-pcoa.plot + 
-  facet_grid(~Season) +
-   guides(fill = guide_colorbar(title = "Latitude, ˚N"), shape = guide_legend(title = "Depth Interval"))
-```
-
 ### NMDS
 
-Let’s try an NMDS instead. For NMDS plots it’s important to set a seed since the starting positions of samples in the alogrithm is random.
+Let’s try an NMDS. For NMDS plots it’s important to set a seed since the starting positions of samples in the alogrithm is random.
 
 Important: if you calculate your bray-curtis distance metric “in-line” it will perform a square root transformation and Wisconsin double standardization. If you don’t want this, you can calculate your bray-curtis distance separately
 
@@ -274,18 +203,33 @@ Important: if you calculate your bray-curtis distance metric “in-line” it wi
 set.seed(1)
 
 # Ordinate
-nmds <- ordinate(ps_min,, method = "NMDS",  distance = "bray") # stress = 0.09
+nmds <- ordinate(sub_ps, method = "NMDS",  distance = "bray") # stress = 0.11
 ```
 
+```{r}
+set.seed(1)
+# Ordinate
+nmds_min <- ordinate(ps_min, method = "NMDS",  distance = "bray") # stress = 0.10
+```
+
+```{r}
+set.seed(7)
+# Ordinate
+nmds_n2 <- ordinate(n2, method = "NMDS",  distance = "bray") # stress = 0.03
+```
+```{r}
+set.seed(7)
+# Ordinate
+nmds_n2s4 <- ordinate(n2s4, method = "NMDS",  distance = "bray") # stress = 0.10
+```
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 22, fig.align = "center"}
 
-nmds.plot <- plot_ordination(ps_min, nmds,  title = "NMDS") +
-  geom_hline(yintercept = 0, linetype = 2) +
-  geom_point(aes(fill = latitude, shape = Depth.Interval), alpha = 0.6, stroke = 2, size = 4) +
+nmds.plot <- plot_ordination(sub_ps, nmds,  title = "NMDS") +
+  geom_point(aes(fill = latitude, shape = z_interv), alpha = 0.6, stroke = 2, size = 4) +
   scale_shape_manual(values = c(21, 22, 23)) +
   scale_fill_gradientn(colors = odv.colors) +
-  custom_theme()  
+  theme_classic2(base_size = 16)  
 #removing one of the plotting layers (there are points within points)
 nmds.plot$layers <- nmds.plot$layers[-1]
 
@@ -294,48 +238,110 @@ nmds.plot +
    guides(fill = guide_colorbar(title = "Latitude, ˚N"), shape = guide_legend(title = "Depth Interval"))
 ```
 
-NMDS plots attempt to show ordinal distances between samples as accurately as possible in two dimensions. It is important to report the stress of these plots, because a high stress value means that the algorithm had a hard time representing the distances between samples in 2 dimensions. The stress of this plot was good - it was .09 (generally anything below .2 is considered acceptable). The PCoA for this data was able to show ~46% variation in just two dimensions, so we may want to stick with that plot.
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 22, fig.align = "center"}
+
+nmds_min.plot <- plot_ordination(ps_min, nmds_min,  title = "NMDS") +
+  geom_point(aes(fill = latitude, shape = z_interv), alpha = 0.6, stroke = 2, size = 4) +
+  scale_shape_manual(values = c(21, 22, 23)) +
+  scale_fill_gradientn(colors = odv.colors) +
+  theme_classic2(base_size = 16)
+#removing one of the plotting layers (there are points within points)
+nmds_min.plot$layers <- nmds_min.plot$layers[-1]
+
+nmds_min.plot + 
+  facet_grid(~Season) +
+   guides(fill = guide_colorbar(title = "Latitude, ˚N"), shape = guide_legend(title = "Depth Interval"))
+```
+
+NMDS plots attempt to show ordinal distances between samples as accurately as possible in two dimensions. It is important to report the stress of these plots, because a high stress value means that the algorithm had a hard time representing the distances between samples in 2 dimensions. The stress of these plots were good - it was .1 (generally anything below .2 is considered acceptable).
+
+It doesn't look like subsampling has a major effect on how we would interpret these beta diversity plots so we'll move forward with ps_min.
+
+Let's take a look at N2.
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
+
+nmds_n2.plot <- plot_ordination(n2, nmds_n2,  title = "NAAMES 2") +
+  stat_ellipse(aes(color = latitude, group = interaction(Station)), type = "t") +
+  # geom_polygon(aes(fill = latitude, group = interaction(latitude, z_interv)), alpha = 0.5) +
+  geom_point(aes(fill = latitude, shape = z_interv), alpha = 0.7, stroke = 2, size = 4) +
+  scale_shape_manual(values = c(21, 22, 23)) +
+  scale_fill_gradientn(colors = odv.colors) +
+  scale_color_gradientn(colors = odv.colors) +
+  theme_classic2(base_size = 16)
+#removing one of the plotting layers (there are points within points)
+nmds_n2.plot$layers <- nmds_n2.plot$layers[-1]
+
+ 
+  
+```
+
+
+95% confidence interval ellipse for the mean (group centroid) tells us something about the sampling distribution of the mean (centroid) we might see if we repeated your data collection a lot of times. In other words we are looking at the uncertainty in the estimate of the population mean (centroid) given the sample of data we collected.
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
+
+nmds_n2s4.plot <- plot_ordination(n2s4, nmds_n2s4,  title = "NAAMES 2 Station 4") +
+  stat_ellipse(aes(color = days, group = interaction(days), linetype = eddy), type = "t") +
+  # geom_polygon(aes(fill = days, group = interaction(days, z_interv)), alpha = 0.5) +
+  geom_point(aes(fill = days, shape = z_interv), alpha = 0.7, stroke = 2, size = 4) +
+  scale_shape_manual(values = c(21, 22, 23)) +
+  scale_color_gradientn(colors = odv.colors) +
+  scale_fill_gradientn(colors = odv.colors) +
+  theme_classic2(base_size = 16)
+#removing one of the plotting layers (there are points within points)
+nmds_n2s4.plot$layers <- nmds_n2s4.plot$layers[-1]
+
+```
+
 
 # Constrained Ordination
 
-Above we used unconstrained ordinations (PCoA, NMDS) to show relationships between samples in low dimensions. We can use a constrained ordination to see how environmental variables are associated with these changes in community composition. We constrain the ordination axes to linear combinations of environmental variables. We then plot the environmental scores onto the ordination
+Above we used unconstrained ordinations (NMDS) to show relationships between samples in low dimensions. We can use a constrained ordination to see how environmental variables are associated with these changes in community composition. We constrain the ordination axes to linear combinations of environmental variables. We then plot the environmental scores onto the ordination
 
 ```{r}
 # Remove data points with missing metadata
-ps_not_na <- ps_min %>%
+ps_not_na <- n2s4 %>%
   subset_samples(
     !is.na(mld) &
       !is.na(npp) & 
       !is.na(doc) &
+      !is.na(ba) &
       !is.na(n) & 
-      !is.na(bc) & 
+      !is.na(aou) & 
+      !is.na(beamt) & 
       !is.na(bcd) & 
       !is.na(o2) & 
+      !is.na(phyc) &
+      !is.na(days) & 
       !is.na(fl) & 
+      !is.na(dens) & 
       !is.na(sal) & 
-      !is.na(temp)
+      !is.na(temp) &
+      eddy == "Core"
   )
 
 bray <- phyloseq::distance(ps_not_na, method = "bray")
 
 # CAP ordinate
-cap_ord <- ordinate(ps_not_na, method = "CAP", distance = bray, formula = ~ mld + doc + n  + bcd + o2 + fl + sal + bc + z + latitude + npp + temp
+cap_ord <- ordinate(ps_not_na, method = "CAP", distance = bray, formula = ~ mld + doc + n  + bcd + ba  + fl  + z + npp +  aou + beamt + phyc + days
 )
 ```
 
 
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 22, fig.align = "center"}
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
 
 # CAP plot
 cap.plot <- plot_ordination(ps_not_na, ordination = cap_ord,  axes = c(1,2)) + 
-  geom_hline(yintercept = 0, linetype = 2) +
-  geom_point(aes(fill = latitude, shape = Depth.Interval), alpha = 0.6, stroke = 2, size = 4) +
+  stat_ellipse(aes(color = days, group = interaction(days), linetype = eddy), type = "t") +
+  geom_point(aes(fill = days, shape = z_interv), alpha = 0.6, stroke = 2, size = 4) +
   scale_shape_manual(values = c(21, 22, 23)) +
   scale_fill_gradientn(colors = odv.colors) +
-  custom_theme()  +
-  facet_grid(~Season) +
-  guides(fill = guide_colorbar(title = "Latitude, ˚N"), shape = guide_legend(title = "Depth Interval"))
+  scale_color_gradientn(colors = odv.colors) +
+  theme_classic2(base_size = 16) +
+  guides(fill = guide_colorbar(title = "Days"), shape = guide_legend(title = "Depth Interval"), linetype = F, color = F) +
+  ggtitle("NAAMES 2 Station 4 Eddy Core")
 #removing one of the plotting layers (there are points within points)
 
 cap.plot$layers <- cap.plot$layers[-1]
@@ -366,7 +372,7 @@ label_map <- aes(x = 1.3 * CAP1,
 arrowhead = arrow(length = unit(0.02, "npc"))
 
 # Make a new graphic
-cap.plot + 
+cap.graph <- cap.plot + 
   geom_segment(
     mapping = arrow_map, 
     size = .5, 
@@ -383,66 +389,318 @@ cap.plot +
 
 ```
 
+```{r fig.height=7, fig.width=22}
+(nmds_n2.plot + 
+  guides(fill = guide_colorbar(title = "Latitude, ˚N"), shape = F, color = F)) +
+
+(nmds_n2s4.plot + 
+  guides(fill = guide_colorbar(title = "Days"), shape = F, linetype = guide_legend(title = "Eddy Location"), color = F)) +
+  
+  cap.graph +
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 22),
+        plot.title = element_text(size = 18)) 
+
+```
+
+
 Do a permutational ANOVA on constrained axes used in ordination
 
 ```{r}
 anova(cap_ord)
 ```
 
+# Betadisper and permutational ANOVA
+
+Above, we performed beta diversity analyses on Bray-Curtis distances on
+rarefied datasets that were then visualized using NMDS and CAP.
+We can test if there are statistically significant differences between
+sample groups using the betadisper and adonis functions of the vegan
+package. Betadisper tests whether two or more groups are homogeneously
+dispersed in relation to their species in studied samples. This test can
+be done to see if one group has more compositional variance than
+another. Moreover, homogeneity of dispersion among groups is very
+advisable to have if you want to test if two or more groups have
+different compositions, which is tested by adonis.
+
+## Phyloseq to DESeq, distance matrix
+
+To be able to run the stats, we first have to create a distance matrix
+from our data. We’ll use the DESeq package to do so.
+
+```{r message=FALSE, warning=FALSE}
+library(DESeq2)
+library(vegan)
+```
+
+```{r}
+deseq_counts <- phyloseq_to_deseq2(ps_min, design = ~latitude ) #the design argument is required but doesn't matter here
+```
+
+```{r}
+deseq_count_tab <- assay(deseq_counts) #extract the read count matrix
+```
+
+We’ll calculate euclidean distances
 
 
-# Custom Table
+```{r}
+#We can subset our data if we want to and calculate distances/run stats for only a subset of the group. The code below shows how
 
-phyloseq objects can sometimes be hard to handle when you have a particular plot in mind that you want to make. to make it easier for us: we'll extract the relative abundance data from the object and merge them with the taxa and sample info data as a new dataframe
+sample.tab2 <- sample.tab %>%
+  rownames_to_column() %>% 
+  filter(z %in% c(5, 25, 50, 75, 100, 150, 200)) %>% 
+  column_to_rownames(var = "rowname")
+
+subset_sample_IDs_n2 <-  row.names(sample.tab2)[sample.tab2$Cruise == "AT34"]
+subset_sample_IDs_n2s4 <-  row.names(sample.tab2)[sample.tab2$Station == 4 & sample.tab2$Cruise == "AT34"]
+
+
+euc_dist_n2 <- dist(t(deseq_count_tab[ , colnames(deseq_count_tab) %in% subset_sample_IDs_n2]))
+euc_dist_n2s4 <- dist(t(deseq_count_tab[ , colnames(deseq_count_tab) %in% subset_sample_IDs_n2s4]))
+
+sample_info_tab_n2 <- sample.tab2[row.names(sample.tab2) %in% subset_sample_IDs_n2, ]
+sample_info_tab_n2s4 <- sample.tab2[row.names(sample.tab2) %in% subset_sample_IDs_n2s4, ]
+```
+
+Betadisper first calculates the average distance of group members to the group centroid in multivariate space (generated by a distance matrix).
+
+Our first question is: Is the community composition between stations on N2 different ?
+
+In the function below: we are using the distance matrix to calculate the multivariate dispersions (variances; average distance to centroids). We then use group dispersions to perform an ANOVA test.
+
+```{r}
+anova(betadisper(euc_dist_n2, sample_info_tab_n2$Station)) 
+```
+
+**Our groups (stations) at N2 do not present homogeneity among group
+dispersions (compositions vary differently)**
+
+```{r}
+anova(betadisper(euc_dist_n2s4, sample_info_tab_n2s4$days)) 
+```
+
+```{r}
+adonis(euc_dist_n2s4~sample_info_tab_n2s4$days)
+```
+
+
+The ANOVA’s p-value is not significant meaning that group dispersions are homogenous (“Null hypothesis of no difference in dispersion between groups”)
+
+Adonis analyzes and partitions sums of squares using distance matrices. It can be seen as an ANOVA using distance matrices (analogous to MANOVA – multivariate analysis of variance). Therefore, it is used to test if two or more groups have similar compositions.
+
+**Our groups (days) at N2S4 present homogeneity among group
+dispersions (compositions vary similarly) and have significantly
+different compositions.**
+
+# Alpha Diversity
+
+
+Estimating alpha diversity of microbial communities is [problematic](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC93182/) no matter what you do. 
+
+We are going to calculate the Chao1 index for richness and the Shannon diversity index. 
+
+**it is important to note that the alpha diversity values are not interpretable as “real” numbers of anything (due to the nature of amplicon data), but they can still be useful as relative metrics of comparison. If Chao1 richness goes up, but Shannon diversity goes down, it indicates that the sample may have more ASVs but is dominated by a few of them.**
+
+We will use the subsampled library, which retains estimates of the species abundance of the real population while standardizing sampling effort.
+
+[subsampling  and alpha diversity paper](https://www.frontiersin.org/articles/10.3389/fmicb.2019.02407/full)
+
+[Chao1: nonparametric estimation of minimum community richness](https://www.jstor.org/stable/4615964?seq=1#metadata_info_tab_contents) 
+
+
+```{r}
+richness <- estimate_richness(n2s4, measures = c("Chao1", "Shannon")) %>% 
+  rownames_to_column(., var = "DNA_ID") %>% 
+  mutate_at(vars(DNA_ID), str_replace_all, pattern = "NAAMES2.", "NAAMES2-") 
+```
+
+
+Let’s add the sample metadata into this dataframe 
+
+```{r}
+alphadiv <- left_join(richness, sample.tab2 %>% rownames_to_column(., var = "DNA_ID")) 
+```
+
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center"}
+
+# install.packages("ggpubr")
+library(ggpubr)
+
+pivot.data <- alphadiv %>% 
+  filter(eddy == "Core") %>% 
+  select(days, z, z_interv, Chao1, Shannon) %>% 
+  pivot_longer(.,  cols = c(Chao1,  Shannon), names_to = "measure", values_to = "est" ) %>% 
+  left_join(., alphadiv %>% 
+              filter(eddy == "Core") %>% 
+              select(days, z, z_interv, se.chao1)) %>% 
+  mutate(se.chao1 = ifelse(measure == "Chao1", se.chao1, NA)) 
+
+alpha.plot <- ggboxplot(pivot.data, x = "days", y = "est",
+            # color = "Location",
+            # palette = c("#0db5e6","#d31f2a"),
+            xlab = expression(italic(paste("Days"))), 
+            ylab = expression(italic(paste("Alpha Diversity Measure"))),
+            add = "dotplot",
+            add.params = list(size = 1, shape = 21, fill = "white"),
+            outlier.shape = NA,
+            width = 0.4,
+            ggtheme = theme_classic2(base_size = 16)) +  
+  stat_compare_means() +
+  facet_grid(measure~ factor(z_interv, levels = levels), scales = "free") 
+
+alpha.plot
+```
+
+Boxes represent the 1.5 interquartile range, with the internal solid line representing the median. Circles represent data points. p-values are reported  the non-parametric two sample Wilcoxon test, which tests whether the means between two groups are equal (ns: p > 0.05, * : p≤ 0.05, ** : p ≤ 0.01).
+
+Difference in the alpha diversity indexes among conditions were tested using pairwise Wilcoxon tests; p < 0.05 was considered the threshold significance for a difference between conditions.
+
+From this plot of community composition in the eddy core we can see within the depth horizons that the richness (via Chao index) of our samples  did not significantly change and the overall diversity (via Shannon index) also did not change. 
+
+# Who??
+
+Which taxa were important? Which taxa were contributing to the change in community compositon?
+
+**Note: Recovered 16S rRNA gene copy numbers do not equal organism abundance.**
+
+That said, we can generate a heat map of our samples showing us how the relative abundance of different taxonomic groups change...potentially giving us a visual of which taxa are most important to the alpha and beta diversity patterns we observed. 
+First, we're going to generate a custom table that will be easier to work with than a phyloseq object.
+
 
 
 ## Generate relative abundances
 
-Our data currently shows the relative proportion of different sequences to the total number of gene copies recovered, so we'll normalize the gene copy number
+Our data currently shows number gene copies recovered, so we'll convert to percentages (relative abundances)
 
 ```{r}
-ps_std <- transform_sample_counts(sub_ps, function(x) x/sum(x))
+n2s4_core <- n2s4 %>% 
+  subset_samples(eddy == "Core")
+ps_std <- transform_sample_counts(n2s4_core, function(x) x/sum(x))
 #extract the relative abundance table and coerce into dataframe
 ps_std.tab <- as(otu_table(ps_std), "matrix")
 ps_std.df = as.data.frame(ps_std.tab) 
 ```
 
-## Table with Rel Abund, Taxa, Sample Info 
+### Make table
 
-Create a new table that combines relative abundances with the taxa table
-
-```{r}
+```{r warning = F}
 #first coerce the taxa table into a data frame
-tax.df = as.data.frame(tax.tab) 
+tax.df <-  as.data.frame(tax.tab) 
 #then combine the data frames
 custom.tab <- tax.df %>% 
   rownames_to_column(., var = "asv") %>% 
   left_join(., ps_std.df %>% rownames_to_column(., var = "asv")) %>% 
-  #create a new index of that combines the  class, order, family, and genus values
-  mutate(cofg = paste(Class, "_", Order,"_", Family, "_", Genus )) %>% 
+  #create a new index of that combines the  class, order, family, and genus values, you can play around here!!
+  mutate(#pcofg = paste(Phylum, "_", Class, "_", Order,"_", Family, "_", Genus),
+         pcof = paste(Phylum, "_", Class, "_", Order,"_", Family)) %>% 
+         # pco = paste(Phylum, "_", Class, "_", Order)) %>% 
   select(-c(asv:Genus)) %>% 
-  select(cofg:everything()) 
+  select(pcof,everything()) %>%
+  group_by(pcof) %>%
+  # select(pco,everything()) %>% 
+  # group_by(pco) %>% 
+  #here we are combining the relative abundances based on our grouping
+  summarise_at(vars(!contains(c("pco"))), sum, na.rm = T) %>% 
+  ungroup()
 
 #save the row names and then make them into the column names
-colnames <- custom.tab[,1]
+colnames <- custom.tab[,1] 
 
 #transpose the dataframe so we can merge with the sample info table
 t_custom.tab <-  as.data.frame(t(custom.tab[,-1]))
-colnames(t_custom.tab) <- colnames
+colnames(t_custom.tab) <- colnames$pcof
+# colnames(t_custom.tab) <- colnames$pco
 
 #merge
 sweet.tab <- t_custom.tab %>% 
   rownames_to_column(., var = "sample") %>% 
   left_join(., sample.tab %>% rownames_to_column(., var = "sample")) %>% 
-  select(sample, Cruise:bcd, everything()) %>% 
-  arrange(CampCN, z)
+  select(sample, Cruise:npp, everything())
+
+
+relabund <- sweet.tab %>% 
+  select(-c(sample:npp)) %>% 
+  #remove groups that are completely absent
+  .[ , colSums(.) > 0] %>% 
+  #arrange by biggest contributors
+  .[, order(colSums(-.))] %>% 
+  bind_cols(sweet.tab %>% select(sample:npp), .)
 ```
+
+## Heatmap
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 12, fig.align = "center"}
+relaheat.data <- relabund %>% 
+  select(-c(sample, Cruise:hours, z_interv:npp)) %>%
+  pivot_longer(.,-c(days, z), names_to = "taxa", values_to = "relabund") %>% 
+  separate(taxa, into = c("p", "c", "o", "f"), sep = " _ ") %>% 
+  mutate(cof = paste(c, o, f, sep = "_")) %>% 
+  group_by(days, z, cof) %>% 
+  mutate(mean_relabund = mean(relabund, na.rm = T)) %>% 
+  ungroup() %>% 
+  select(-relabund) %>% 
+  distinct() %>% 
+  mutate_at(vars(p,c,o, cof), str_replace_all, "NA", "Unassigned") %>% 
+  arrange(desc(cof), mean_relabund)
+
+# install.packages("viridis")
+# library(viridis)
+
+relaheat_class <- relaheat.data %>%
+  filter(mean_relabund > 0.01) %>% 
+  ggplot(aes(x = days, y = c)) +
+  geom_tile(aes(fill = mean_relabund), color = "white") +
+  scale_fill_gradientn(colors = odv.colors) +
+  # scale_fill_viridis(option = "D", begin = 0.01) +
+  labs(x = "Days", y = "Class", fill = "Relative Abundance") +
+  facet_grid(~z) +
+  theme_classic2(base_size = 16) +
+  theme(axis.text.y = element_text(size = 12)) +
+   guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) 
+
+
+
+relaheat_order <- relaheat.data %>%
+  filter(mean_relabund > 0.01) %>% 
+  ggplot(aes(x = days, y = o)) +
+  geom_tile(aes(fill = mean_relabund), color = "white") +
+  scale_fill_gradientn(colors = odv.colors) +
+  # scale_fill_viridis(option = "D", begin = 0.01) +
+  labs(x = "Days", y = "Order", fill = "Relative Abundance") +
+  facet_grid(~z) +
+  theme_classic2(base_size = 16) +
+  theme(axis.text.y = element_text(size = 12)) +
+   guides(color = F, fill = F) 
+
+
+relaheat_cof <- relaheat.data %>%
+  filter(mean_relabund > 0.01) %>% 
+  ggplot(aes(x = days, y = cof)) +
+  geom_tile(aes(fill = mean_relabund), color = "white") +
+  scale_fill_gradientn(colors = odv.colors) +
+  # scale_fill_viridis(option = "D", begin = 0.01) +
+  labs(x = "Days", y = "Class_Order", fill = "Relative Abundance") +
+  facet_grid(~z) +
+  theme_classic2(base_size = 16) +
+  theme(axis.text.y = element_text(size = 12), legend.position = "top") +
+   guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) 
+
+
+relaheat_cof
+
+```
+
 
 ## Save
 
 ```{r}
-saveRDS(sweet.tab, "~/GITHUB/naames_multiday/Output/Custom_ASV_Table.rds")
+
+saveRDS(sample.tab, "~/GITHUB/naames_multiday/Output/Sample_Table.rds")
+saveRDS(relabund, "~/GITHUB/naames_multiday/Output/Relabund_Table.rds")
 saveRDS(sub_ps, "~/GITHUB/naames_multiday/Output/phyloseq_obj.rds")
+saveRDS(ps_min, "~/GITHUB/naames_multiday/Output/phyloseq_obj_min.rds")
 
 
 ```
