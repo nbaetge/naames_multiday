@@ -11,6 +11,7 @@ Here, ODV-style section plots are made from data. Data are first transformed to 
 ```{r load libraries, message=FALSE, warning=FALSE}
 library(tidyverse) 
 library(patchwork)
+library(ggpubr)
 #for odv type plots
 library(reshape2)
 library(MBA)
@@ -19,17 +20,6 @@ library(mgcv)
 ```
 
 ```{r aesthetics}
-custom_theme <- function() {
-  theme_test(base_size = 30) %+replace%
-    theme(legend.position = "right",
-          legend.spacing.x = unit(0.5,"cm"),
-          legend.title = element_text(size = 14),
-          legend.text = element_text(size = 14),
-          legend.background = element_rect(fill = "transparent",colour = NA),
-          legend.key = element_rect(fill = "transparent",colour = NA),
-          panel.background = element_rect(fill = "transparent",colour = NA),
-          plot.background = element_rect(fill = "transparent",colour = NA)) 
-}
 
 custom.colors <- c("AT39" = "#377EB8", "AT34" = "#4DAF4A", "AT38" = "#E41A1C", "AT32" = "#FF7F00", "Temperate" = "#A6CEE3", "Subpolar" = "#377EB8", "Subtropical" = "#FB9A99", "GS/Sargasso" = "#E41A1C", "Early Spring" = "#377EB8", "Late Spring" = "#4DAF4A","Early Autumn" = "#E41A1C", "Late Autumn" = "#FF7F00")
 
@@ -98,10 +88,10 @@ beamt.plot <-  mba %>%
   # geom_point(data = s4_ctd_mark, aes(x = lat, y = z), colour = "Black", size = 0.4, shape = 3, alpha = 0.1) +
   scale_fill_gradientn(colors = odv.colors) +
   scale_y_reverse() +
-  labs(y = expression(italic("Depth, m")), x = expression(italic("")), fill = expression(italic(paste("z-score")))) +
+  labs(y = "Depth, m", x = "", fill = "z-score") +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
   theme(legend.spacing.y = unit(0.5, 'cm')) +
-  custom_theme() +
+  theme_classic2(base_size = 20) +
   ggtitle("Beam Transmission")
 ```
 
@@ -139,10 +129,10 @@ fl.plot <-  mba %>%
   geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 0.4, shape = 3, alpha = 0.1) +
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse() +
-  labs(y = expression(italic("Depth, m")), x = expression(italic("")), fill = expression(italic(paste("")))) +
+  labs(y = "Depth, m", x = "", fill = "z-score") +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
   theme(legend.spacing.y = unit(0.5, 'cm')) +
-  custom_theme() +
+  theme_classic2(base_size = 20) +
   ggtitle("Fluorescence")
 
 ```
@@ -183,10 +173,10 @@ phyto.plot <-  mba %>%
   scale_fill_gradientn(colors = rev(odv.colors)) +
   expand_limits(y = 300) +
   scale_y_reverse() +
-  labs(y = expression(italic("Depth, m")), x = expression(italic("Latitude,˚N")), fill = expression(italic(paste("")))) +
+  labs(y = "Depth, m", x = "", fill = "z-score") +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
   theme(legend.spacing.y = unit(0.5, 'cm')) +
-  custom_theme() +
+  theme_classic2(base_size = 20) +
   ggtitle("Phytoplankton Abundance")
 
 ```
@@ -227,10 +217,10 @@ npp.plot <-  mba %>%
   scale_fill_gradientn(colors = rev(odv.colors)) +
   expand_limits(y = 300) +
   scale_y_reverse() +
-  labs(y = expression(italic("")), x = expression(italic("")), fill = expression(italic(paste("")))) +
+ labs(y = "Depth, m", x = "", fill = "z-score") +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
   theme(legend.spacing.y = unit(0.5, 'cm')) +
-  custom_theme() +
+  theme_classic2(base_size = 20) +
   ggtitle("Modeled NPP")
 
 ```
@@ -271,10 +261,10 @@ ba.plot <-  mba %>%
  geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 2, shape = 3, alpha = 0.6) +
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse() +
-  labs(y = expression(italic("")), x = expression(italic("")), fill = expression(italic(paste("z-score")))) +
+  labs(y = "Depth, m", x = "", fill = "z-score") +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
   theme(legend.spacing.y = unit(0.5, 'cm')) +
-  custom_theme() +
+  theme_classic2(base_size = 20) +
   ggtitle("Bacterioplankton Abundance")
 
 ```
@@ -314,10 +304,10 @@ bcd.plot <-  mba %>%
   geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 2, shape = 3, alpha = 0.6) +
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse() +
-  labs(y = expression(italic("")), x = expression(italic("Latitude, ˚N")), fill = expression(italic(paste("")))) +
+  labs(y = "Depth, m", x = "", fill = "z-score") +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
   theme(legend.spacing.y = unit(0.5, 'cm')) +
-  custom_theme() +
+  theme_classic2(base_size = 20) +
   ggtitle("Bacterioplankton Carbon Demand")
 
 ```
@@ -358,10 +348,10 @@ n.plot <-  mba %>%
   geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 2, shape = 3, alpha = 0.6) +
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse() +
-  labs(y = expression(italic("")), x = expression(italic("")), fill = expression(italic(paste("z-score")))) +
+  labs(y = "Depth, m", x = "", fill = "z-score") +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
   theme(legend.spacing.y = unit(0.5, 'cm')) +
-  custom_theme() +
+  theme_classic2(base_size = 20) +
   ggtitle("N + N")
 
 ```
@@ -401,10 +391,10 @@ doc.plot <-  mba %>%
   geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 2, shape = 3, alpha = 0.6) +
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse() +
-  labs(y = expression(italic("")), x = expression(italic("")), fill = expression(italic(paste("")))) +
+  labs(y = "Depth, m", x = "", fill = "z-score") +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
   theme(legend.spacing.y = unit(0.5, 'cm')) +
-  custom_theme() +
+  theme_classic2(base_size = 20) +
   ggtitle("DOC")
 
 ```
@@ -446,19 +436,21 @@ aou.plot <-  mba %>%
   geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 0.4, shape = 3, alpha = 0.1) +
   scale_fill_gradientn(colors = rev(odv.colors)) +
   scale_y_reverse() +
-  labs(y = expression(italic("")), x = expression(italic("Latitude, ˚N")), fill = expression(italic(paste("")))) +
+  labs(y = "", x = "Latitude, ˚N", fill = "z-score") +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
   theme(legend.spacing.y = unit(0.5, 'cm')) +
-  custom_theme() +
+  theme_classic2(base_size = 20) +
   ggtitle("AOU")
 
 ```
 
 ### Patchwork
 
-```{r combine plots, fig.height=20, fig.width=34, message=FALSE, warning=FALSE}
+```{r combine plots, fig.height=16, fig.width=24, message=FALSE, warning=FALSE}
 
-patchwork <- (beamt.plot / fl.plot / phyto.plot) | (ba.plot / npp.plot / bcd.plot) | (n.plot / doc.plot / aou.plot )
+# patchwork <- (beamt.plot / fl.plot / phyto.plot) | (ba.plot / npp.plot / bcd.plot) | (n.plot / doc.plot / aou.plot )
+
+patchwork <- (doc.plot / aou.plot) | (beamt.plot / fl.plot) 
 
 patchwork +  plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 22))

@@ -70,7 +70,7 @@ mld.plot <-  data %>%
   ggplot(aes(x = days, y = mld)) +
   geom_line(aes(linetype = eddy), size = 0.7) +
   geom_point(aes(shape = eddy), size = 6, fill = "white", color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste("Days"))), y = expression(italic(paste("MLD, m"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  labs(x = "Days", y = expression(paste("MLD, m")), colour = "", linetype = "Eddy Location", shape = "Eddy Location") +
   guides(linetype = F, shape = F) +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   expand_limits(y = 300) +
@@ -96,7 +96,7 @@ chl.plot <-  data %>%
   ggplot(aes(x = z, y = chl, group = interaction(Date, CampCN))) +
   geom_line(aes(linetype = eddy, color = days), size = 0.7) +
   geom_point(aes(shape = eddy, fill = days), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Chl a, mg m"^"-3"))), colour = "", fill = "Days", linetype = "Eddy Location", shape = "Eddy Location") +
+  labs(x = "Depth, m", y = expression(paste("Chl a, mg m"^"-3")), colour = "", fill = "Days", linetype = "Eddy Location", shape = "Eddy Location") +
   expand_limits(x = 300) +
   scale_x_reverse() +
   coord_flip() +
@@ -127,7 +127,7 @@ phyto.plot <-  data %>%
   ggplot(aes(x = z, y = phyto, group = interaction(days))) +
   geom_line(aes(linetype = eddy, colour = days), size = 0.7) +
   geom_point(aes(shape = eddy, fill = days), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Phytoplankton Cells, m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
+  labs(x = "Depth, m", y = expression(paste("Phytoplankton Cells, m"^"-3")), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
   expand_limits(x = 300) +
   scale_x_reverse() +
   coord_flip() +
@@ -160,7 +160,7 @@ phyc.plot <-  data %>%
   geom_errorbar(aes(ymin = ave_phyc - sd_phyc, ymax = ave_phyc + sd_phyc, color = days), width = 1.5, alpha = 0.7) +
   geom_line(aes(linetype = eddy, colour = days), size = 0.7) +
   geom_point(aes(shape = eddy, fill = days), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Phytoplankton Carbon, mmol m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
+  labs(x = "Depth, m", y = expression(paste("Phytoplankton Carbon, mmol m"^"-3")), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
   expand_limits(x = 300) +
   scale_x_reverse() +
   coord_flip() +
@@ -185,7 +185,7 @@ npp.plot <-  npp %>%
   mutate(npp = npp/10^3) %>% 
   ggplot(aes(x = z, y = npp, group = days)) +
   geom_line(aes(linetype = eddy, colour = days), size = 2) +
-  labs(x = expression(italic(paste("Depth, m"))), y = expression(italic(paste("Modeled NPP, mmol m"^-3, "d"^-1))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
+  labs(x = "Depth, m", y = expression(paste("Modeled NPP, mmol m"^-3, "d"^-1)), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
   expand_limits(x = 300) +
   scale_x_reverse() +
   coord_flip() +
@@ -212,7 +212,7 @@ n.plot <-  data %>%
   geom_errorbar(aes(x = z, ymin = n - sd_n, ymax = n + sd_n)) +
   geom_line(aes(linetype = eddy, color = days), size = 0.7) +
   geom_point(aes(shape = eddy, fill = days), size = 6,  color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("N + N, mmol m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
+  labs(x = "", y = expression(paste("N + N, mmol m"^"-3")), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
   scale_x_reverse() +
   coord_flip() +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
@@ -240,7 +240,7 @@ doc.plot <-  data %>%
   geom_errorbar(aes(x = z, ymin = doc - sd_doc, ymax = doc + sd_doc, color = days)) +
   geom_line(aes(linetype = eddy, color = days), size = 0.7) +
   geom_point(aes(shape = eddy, fill = days), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("DOC, mmol m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
+  labs(x = "", y = expression(paste("DOC, mmol m"^"-3")), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
   scale_x_reverse() +
   coord_flip() +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
@@ -267,7 +267,7 @@ tdaa.plot <-  data %>%
   geom_errorbar(aes(x = z, ymin = tdaa_c - sd_tdaa, ymax = tdaa_c + sd_tdaa, color = days)) +
   geom_line(aes(linetype = eddy, color = days), size = 0.7) +
   geom_point(aes(shape = eddy, fill = days), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("TDAA, mmol C m"^-3))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
+  labs(x = "", y = expression(paste("TDAA, mmol C m"^-3)), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
   scale_x_reverse() +
   coord_flip() +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
@@ -294,7 +294,7 @@ tdaaY.plot <-  data %>%
   ggplot(aes(x = z, y = tdaa_yield, group = interaction(Date, CampCN))) +
   geom_line(aes(linetype = eddy, color = days), size = 0.7) +
   geom_point(aes(shape = eddy, fill = days), size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("TDAA Yield, %"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
+  labs(x = "", y = expression(paste("TDAA Yield, %")), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
   scale_x_reverse() +
   coord_flip() +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
@@ -324,7 +324,7 @@ aou.plot <-  ctd %>%
   ggplot(aes(x = z, y = ave_aou, group = interaction(Date, CampCN))) +
   geom_ribbon(aes(ymin = ave_aou - sd_aou, ymax = ave_aou + sd_aou, fill = days, linetype = eddy), alpha = 0.1) +
   geom_line(aes(linetype = eddy, color = days), size = 0.7) +
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("AOU, mmol m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
+  labs(x = "", y = expression(paste("AOU, mmol m"^"-3")), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
   scale_x_reverse() +
   coord_flip() +
   # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
@@ -351,7 +351,7 @@ ba.plot <-  data %>%
   geom_errorbar(aes(x = z, ymin = ba - sd_ba, ymax = ba + sd_ba, color = days)) +
   geom_line(aes(linetype = eddy, color = days), size = 0.7) +
   geom_point(aes(shape = eddy, fill = days), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("Bacterioplankton Cells, m"^"-3"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
+  labs(x = "", y = expression(paste("Bacterioplankton Cells, m"^"-3")), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
   scale_x_reverse() +
   coord_flip() +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
@@ -380,7 +380,7 @@ bcd.plot <-  data %>%
   geom_errorbar(aes(x = z, ymin = bcd - sd_bcd, ymax = bcd + sd_bcd, color = days)) +
   geom_line(aes(linetype = eddy, color = days), size = 0.7) +
   geom_point(aes(shape = eddy, fill = days), size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("BCD, mmol C m"^"-3","d"^-1))), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
+  labs(x = "", y = expression(paste("BCD, mmol C m"^"-3","d"^-1)), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
   scale_x_reverse() +
   coord_flip() +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +

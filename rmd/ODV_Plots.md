@@ -12,6 +12,7 @@ depth)
 ``` r
 library(tidyverse) 
 library(patchwork)
+library(ggpubr)
 #for odv type plots
 library(reshape2)
 library(MBA)
@@ -19,18 +20,6 @@ library(mgcv)
 ```
 
 ``` r
-custom_theme <- function() {
-  theme_test(base_size = 30) %+replace%
-    theme(legend.position = "right",
-          legend.spacing.x = unit(0.5,"cm"),
-          legend.title = element_text(size = 14),
-          legend.text = element_text(size = 14),
-          legend.background = element_rect(fill = "transparent",colour = NA),
-          legend.key = element_rect(fill = "transparent",colour = NA),
-          panel.background = element_rect(fill = "transparent",colour = NA),
-          plot.background = element_rect(fill = "transparent",colour = NA)) 
-}
-
 custom.colors <- c("AT39" = "#377EB8", "AT34" = "#4DAF4A", "AT38" = "#E41A1C", "AT32" = "#FF7F00", "Temperate" = "#A6CEE3", "Subpolar" = "#377EB8", "Subtropical" = "#FB9A99", "GS/Sargasso" = "#E41A1C", "Early Spring" = "#377EB8", "Late Spring" = "#4DAF4A","Early Autumn" = "#E41A1C", "Late Autumn" = "#FF7F00")
 
 levels = c("GS/Sargasso", "Subtropical", "Temperate", "Subpolar",  "AT39-6", "AT34", "AT38", "AT32", "Early Spring", "Late Spring","Early Autumn",  "Late Autumn")
@@ -264,7 +253,9 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 ### Patchwork
 
 ``` r
-patchwork <- (beamt.plot / fl.plot / phyto.plot) | (ba.plot / npp.plot / bcd.plot) | (n.plot / doc.plot / aou.plot )
+# patchwork <- (beamt.plot / fl.plot / phyto.plot) | (ba.plot / npp.plot / bcd.plot) | (n.plot / doc.plot / aou.plot )
+
+patchwork <- (doc.plot / aou.plot) | (beamt.plot / fl.plot) 
 
 patchwork +  plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 22))

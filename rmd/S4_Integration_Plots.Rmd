@@ -118,7 +118,7 @@ phyc.plot <-  pivoted %>%
             fill = "light grey", alpha = 0.1) +
    geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(shape = eddy, fill = factor(depth_interval, levels = levels)), size = 6, color = "black", stroke = 1) +  
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("Phytoplankton Carbon, mmol m"^"-3"))), colour = "") +
+  labs(x = "", y = expression(paste("Phytoplankton Carbon, mmol m"^"-3")), colour = "") +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   scale_fill_manual(values = custom.colors) +
   scale_color_manual(values = custom.colors) +
@@ -139,7 +139,7 @@ phyto.plot <-  pivoted %>%
             fill = "light grey", alpha = 0.1) +
    geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(shape = eddy, fill = factor(depth_interval, levels = levels)), size = 6, color = "black", stroke = 1) +  
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("Phytoplankton Cells, m"^"-3"))), colour = "") +
+  labs(x = "", y = expression(paste("Phytoplankton Cells, m"^"-3")), colour = "") +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   scale_fill_manual(values = custom.colors) +
   scale_color_manual(values = custom.colors) +
@@ -162,7 +162,7 @@ ba.plot <-  pivoted %>%
             fill = "light grey", alpha = 0.1) +
    geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(shape = eddy, fill = factor(depth_interval, levels = levels)), size = 6, color = "black", stroke = 1) +  
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("Bacterioplankton Cells, m"^"-3"))), colour = "") +
+  labs(x = "", y = expression(paste("Bacterioplankton Cells, m"^"-3")), colour = "") +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   scale_fill_manual(values = custom.colors) +
   scale_color_manual(values = custom.colors) +
@@ -184,7 +184,7 @@ npp.plot <-  pivoted %>%
             fill = "light grey", alpha = 0.1) +
    geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(shape = eddy, fill = factor(depth_interval, levels = levels)), size = 6, color = "black", stroke = 1) +  
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("NPP, mmol m"^"-3", "d"^-1))), colour = "") +
+  labs(x = "", y = expression(paste("NPP, mmol m"^"-3", "d"^-1)), colour = "") +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   scale_fill_manual(values = custom.colors) +
   scale_color_manual(values = custom.colors) +
@@ -211,7 +211,7 @@ bcd.plot <-  pivoted %>%
             fill = "light grey", alpha = 0.1) +
    geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(shape = eddy, fill = factor(depth_interval, levels = levels)), size = 6, color = "black", stroke = 1) +  
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("BCD, mmol m"^"-3", "d"^-1))), colour = "") +
+  labs(x = "", y = expression(paste("BCD, mmol m"^"-3", "d"^-1)), colour = "") +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   scale_fill_manual(values = custom.colors) +
   scale_color_manual(values = custom.colors) +
@@ -235,7 +235,7 @@ doc.plot <-  pivoted %>%
             fill = "light grey", alpha = 0.1) +
   geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(shape = eddy, fill = factor(depth_interval, levels = levels)), size = 6, color = "black", stroke = 1) +  
-  labs(x = expression(italic(paste("Days on Station"))), y = expression(italic(paste("DOC, mmol m"^"-3"))), colour = "", fill = "Depth Interval", linetype = "Eddy Location", shape = "Eddy Location") +
+  labs(x = "Days on Station", y = expression(paste("DOC, mmol m"^"-3")), colour = "", fill = "Depth Interval", linetype = "Eddy Location", shape = "Eddy Location") +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   scale_fill_manual(values = custom.colors) +
   scale_color_manual(values = custom.colors) +
@@ -261,7 +261,7 @@ tdaa.plot <-  pivoted %>%
             fill = "light grey", alpha = 0.1) +
   geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(shape = eddy, fill = factor(depth_interval, levels = levels)), size = 6, color = "black", stroke = 1) +  
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("TDAA, mmol m"^"-3"))), colour = "") +
+  labs(x = "", y = expression(paste("TDAA, mmol m"^"-3")), colour = "") +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   scale_fill_manual(values = custom.colors) +
   scale_color_manual(values = custom.colors) +
@@ -273,7 +273,7 @@ tdaa.plot <-  pivoted %>%
 
 
 
-```{r combine plots, echo = FALSE, warning = FALSE, message = FALSE, fig.height = 12, fig.width = 18}
+```{r combine plots, echo = FALSE, warning = FALSE, message = FALSE, fig.height = 10, fig.width = 18}
 
 patchwork <- (phyto.plot + ba.plot + npp.plot) / (bcd.plot + doc.plot + tdaa.plot)
 
