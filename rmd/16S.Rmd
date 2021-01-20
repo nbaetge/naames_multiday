@@ -529,7 +529,7 @@ alphadiv <- left_join(richness, sample.tab2 %>% rownames_to_column(., var = "DNA
 library(ggpubr)
 
 pivot.data <- alphadiv %>% 
-  filter(eddy == "Core") %>% 
+  #filter(eddy == "Core") %>% 
   select(days, z, z_interv, Chao1, Shannon) %>% 
   pivot_longer(.,  cols = c(Chao1,  Shannon), names_to = "measure", values_to = "est" ) %>% 
   left_join(., alphadiv %>% 
@@ -577,7 +577,7 @@ Our data currently shows number gene copies recovered, so we'll convert to perce
 ```{r}
 n2s4_core <- n2s4 %>% 
   subset_samples(eddy == "Core")
-ps_std <- transform_sample_counts(n2s4_core, function(x) x/sum(x))
+ps_std <- transform_sample_counts(n2s4, function(x) x/sum(x))
 #extract the relative abundance table and coerce into dataframe
 ps_std.tab <- as(otu_table(ps_std), "matrix")
 ps_std.df = as.data.frame(ps_std.tab) 
@@ -633,8 +633,8 @@ relabund <- sweet.tab %>%
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 12, fig.align = "center"}
 relaheat.data <- relabund %>% 
-  select(-c(sample, Cruise:hours, z_interv:npp)) %>%
-  pivot_longer(.,-c(days, z), names_to = "taxa", values_to = "relabund") %>% 
+  select(-c(sample, Cruise:CampCN, z_interv:npp)) %>%
+  pivot_longer(.,-c(eddy, hours, days, z), names_to = "taxa", values_to = "relabund") %>% 
   separate(taxa, into = c("p", "c", "o", "f"), sep = " _ ") %>% 
   mutate(cof = paste(c, o, f, sep = "_")) %>% 
   group_by(days, z, cof) %>% 
@@ -679,6 +679,7 @@ relaheat_cof <- relaheat.data %>%
   filter(mean_relabund > 0.01) %>% 
   ggplot(aes(x = days, y = cof)) +
   geom_tile(aes(fill = mean_relabund), color = "white") +
+  # scale_color_manual(values = custom.colors) %>%
   scale_fill_gradientn(colors = odv.colors) +
   # scale_fill_viridis(option = "D", begin = 0.01) +
   labs(x = "Days", y = "Class_Order", fill = "Relative Abundance") +
@@ -688,7 +689,7 @@ relaheat_cof <- relaheat.data %>%
    guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) 
 
 
-relaheat_cof
+relaheat_cof 
 
 ```
 
