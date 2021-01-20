@@ -67,10 +67,10 @@ casts <- data %>%
 ```{r mld plot, message=FALSE, warning=FALSE, echo = FALSE}
 mld.plot <-  data %>% 
   drop_na(mld) %>% 
-  ggplot(aes(x = datetime, y = mld)) +
+  ggplot(aes(x = days, y = mld)) +
   geom_line(aes(linetype = eddy), size = 0.7) +
   geom_point(aes(shape = eddy), size = 6, fill = "white", color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = expression(italic(paste(""))), y = expression(italic(paste("MLD, m"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location") +
+  labs(x = expression(italic(paste("Days"))), y = expression(italic(paste("MLD, m"))), colour = "", linetype = "Eddy Location", shape = "Eddy Location") +
   guides(linetype = F, shape = F) +
   scale_shape_manual(values = c("Core" = 21, "Outside" = 24)) +
   expand_limits(y = 300) +
@@ -107,8 +107,7 @@ chl.plot <-  data %>%
   scale_color_gradientn(colors = odv.colors) +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) +
   theme_classic2(base_size = 20) +
-  theme(legend.title = element_blank(),
-        panel.spacing.x = unit(1, "cm"),
+  theme(panel.spacing.x = unit(1, "cm"),
         axis.text.x = element_text(angle = 0),
         legend.key.size = unit(1, "cm"))
 
