@@ -18,6 +18,7 @@ library(oce)
 
 ```
 
+We'll use a CCF of 5 from N2S4  surface and deep experiments to convert bact abund to bact c
 
 # Import Data
 
@@ -117,11 +118,10 @@ interpolated.df <- left_join(bf, interpolations.df) %>%
 
 ```
 
-# Estimate BCD and Specific Growth Rates
+# Estimate BCD and BC
 
-We'll estimate BCD for each cast of each station of all the cruises using bacterial production and the station averages of BGE. Otherwise, they are calculated using the cruise average bge. We'll also estimate specific growth rates (mew) by first converting bacterial abundance to bacterial carbon using station or seasonal  averages of CCFs (from POC taken from initial population) and then dividing bacterial production by bacterial carbon. 
+We'll estimate BCD for each cast of each station of all the cruises using bacterial production and the station averages of BGE. Otherwise, they are calculated using the cruise average bge. We'll also convert bacterial abundance to bacterial carbon for N2S4 using station  average of CCFs (from POC taken from initial population). 
 
-Because there are no BGEs and CCFs associated with AT32, we will apply those from AT38 to that cruise.
 
 BCD and specific growth rates will be integrated for the 0-100 m, the 100-200 m, and the 200-300 m boxes.
 
@@ -134,6 +134,9 @@ bcd <- interpolated.df %>%
          #bp in nmol C / L / d is equivalent to  µmol C / m3 / d 
          bcd = round(bp/cruise_bge),
          ba = ba * 10^3,
+         bc = ba * (5/12) / (10^12),
+         bc = ifelse(Cruise == "AT34" & Station == 4, bc, NA),
+          bc = ifelse(Cruise == "AT38" & Station == 6, ba * (43/12) / (10^12), bc),
          phyto = phyto * 10^3,
          sd_ba = sd_ba * 10^3) %>% 
   rename(z = Target_Z,
@@ -150,6 +153,7 @@ integ_100 <- bcd %>%
   filter(z <= 100) %>% 
   mutate(bcd.100 = integrateTrapezoid(z, bcd, type = "A"),
          ba.100 = integrateTrapezoid(z, ba, type = "A"),
+         bc.100 = integrateTrapezoid(z, bc, type = "A"),
          doc.100 = integrateTrapezoid(z, doc, type = "A"),
          phyc.100 = integrateTrapezoid(z, phyc, type = "A"),
          phyto.100 = integrateTrapezoid(z, phyto, type = "A"),
@@ -170,6 +174,7 @@ integ_200 <- bcd %>%
   filter(between(z, 100, 200)) %>% 
   mutate(bcd.200 = integrateTrapezoid(z, bcd, type = "A"),
          ba.200 = integrateTrapezoid(z, ba, type = "A"),
+         bc.200 = integrateTrapezoid(z, bc, type = "A"),
          doc.200 = integrateTrapezoid(z, doc, type = "A"),
          phyc.200 = integrateTrapezoid(z, phyc, type = "A"),
          phyto.200 = integrateTrapezoid(z, phyto, type = "A"),
@@ -189,6 +194,7 @@ integ_300 <- bcd %>%
   filter(between(z, 200, 300)) %>% 
   mutate(bcd.300 = integrateTrapezoid(z, bcd, type = "A"),
          ba.300 = integrateTrapezoid(z, ba, type = "A"),
+          bc.300 = integrateTrapezoid(z, bc, type = "A"),
          doc.300 = integrateTrapezoid(z, doc, type = "A"),
          phyc.300 = integrateTrapezoid(z, phyc, type = "A"),
          phyto.300 = integrateTrapezoid(z, phyto, type = "A"),

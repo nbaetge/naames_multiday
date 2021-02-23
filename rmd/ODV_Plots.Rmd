@@ -26,6 +26,10 @@ custom.colors <- c("AT39" = "#377EB8", "AT34" = "#4DAF4A", "AT38" = "#E41A1C", "
 levels = c("GS/Sargasso", "Subtropical", "Temperate", "Subpolar",  "AT39-6", "AT34", "AT38", "AT32", "Early Spring", "Late Spring","Early Autumn",  "Late Autumn")
 
 odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe", "#d16cfa")
+
+matlab.colors <- c("#A50026", "#D73027", "#F46D43", "#FDAE61", "#FEE090", "#FFFFBF", "#E0F3F8", "#ABD9E9", "#74ADD1", "#4575B4", "#313695")
+matlab.colors2 <- c("#A50026", "#D73027", "#F46D43", "#FDAE61",  "#ABD9E9", "#74ADD1", "#4575B4", "#313695")
+
 ```
 
 
@@ -82,13 +86,17 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 beamt.plot <-  mba %>% 
   ggplot(aes(x = lat, y = z)) + 
   geom_raster(aes(fill = zscore)) +
-  geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2) +
-  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2) +
+  geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2, alpha = 0.5) +
+  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2, alpha = 0.5) +
+  geom_label(data = data.frame(x = 47.5, y = -5, label = "N2S4"), aes(x = x, y = y, label = label), fill = "black", size = 7, colour = "white", fontface = "bold") +
+  geom_vline(aes(xintercept = 53.329), linetype = 2, size = 2, alpha = 0.5) +
+  geom_vline(aes(xintercept = 53.401), linetype = 2, size = 2, alpha = 0.5) +
+  geom_label(data = data.frame(x = 53.365, y = -5, label = "N3S6"), aes(x = x, y = y, label = label), fill = "black", size = 7, colour = "white", fontface = "bold") +
   geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 0.4, shape = 3, alpha = 0.1) +
   # geom_point(data = s4_ctd_mark, aes(x = lat, y = z), colour = "Black", size = 0.4, shape = 3, alpha = 0.1) +
-  scale_fill_gradientn(colors = odv.colors) +
+  scale_fill_gradientn(colors = matlab.colors) +
   scale_y_reverse() +
-  labs(y = "Depth, m", x = "", fill = "z-score") +
+  labs(y = "", x = "", fill = "z-score") +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
   theme(legend.spacing.y = unit(0.5, 'cm')) +
   theme_classic2(base_size = 20) +
@@ -124,12 +132,16 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 fl.plot <-  mba %>% 
   ggplot(aes(x = lat, y = z)) +
   geom_raster(aes(fill = zscore)) +
-  geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2) +
-  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2) +
+  geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2, alpha = 0.5) +
+  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2, alpha = 0.5) +
+   geom_label(data = data.frame(x = 47.5, y = -5, label = "N2S4"), aes(x = x, y = y, label = label), fill = "black", size = 7, colour = "white", fontface = "bold") +
+  geom_vline(aes(xintercept = 53.329), linetype = 2, size = 2, alpha = 0.5) +
+  geom_vline(aes(xintercept = 53.401), linetype = 2, size = 2, alpha = 0.5) +
+  geom_label(data = data.frame(x = 53.365, y = -5, label = "N3S6"), aes(x = x, y = y, label = label), fill = "black", size = 7, colour = "white", fontface = "bold") +
   geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 0.4, shape = 3, alpha = 0.1) +
-  scale_fill_gradientn(colors = rev(odv.colors)) +
+  scale_fill_gradientn(colors = rev(matlab.colors)) +
   scale_y_reverse() +
-  labs(y = "Depth, m", x = "", fill = "z-score") +
+  labs(y = "", x = "", fill = "z-score") +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
   theme(legend.spacing.y = unit(0.5, 'cm')) +
   theme_classic2(base_size = 20) +
@@ -167,10 +179,14 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 phyto.plot <-  mba %>% 
   ggplot(aes(x = lat, y = z)) + 
   geom_raster(aes(fill = zscore)) +
-  geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2) +
-  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2) +
+   geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2, alpha = 0.5) +
+  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2, alpha = 0.5) +
+  geom_label(data = data.frame(x = 47.5, y = -5, label = "N2S4"), aes(x = x, y = y, label = label), fill = "black", size = 7, colour = "white", fontface = "bold") +
+  geom_vline(aes(xintercept = 53.329), linetype = 2, size = 2, alpha = 0.5) +
+  geom_vline(aes(xintercept = 53.401), linetype = 2, size = 2, alpha = 0.5) +
+  geom_label(data = data.frame(x = 53.365, y = -5, label = "N3S6"), aes(x = x, y = y, label = label), fill = "black", size = 7, colour = "white", fontface = "bold") +
   geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 2, shape = 3, alpha = 0.6) +
-  scale_fill_gradientn(colors = rev(odv.colors)) +
+  scale_fill_gradientn(colors = rev(matlab.colors)) +
   expand_limits(y = 300) +
   scale_y_reverse() +
   labs(y = "Depth, m", x = "", fill = "z-score") +
@@ -211,10 +227,14 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 npp.plot <-  mba %>% 
   ggplot(aes(x = lat, y = z)) + 
   geom_raster(aes(fill = zscore)) +
-  geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2) +
-  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2) +
+   geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2, alpha = 0.5) +
+  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2, alpha = 0.5) +
+  geom_label(data = data.frame(x = 47.5, y = -5, label = "N2S4"), aes(x = x, y = y, label = label), fill = "black", size = 7, colour = "white", fontface = "bold") +
+  geom_vline(aes(xintercept = 53.329), linetype = 2, size = 2, alpha = 0.5) +
+  geom_vline(aes(xintercept = 53.401), linetype = 2, size = 2, alpha = 0.5) +
+  geom_label(data = data.frame(x = 53.365, y = -5, label = "N3S6"), aes(x = x, y = y, label = label), fill = "black", size = 7, colour = "white", fontface = "bold") +
   geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 0.4, shape = 3, alpha = 0.3) +
-  scale_fill_gradientn(colors = rev(odv.colors)) +
+  scale_fill_gradientn(colors = rev(matlab.colors)) +
   expand_limits(y = 300) +
   scale_y_reverse() +
  labs(y = "Depth, m", x = "", fill = "z-score") +
@@ -256,12 +276,16 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 ba.plot <-  mba %>% 
   ggplot(aes(x = lat, y = z)) + 
   geom_raster(aes(fill = zscore)) +
-  geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2) +
-  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2) +
+   geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2, alpha = 0.5) +
+  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2, alpha = 0.5) +
+  geom_label(data = data.frame(x = 47.5, y = -5, label = "N2S4"), aes(x = x, y = y, label = label), fill = "black", size = 7, colour = "white", fontface = "bold") +
+  geom_vline(aes(xintercept = 53.329), linetype = 2, size = 2, alpha = 0.5) +
+  geom_vline(aes(xintercept = 53.401), linetype = 2, size = 2, alpha = 0.5) +
+  geom_label(data = data.frame(x = 53.365, y = -5, label = "N3S6"), aes(x = x, y = y, label = label), fill = "black", size = 7, colour = "white", fontface = "bold") +
  geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 2, shape = 3, alpha = 0.6) +
-  scale_fill_gradientn(colors = rev(odv.colors)) +
+  scale_fill_gradientn(colors = rev(matlab.colors)) +
   scale_y_reverse() +
-  labs(y = "Depth, m", x = "", fill = "z-score") +
+  labs(y = "", x = "", fill = "z-score") +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
   theme(legend.spacing.y = unit(0.5, 'cm')) +
   theme_classic2(base_size = 20) +
@@ -269,17 +293,17 @@ ba.plot <-  mba %>%
 
 ```
 
-## BCD
+## BP
 
 ```{r bcd subset, message=FALSE, warning=FALSE}
 
 subset <- data %>% 
   filter(between(z, 0, 300)) %>% 
-  select(lat, z, bcd) %>% 
+  select(lat, z, bp) %>% 
   group_by(z) %>% 
-  mutate(mean = mean(bcd, na.rm = T),
-         sd = sd(bcd, na.rm = T),
-         zscore = (bcd - mean)/sd) %>% 
+  mutate(mean = mean(bp, na.rm = T),
+         sd = sd(bp, na.rm = T),
+         zscore = (bp - mean)/sd) %>% 
   ungroup() %>% 
   select(lat, z, zscore) %>% 
   mutate(zscore = round(zscore, 2)) %>% 
@@ -296,19 +320,23 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 
 ```{r bcd plot, fig.height=6, fig.width=12, message=FALSE, warning=FALSE, echo = FALSE}
 
-bcd.plot <-  mba %>% 
+bp.plot <-  mba %>% 
   ggplot(aes(x = lat, y = z)) + 
   geom_raster(aes(fill = zscore)) +
-  geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2) +
-  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2) +
+   geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2, alpha = 0.5) +
+  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2, alpha = 0.5) +
+   geom_label(data = data.frame(x = 47.5, y = -5, label = "N2S4"), aes(x = x, y = y, label = label), fill = "black", size = 7, colour = "white", fontface = "bold") +
+  geom_vline(aes(xintercept = 53.329), linetype = 2, size = 2, alpha = 0.5) +
+  geom_vline(aes(xintercept = 53.401), linetype = 2, size = 2, alpha = 0.5) +
+  geom_label(data = data.frame(x = 53.365, y = -5, label = "N3S6"), aes(x = x, y = y, label = label), fill = "black", size = 7, colour = "white", fontface = "bold") +
   geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 2, shape = 3, alpha = 0.6) +
-  scale_fill_gradientn(colors = rev(odv.colors)) +
+  scale_fill_gradientn(colors = rev(matlab.colors)) +
   scale_y_reverse() +
-  labs(y = "Depth, m", x = "", fill = "z-score") +
+  labs(y = "", x = "", fill = "z-score") +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
   theme(legend.spacing.y = unit(0.5, 'cm')) +
   theme_classic2(base_size = 20) +
-  ggtitle("Bacterioplankton Carbon Demand")
+  ggtitle("Bacterioplankton Production")
 
 ```
 
@@ -343,10 +371,14 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 n.plot <-  mba %>% 
   ggplot(aes(x = lat, y = z)) + 
   geom_raster(aes(fill = zscore)) +
-  geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2) +
-  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2) +
+   geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2, alpha = 0.5) +
+  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2, alpha = 0.5) +
+   geom_label(data = data.frame(x = 47.5, y = -5, label = "N2S4"), aes(x = x, y = y, label = label), fill = "black", size = 7, colour = "white", fontface = "bold") +
+  geom_vline(aes(xintercept = 53.329), linetype = 2, size = 2, alpha = 0.5) +
+  geom_vline(aes(xintercept = 53.401), linetype = 2, size = 2, alpha = 0.5) +
+  geom_label(data = data.frame(x = 53.365, y = -5, label = "N3S6"), aes(x = x, y = y, label = label), fill = "black", size = 7, colour = "white", fontface = "bold") +
   geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 2, shape = 3, alpha = 0.6) +
-  scale_fill_gradientn(colors = rev(odv.colors)) +
+  scale_fill_gradientn(colors = rev(matlab.colors)) +
   scale_y_reverse() +
   labs(y = "Depth, m", x = "", fill = "z-score") +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
@@ -386,10 +418,14 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 doc.plot <-  mba %>% 
   ggplot(aes(x = lat, y = z)) + 
   geom_raster(aes(fill = zscore)) +
-  geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2) +
-  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2) +
+   geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2, alpha = 0.5) +
+  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2, alpha = 0.5) +
+  geom_label(data = data.frame(x = 47.5, y = -5, label = "N2S4"), aes(x = x, y = y, label = label), fill = "black", size = 7, colour = "white", fontface = "bold") +
+  geom_vline(aes(xintercept = 53.329), linetype = 2, size = 2, alpha = 0.5) +
+  geom_vline(aes(xintercept = 53.401), linetype = 2, size = 2, alpha = 0.5) +
+  geom_label(data = data.frame(x = 53.365, y = -5, label = "N3S6"), aes(x = x, y = y, label = label), fill = "black", size = 7, colour = "white", fontface = "bold") +
   geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 2, shape = 3, alpha = 0.6) +
-  scale_fill_gradientn(colors = rev(odv.colors)) +
+  scale_fill_gradientn(colors = rev(matlab.colors)) +
   scale_y_reverse() +
   labs(y = "Depth, m", x = "", fill = "z-score") +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
@@ -431,12 +467,16 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 aou.plot <-  mba %>% 
   ggplot(aes(x = lat, y = z)) + 
   geom_raster(aes(fill = zscore)) +
-  geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2) +
-  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2) +
+   geom_vline(aes(xintercept = 47.25), linetype = 2, size = 2, alpha = 0.5) +
+  geom_vline(aes(xintercept = 47.75), linetype = 2, size = 2, alpha = 0.5) +
+  geom_label(data = data.frame(x = 47.5, y = -5, label = "N2S4"), aes(x = x, y = y, label = label), fill = "black", size = 7, colour = "white", fontface = "bold") +
+  geom_vline(aes(xintercept = 53.329), linetype = 2, size = 2, alpha = 0.5) +
+  geom_vline(aes(xintercept = 53.401), linetype = 2, size = 2, alpha = 0.5) +
+  geom_label(data = data.frame(x = 53.365, y = -5, label = "N3S6"), aes(x = x, y = y, label = label), fill = "black", size = 7, colour = "white", fontface = "bold") +
   geom_point(data = subset, aes(x = lat, y = z), colour = "White", size = 0.4, shape = 3, alpha = 0.1) +
-  scale_fill_gradientn(colors = rev(odv.colors)) +
+  scale_fill_gradientn(colors = rev(matlab.colors)) +
   scale_y_reverse() +
-  labs(y = "", x = "Latitude, ˚N", fill = "z-score") +
+  labs(y = "Depth, m", x = "Latitude, ˚N", fill = "z-score") +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1)) +
   theme(legend.spacing.y = unit(0.5, 'cm')) +
   theme_classic2(base_size = 20) +
@@ -446,11 +486,11 @@ aou.plot <-  mba %>%
 
 ### Patchwork
 
-```{r combine plots, fig.height=16, fig.width=24, message=FALSE, warning=FALSE}
+```{r combine plots, fig.height=14, fig.width=28, message=FALSE, warning=FALSE}
 
 # patchwork <- (beamt.plot / fl.plot / phyto.plot) | (ba.plot / npp.plot / bcd.plot) | (n.plot / doc.plot / aou.plot )
 
-patchwork <- (doc.plot / aou.plot) | (beamt.plot / fl.plot) 
+patchwork <- (doc.plot / aou.plot) | (beamt.plot / fl.plot) | (ba.plot / bp.plot)
 
 patchwork +  plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 22))

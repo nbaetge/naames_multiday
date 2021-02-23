@@ -21,12 +21,15 @@ library(ggpubr)
 
 
 ```{r aesthetics}
-custom.colors <- c("AT39" = "#377EB8", "AT34" = "#4DAF4A", "AT38" = "#E41A1C", "AT32" = "#FF7F00", "Temperate" = "#A6CEE3", "Subpolar" = "#377EB8", "Subtropical" = "#FB9A99", "GS/Sargasso" = "#E41A1C", "Early Spring" = "#377EB8", "Late Spring" = "#4DAF4A","Early Autumn" = "#E41A1C", "Late Autumn" = "#FF7F00",  "5-75 m" = "#27ab19", "100-200 m" = "#feb483", "300 m" = "#d16cfa")
+custom.colors <- c("AT39" = "#377EB8", "AT34" = "#4DAF4A", "AT38" = "#E41A1C",  "NAAMES 2" = "#4DAF4A", "NAAMES 3" = "#E41A1C",   "AT32" = "#FF7F00", "Temperate" = "#A6CEE3", "Subpolar" = "#377EB8", "Subtropical" = "#FB9A99", "GS/Sargasso" = "#E41A1C", "Early Spring" = "#377EB8", "Late Spring" = "#4DAF4A","Early Autumn" = "#E41A1C", "Late Autumn" = "#FF7F00",  "5-75 m" = "#27ab19", "100-200 m" = "#feb483", "300 m" = "#d16cfa")
 
 levels = c("GS/Sargasso", "Subtropical", "Temperate", "Subpolar",  "AT39-6", "AT34", "AT38", "AT32","South", "North", "Early Spring", "Late Spring","Early Autumn",  "Late Autumn", "5-75 m", "100-200 m", "300 m")
 
 #odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe", "#d16cfa")
 odv.colors <- c( "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe", "#d16cfa")
+
+matlab.colors <- c("#A50026", "#D73027", "#F46D43", "#FDAE61", "#FEE090", "#FFFFBF", "#E0F3F8", "#ABD9E9", "#74ADD1", "#4575B4", "#313695")
+matlab.colors2 <- c("#A50026", "#D73027", "#F46D43", "#FDAE61",  "#ABD9E9", "#74ADD1", "#4575B4", "#313695")
 ```
 
 # Import Data 
@@ -69,21 +72,24 @@ sample.tab <- read_rds("~/GITHUB/naames_multiday/Input/master/processed_bf.8.202
          z_interv = ifelse(z > 75 & z <= 200 , "100-200 m", z_interv),
          z_interv = ifelse(z == 300, "300 m", z_interv)) %>% 
   select(Cruise:z,  z_interv, everything()) %>% 
+  mutate(Cruise2 = ifelse(Cruise == "AT32", "NAAMES 1", "NAAMES 2"),
+         Cruise2 = ifelse(Cruise == "AT38", "NAAMES 3", Cruise2),
+         Cruise2 = ifelse(Cruise == "AT39", "NAAMES 4", Cruise2)) %>% 
+  select(Cruise, Cruise2, everything()) %>% 
   left_join(., ctd) %>% 
   left_join(., npp %>% mutate_at(vars(Station), as.character)) %>% 
   rename(latitude = Latitude) %>% 
   mutate(eddy = ifelse(Cruise == "AT34" & Station == 4, "Core", NA),
-         eddy = ifelse(Date == "2016-05-27", "Outside", eddy)) %>% 
+         eddy = ifelse(Date == "2016-05-27", "Periphery", eddy)) %>% 
   group_by(Cruise, Station) %>% 
   mutate(time = ymd_hms(datetime),
          interv = interval(first(time), time),
          dur = as.duration(interv),
-         hours = round(as.numeric(dur, "days")/3600),
-         days = round(as.numeric(dur, "days")/86400)) %>% 
+         days = round(as.numeric(dur, "days"))) %>% 
   ungroup() %>% 
   column_to_rownames(var = "DNA_ID") %>% 
-  select(Cruise:CampCN, eddy, hours, days, everything()) %>% 
-  select(-c(time:dur))
+  select(Cruise:CampCN, eddy,  days, everything()) %>% 
+  select(-c(time:dur)) 
 
 ```
 
@@ -183,6 +189,12 @@ n2 <- ps_min %>%
 
 n2s4 <- ps_min %>% 
   subset_samples(Cruise == "AT34" & Station == 4)
+
+n3s6 <- ps_min %>% 
+  subset_samples(Cruise == "AT38" & Station == 6)
+
+s4s6 <- ps_min %>% 
+  subset_samples(Cruise == "AT38" & Station == 6 | Cruise == "AT34" & Station == 4)
 ```
 
 
@@ -223,6 +235,21 @@ set.seed(7)
 nmds_n2s4 <- ordinate(n2s4, method = "NMDS",  distance = "bray") # stress = 0.10
 ```
 
+
+```{r}
+set.seed(8)
+# Ordinate
+nmds_n3s6 <- ordinate(n3s6, method = "NMDS",  distance = "bray") # stress = 0.02
+```
+
+
+
+```{r}
+set.seed(8)
+# Ordinate
+nmds_s4s6 <- ordinate(s4s6, method = "NMDS",  distance = "bray") # stress = 0.02
+```
+
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 22, fig.align = "center"}
 
 nmds.plot <- plot_ordination(sub_ps, nmds,  title = "NMDS") +
@@ -257,37 +284,30 @@ NMDS plots attempt to show ordinal distances between samples as accurately as po
 
 It doesn't look like subsampling has a major effect on how we would interpret these beta diversity plots so we'll move forward with ps_min.
 
-Let's take a look at N2.
-
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
 
-nmds_n2.plot <- plot_ordination(n2, nmds_n2,  title = "NAAMES 2") +
-  stat_ellipse(aes(color = latitude, group = interaction(Station)), type = "t") +
-  # geom_polygon(aes(fill = latitude, group = interaction(latitude, z_interv)), alpha = 0.5) +
-  geom_point(aes(fill = latitude, shape = z_interv), alpha = 0.7, stroke = 2, size = 4) +
-  scale_shape_manual(values = c(21, 22, 23)) +
-  scale_fill_gradientn(colors = odv.colors) +
-  scale_color_gradientn(colors = odv.colors) +
+nmds_s4s6.plot <- plot_ordination(s4s6, nmds_s4s6,  title = "NAAMES 2 Station 4 & NAAMES 3 Station 6") +
+  # stat_ellipse(aes(color = Cruise2, group = interaction(Cruise2)), type = "t") +
+  stat_ellipse(aes(linetype = z_interv, group = interaction(Cruise2, z_interv)), type = "t") +
+  geom_point(aes(fill = Cruise2, shape = z_interv), alpha = 0.7, stroke = 2, size = 4) +
+  scale_shape_manual(values = c(21, 22)) +
+  scale_color_manual(values = custom.colors) +
+  scale_fill_manual(values = custom.colors) +
   theme_classic2(base_size = 16)
 #removing one of the plotting layers (there are points within points)
-nmds_n2.plot$layers <- nmds_n2.plot$layers[-1]
-
- 
-  
+nmds_s4s6.plot$layers <- nmds_s4s6.plot$layers[-1]
 ```
-
-
-95% confidence interval ellipse for the mean (group centroid) tells us something about the sampling distribution of the mean (centroid) we might see if we repeated your data collection a lot of times. In other words we are looking at the uncertainty in the estimate of the population mean (centroid) given the sample of data we collected.
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
 
 nmds_n2s4.plot <- plot_ordination(n2s4, nmds_n2s4,  title = "NAAMES 2 Station 4") +
-  stat_ellipse(aes(color = days, group = interaction(days), linetype = eddy), type = "t") +
-  # geom_polygon(aes(fill = days, group = interaction(days, z_interv)), alpha = 0.5) +
+  # stat_ellipse(aes(color = days, group = interaction(days), linetype = eddy), type = "t") +
+  stat_ellipse(aes(linetype = z_interv, group = interaction(z_interv)), type = "t") +
+  # geom_polygon(aes(fill = days, group = interaction(days)), alpha = 0.5) +
   geom_point(aes(fill = days, shape = z_interv), alpha = 0.7, stroke = 2, size = 4) +
   scale_shape_manual(values = c(21, 22, 23)) +
-  scale_color_gradientn(colors = odv.colors) +
-  scale_fill_gradientn(colors = odv.colors) +
+  # scale_color_gradientn(colors = rev(matlab.colors2)) +
+  scale_fill_gradientn(colors = rev(matlab.colors2)) +
   theme_classic2(base_size = 16)
 #removing one of the plotting layers (there are points within points)
 nmds_n2s4.plot$layers <- nmds_n2s4.plot$layers[-1]
@@ -295,120 +315,45 @@ nmds_n2s4.plot$layers <- nmds_n2s4.plot$layers[-1]
 ```
 
 
-# Constrained Ordination
-
-Above we used unconstrained ordinations (NMDS) to show relationships between samples in low dimensions. We can use a constrained ordination to see how environmental variables are associated with these changes in community composition. We constrain the ordination axes to linear combinations of environmental variables. We then plot the environmental scores onto the ordination
-
-```{r}
-# Remove data points with missing metadata
-ps_not_na <- n2s4 %>%
-  subset_samples(
-    !is.na(mld) &
-      !is.na(npp) & 
-      !is.na(doc) &
-      !is.na(ba) &
-      !is.na(n) & 
-      !is.na(aou) & 
-      !is.na(beamt) & 
-      !is.na(bcd) & 
-      !is.na(o2) & 
-      !is.na(phyc) &
-      !is.na(days) & 
-      !is.na(fl) & 
-      !is.na(dens) & 
-      !is.na(sal) & 
-      !is.na(temp) &
-      eddy == "Core"
-  )
-
-bray <- phyloseq::distance(ps_not_na, method = "bray")
-
-# CAP ordinate
-cap_ord <- ordinate(ps_not_na, method = "CAP", distance = bray, formula = ~ mld + doc + n  + bcd + ba  + fl  + z + npp +  aou + beamt + phyc + days
-)
-```
-
-
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
 
-# CAP plot
-cap.plot <- plot_ordination(ps_not_na, ordination = cap_ord,  axes = c(1,2)) + 
-  stat_ellipse(aes(color = days, group = interaction(days), linetype = eddy), type = "t") +
-  geom_point(aes(fill = days, shape = z_interv), alpha = 0.6, stroke = 2, size = 4) +
+nmds_n3s6.plot <- plot_ordination(n3s6, nmds_n3s6,  title = "NAAMES 3 Station 6") +
+  stat_ellipse(aes(linetype = z_interv, group = interaction(z_interv)), type = "t") +
+  # geom_polygon(aes(fill = days, group = interaction(days, z_interv)), alpha = 0.5) +
+  geom_point(aes(fill = days, shape = z_interv), alpha = 0.7, stroke = 2, size = 4) +
   scale_shape_manual(values = c(21, 22, 23)) +
-  scale_fill_gradientn(colors = odv.colors) +
-  scale_color_gradientn(colors = odv.colors) +
-  theme_classic2(base_size = 16) +
-  guides(fill = guide_colorbar(title = "Days"), shape = guide_legend(title = "Depth Interval"), linetype = F, color = F) +
-  ggtitle("NAAMES 2 Station 4 Eddy Core")
+  # scale_color_gradientn(colors = rev(matlab.colors2)) +
+  scale_fill_gradientn(colors = rev(matlab.colors2)) +
+  theme_classic2(base_size = 16)
 #removing one of the plotting layers (there are points within points)
-
-cap.plot$layers <- cap.plot$layers[-1]
-
-
-
-# Now add the environmental variables as arrows
-arrowmat <- vegan::scores(cap_ord, display = "bp")
-
-# Add labels, make a data.frame
-arrowdf <- data.frame(labels = rownames(arrowmat), arrowmat)
-
-# Define the arrow aesthetic mapping
-arrow_map <- aes(xend = CAP1, 
-    yend = CAP2, 
-    x = 0, 
-    y = 0, 
-    shape = NULL, 
-    color = NULL, 
-    label = labels)
-
-label_map <- aes(x = 1.3 * CAP1, 
-    y = 1.3 * CAP2, 
-    shape = NULL, 
-    color = NULL, 
-    label = labels)
-
-arrowhead = arrow(length = unit(0.02, "npc"))
-
-# Make a new graphic
-cap.graph <- cap.plot + 
-  geom_segment(
-    mapping = arrow_map, 
-    size = .5, 
-    data = arrowdf, 
-    color = "gray", 
-    arrow = arrowhead
-  ) + 
-  geom_text(
-    mapping = label_map, 
-    size = 4,  
-    data = arrowdf, 
-    show.legend = FALSE
-  )
+nmds_n3s6.plot$layers <- nmds_n3s6.plot$layers[-1]
 
 ```
 
-```{r fig.height=7, fig.width=22}
-(nmds_n2.plot + 
-  guides(fill = guide_colorbar(title = "Latitude, ˚N"), shape = F, color = F)) +
+
+
+```{r fig.height=6, fig.width=18}
+
+(nmds_s4s6.plot + 
+  guides( shape = guide_legend(title = "Depth Interval"), color = F,  linetype = guide_legend(title = "Depth Interval"), fill = guide_legend(title = "Cruise", override.aes = list(shape = 21)))) +
+  
 
 (nmds_n2s4.plot + 
-  guides(fill = guide_colorbar(title = "Days"), shape = F, linetype = guide_legend(title = "Eddy Location"), color = F)) +
+  guides(fill = guide_colorbar(title = "Days"), shape = guide_legend(title = "Depth Interval"), linetype = guide_legend(title = "Depth Interval"), color = F)) +
   
-  cap.graph +
+  (nmds_n3s6.plot + 
+  guides(fill = guide_colorbar(title = "Days"), shape = guide_legend(title = "Depth Interval"),  linetype = guide_legend(title = "Depth Interval"), color = F)) +
+  
+
   plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 22),
         plot.title = element_text(size = 18)) 
 
 ```
 
+95% confidence interval ellipse for the mean (group centroid) tells us something about the sampling distribution of the mean (centroid) we might see if we repeated your data collection a lot of times. In other words we are looking at the uncertainty in the estimate of the population mean (centroid) given the sample of data we collected.
 
-Do a permutational ANOVA on constrained axes used in ordination
-
-```{r}
-anova(cap_ord)
-```
 
 # Betadisper and permutational ANOVA
 
@@ -452,45 +397,74 @@ sample.tab2 <- sample.tab %>%
   filter(z %in% c(5, 25, 50, 75, 100, 150, 200)) %>% 
   column_to_rownames(var = "rowname")
 
-subset_sample_IDs_n2 <-  row.names(sample.tab2)[sample.tab2$Cruise == "AT34"]
+
+subset_sample_IDs_s4s6 <-  row.names(sample.tab2)[sample.tab2$Station == 4 & sample.tab2$Cruise == "AT34" | sample.tab2$Station == 6 & sample.tab2$Cruise == "AT38"]
+
+euc_dist_s4s6 <- dist(t(deseq_count_tab[ , colnames(deseq_count_tab) %in% subset_sample_IDs_s4s6]))
+
+sample_info_tab_s4s6 <- sample.tab2[row.names(sample.tab2) %in% subset_sample_IDs_s4s6, ]
+
+####
+
 subset_sample_IDs_n2s4 <-  row.names(sample.tab2)[sample.tab2$Station == 4 & sample.tab2$Cruise == "AT34"]
 
-
-euc_dist_n2 <- dist(t(deseq_count_tab[ , colnames(deseq_count_tab) %in% subset_sample_IDs_n2]))
 euc_dist_n2s4 <- dist(t(deseq_count_tab[ , colnames(deseq_count_tab) %in% subset_sample_IDs_n2s4]))
 
-sample_info_tab_n2 <- sample.tab2[row.names(sample.tab2) %in% subset_sample_IDs_n2, ]
 sample_info_tab_n2s4 <- sample.tab2[row.names(sample.tab2) %in% subset_sample_IDs_n2s4, ]
+
+####
+
+subset_sample_IDs_n3s6 <-  row.names(sample.tab2)[sample.tab2$Station == 6 & sample.tab2$Cruise == "AT38"]
+
+euc_dist_n3s6 <- dist(t(deseq_count_tab[ , colnames(deseq_count_tab) %in% subset_sample_IDs_n3s6]))
+
+sample_info_tab_n3s6 <- sample.tab2[row.names(sample.tab2) %in% subset_sample_IDs_n3s6, ]
+
+
+
 ```
 
 Betadisper first calculates the average distance of group members to the group centroid in multivariate space (generated by a distance matrix).
 
-Our first question is: Is the community composition between stations on N2 different ?
+Our first question is: Is the community composition between N2S4 and N3S6 different ?
 
 In the function below: we are using the distance matrix to calculate the multivariate dispersions (variances; average distance to centroids). We then use group dispersions to perform an ANOVA test.
 
 ```{r}
-anova(betadisper(euc_dist_n2, sample_info_tab_n2$Station)) 
+anova(betadisper(euc_dist_s4s6, sample_info_tab_s4s6$Cruise)) 
 ```
+The ANOVA’s p-value is significant meaning that group dispersions are not homogenous (“Null hypothesis of no difference in dispersion between groups”)
 
-**Our groups (stations) at N2 do not present homogeneity among group
-dispersions (compositions vary differently)**
+**Our groups (Cruises) at between N2S4 and N3S6 do not present homogeneity among group dispersions (compositions vary differently)** 
+
 
 ```{r}
 anova(betadisper(euc_dist_n2s4, sample_info_tab_n2s4$days)) 
 ```
 
+
+```{r}
+anova(betadisper(euc_dist_n3s6, sample_info_tab_n3s6$days)) 
+```
+
+**Our groups (Days) within N2S4 and N3S6 do present homogeneity among group dispersions (compositions vary similarly)** 
+
 ```{r}
 adonis(euc_dist_n2s4~sample_info_tab_n2s4$days)
 ```
 
-
-The ANOVA’s p-value is not significant meaning that group dispersions are homogenous (“Null hypothesis of no difference in dispersion between groups”)
+```{r}
+adonis(euc_dist_n3s6~sample_info_tab_n3s6$days)
+```
 
 Adonis analyzes and partitions sums of squares using distance matrices. It can be seen as an ANOVA using distance matrices (analogous to MANOVA – multivariate analysis of variance). Therefore, it is used to test if two or more groups have similar compositions.
 
 **Our groups (days) at N2S4 present homogeneity among group
 dispersions (compositions vary similarly) and have significantly
+different compositions.**
+
+**Our groups (days) at N3S6 present homogeneity among group
+dispersions (compositions vary similarly) and do not have significantly
 different compositions.**
 
 # Alpha Diversity
@@ -510,54 +484,118 @@ We will use the subsampled library, which retains estimates of the species abund
 
 
 ```{r}
-richness <- estimate_richness(n2s4, measures = c("Chao1", "Shannon")) %>% 
+richness_n2s4 <- estimate_richness(n2s4, measures = c("Chao1", "Shannon")) %>% 
   rownames_to_column(., var = "DNA_ID") %>% 
   mutate_at(vars(DNA_ID), str_replace_all, pattern = "NAAMES2.", "NAAMES2-") 
 ```
 
+```{r}
+richness_n3s6 <- estimate_richness(n3s6, measures = c("Chao1", "Shannon")) %>% 
+  rownames_to_column(., var = "DNA_ID") %>% 
+  mutate_at(vars(DNA_ID), str_replace_all, pattern = "N3S6C4.", "N3S6C4-") %>% 
+  mutate_at(vars(DNA_ID), str_replace_all, pattern = "N3S6C5.", "N3S6C5-") %>% 
+  mutate_at(vars(DNA_ID), str_replace_all, pattern = "N3S6C7.", "N3S6C7-") %>% 
+  mutate_at(vars(DNA_ID), str_replace_all, pattern = "N3S6C10.", "N3S6C10-")  
+```
 
 Let’s add the sample metadata into this dataframe 
 
 ```{r}
-alphadiv <- left_join(richness, sample.tab2 %>% rownames_to_column(., var = "DNA_ID")) 
+alphadiv_n2s4 <- left_join(richness_n2s4, sample.tab2 %>% rownames_to_column(., var = "DNA_ID")) 
 ```
-
+```{r}
+alphadiv_n3s6 <- left_join(richness_n3s6, sample.tab2 %>% rownames_to_column(., var = "DNA_ID")) 
+```
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center"}
 
 # install.packages("ggpubr")
 library(ggpubr)
 
-pivot.data <- alphadiv %>% 
+my_comparisons <- list( c("0", "1"), c("0", "2"), c("0", "3"), c("1", "2"), c("1", "3"), c("2", "3")) 
+
+pivot.data_n2s4 <- alphadiv_n2s4 %>% 
   #filter(eddy == "Core") %>% 
   select(days, z, z_interv, Chao1, Shannon) %>% 
   pivot_longer(.,  cols = c(Chao1,  Shannon), names_to = "measure", values_to = "est" ) %>% 
-  left_join(., alphadiv %>% 
+  left_join(., alphadiv_n2s4 %>% 
               filter(eddy == "Core") %>% 
               select(days, z, z_interv, se.chao1)) %>% 
   mutate(se.chao1 = ifelse(measure == "Chao1", se.chao1, NA)) 
 
-alpha.plot <- ggboxplot(pivot.data, x = "days", y = "est",
-            # color = "Location",
-            # palette = c("#0db5e6","#d31f2a"),
-            xlab = "Days", 
-            ylab = "Alpha Diversity Measure",
-            add = "dotplot",
-            add.params = list(size = 1, shape = 21, fill = "white"),
-            outlier.shape = NA,
-            width = 0.4,
-            ggtheme = theme_classic2(base_size = 16)) +  
-  stat_compare_means() +
-  facet_grid(measure~ factor(z_interv, levels = levels), scales = "free") 
 
-alpha.plot
+ alpha.plot_n2s4 <- pivot.data_n2s4 %>% 
+   ggplot(aes(x = factor(days), y = est)) +
+   geom_boxplot(width = 0.3, outlier.shape = NA) +
+   geom_point(aes(fill = z), shape = 21, size = 3, alpha = 0.7) +
+  # scale_color_viridis_d(option = "viridis") +
+  # scale_fill_viridis_d(option = "viridis") +
+     scale_color_gradientn(colors = matlab.colors2) +
+    scale_fill_gradientn(colors = matlab.colors2) +
+  theme_classic2(base_size = 16) +
+  labs(x = "Days", y =  "Alpha Diversity Measure", fill = "Depth, m") + 
+  stat_compare_means()  +
+  stat_compare_means(comparisons = my_comparisons,
+                     label = "p.adj",
+                     step.increase = 0.11,
+                     tip.length = 0.01) +
+  facet_grid(measure~ factor(z_interv, levels = levels), scales = "free") +
+  ggtitle("NAAMES 2 Station 4") +
+   guides(fill = F)
 ```
+
+
+```{r}
+
+my_comparisons <- list( c("0", "1"), c("0", "2"),  c("1", "2")) 
+
+
+pivot.data_n3s6 <- alphadiv_n3s6 %>% 
+  #filter(eddy == "Core") %>% 
+  select(days, z, z_interv, Chao1, Shannon) %>% 
+  pivot_longer(.,  cols = c(Chao1,  Shannon), names_to = "measure", values_to = "est" ) %>% 
+  left_join(., alphadiv_n3s6 %>% 
+              select(days, z, z_interv, se.chao1)) %>% 
+  mutate(se.chao1 = ifelse(measure == "Chao1", se.chao1, NA)) 
+
+alpha.plot_n3s6 <- pivot.data_n3s6 %>% 
+   ggplot(aes(x = factor(days), y = est)) +
+   geom_boxplot(width = 0.3, outlier.shape = NA) +
+   geom_point(aes(fill = z), shape = 21, size = 3, alpha = 0.7) +
+   scale_color_gradientn(colors = matlab.colors2) +
+    scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_viridis_d(option = "viridis") +
+  # scale_fill_viridis_d(option = "viridis") +
+  theme_classic2(base_size = 16) +
+  labs(x = "Days", y =  "", fill = "Depth, m") + 
+  stat_compare_means()  +
+  stat_compare_means(comparisons = my_comparisons,
+                     label = "p.adj",
+                     step.increase = 0.11,
+                     tip.length = 0.01) +
+  facet_grid(measure~ factor(z_interv, levels = levels), scales = "free") +
+  ggtitle("NAAMES 3 Station 6") +
+  guides(colour = guide_colorbar(reverse = T),
+         fill = guide_colorbar(reverse = T))
+```
+
+```{r fig.height=10, fig.width=16}
+alpha.plot_n2s4 + alpha.plot_n3s6 + 
+  
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 22),
+        plot.title = element_text(size = 18)) 
+
+```
+
+
 
 Boxes represent the 1.5 interquartile range, with the internal solid line representing the median. Circles represent data points. p-values are reported  the non-parametric two sample Wilcoxon test, which tests whether the means between two groups are equal (ns: p > 0.05, * : p≤ 0.05, ** : p ≤ 0.01).
 
 Difference in the alpha diversity indexes among conditions were tested using pairwise Wilcoxon tests; p < 0.05 was considered the threshold significance for a difference between conditions.
 
-From this plot of community composition in the eddy core we can see within the depth horizons that the richness (via Chao index) of our samples  did not significantly change and the overall diversity (via Shannon index) also did not change. 
+The richness (via Chao index) of our samples  did not significantly change and the overall diversity (via Shannon index) also did not change at N2S4.
+Did see a change in richness and overall diversity in the 100-200 m bin at N3S6
 
 # Who??
 
@@ -575,12 +613,19 @@ First, we're going to generate a custom table that will be easier to work with t
 Our data currently shows number gene copies recovered, so we'll convert to percentages (relative abundances)
 
 ```{r}
-n2s4_core <- n2s4 %>% 
-  subset_samples(eddy == "Core")
+# n2s4_core <- n2s4 %>% 
+#   subset_samples(eddy == "Core")
 ps_std <- transform_sample_counts(n2s4, function(x) x/sum(x))
 #extract the relative abundance table and coerce into dataframe
 ps_std.tab <- as(otu_table(ps_std), "matrix")
 ps_std.df = as.data.frame(ps_std.tab) 
+```
+
+```{r}
+ps_std_s6 <- transform_sample_counts(n3s6, function(x) x/sum(x))
+#extract the relative abundance table and coerce into dataframe
+ps_std.tab_s6 <- as(otu_table(ps_std_s6), "matrix")
+ps_std.df_s6 = as.data.frame(ps_std.tab_s6) 
 ```
 
 ### Make table
@@ -629,14 +674,57 @@ relabund <- sweet.tab %>%
   bind_cols(sweet.tab %>% select(sample:npp), .)
 ```
 
-## Heatmap
+```{r warning = F}
+#then combine the data frames
+custom.tab_s6 <- tax.df %>% 
+  rownames_to_column(., var = "asv") %>% 
+  left_join(., ps_std.df_s6 %>% rownames_to_column(., var = "asv")) %>% 
+  #create a new index of that combines the  class, order, family, and genus values, you can play around here!!
+  mutate(#pcofg = paste(Phylum, "_", Class, "_", Order,"_", Family, "_", Genus),
+         pcof = paste(Phylum, "_", Class, "_", Order,"_", Family)) %>% 
+         # pco = paste(Phylum, "_", Class, "_", Order)) %>% 
+  select(-c(asv:Genus)) %>% 
+  select(pcof,everything()) %>%
+  group_by(pcof) %>%
+  # select(pco,everything()) %>% 
+  # group_by(pco) %>% 
+  #here we are combining the relative abundances based on our grouping
+  summarise_at(vars(!contains(c("pco"))), sum, na.rm = T) %>% 
+  ungroup()
+
+#save the row names and then make them into the column names
+colnames_s6 <- custom.tab_s6[,1] 
+
+#transpose the dataframe so we can merge with the sample info table
+t_custom.tab_s6 <-  as.data.frame(t(custom.tab_s6[,-1]))
+colnames(t_custom.tab_s6) <- colnames_s6$pcof
+# colnames(t_custom.tab) <- colnames$pco
+
+#merge
+sweet.tab_s6 <- t_custom.tab_s6 %>% 
+  rownames_to_column(., var = "sample") %>% 
+  left_join(., sample.tab %>% rownames_to_column(., var = "sample")) %>% 
+  select(sample, Cruise:npp, everything())
+
+
+relabund_s6 <- sweet.tab_s6 %>% 
+  select(-c(sample:npp)) %>% 
+  #remove groups that are completely absent
+  .[ , colSums(.) > 0] %>% 
+  #arrange by biggest contributors
+  .[, order(colSums(-.))] %>% 
+  bind_cols(sweet.tab_s6 %>% select(sample:npp), .)
+```
+
+
+## Heatmaps
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 12, fig.align = "center"}
 relaheat.data <- relabund %>% 
-  select(-c(sample, Cruise:CampCN, z_interv:npp)) %>%
-  pivot_longer(.,-c(eddy, hours, days, z), names_to = "taxa", values_to = "relabund") %>% 
+  select(-c(sample, Cruise:CampCN, mld:npp)) %>%
+  pivot_longer(.,-c(eddy, days, z, z_interv), names_to = "taxa", values_to = "relabund") %>% 
   separate(taxa, into = c("p", "c", "o", "f"), sep = " _ ") %>% 
-  mutate(cof = paste(c, o, f, sep = "_")) %>% 
+  mutate(cof = paste(c, o, f, sep = ": ")) %>% 
   group_by(days, z, cof) %>% 
   mutate(mean_relabund = mean(relabund, na.rm = T)) %>% 
   ungroup() %>% 
@@ -648,58 +736,380 @@ relaheat.data <- relabund %>%
 # install.packages("viridis")
 # library(viridis)
 
-relaheat_class <- relaheat.data %>%
-  filter(mean_relabund > 0.01) %>% 
-  ggplot(aes(x = days, y = c)) +
-  geom_tile(aes(fill = mean_relabund), color = "white") +
-  scale_fill_gradientn(colors = odv.colors) +
-  # scale_fill_viridis(option = "D", begin = 0.01) +
-  labs(x = "Days", y = "Class", fill = "Relative Abundance") +
-  facet_grid(~z) +
-  theme_classic2(base_size = 16) +
-  theme(axis.text.y = element_text(size = 12)) +
-   guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) 
-
-
-
-relaheat_order <- relaheat.data %>%
-  filter(mean_relabund > 0.01) %>% 
-  ggplot(aes(x = days, y = o)) +
-  geom_tile(aes(fill = mean_relabund), color = "white") +
-  scale_fill_gradientn(colors = odv.colors) +
-  # scale_fill_viridis(option = "D", begin = 0.01) +
-  labs(x = "Days", y = "Order", fill = "Relative Abundance") +
-  facet_grid(~z) +
-  theme_classic2(base_size = 16) +
-  theme(axis.text.y = element_text(size = 12)) +
-   guides(color = F, fill = F) 
-
-
 relaheat_cof <- relaheat.data %>%
-  filter(mean_relabund > 0.01) %>% 
-  ggplot(aes(x = days, y = cof)) +
+  filter(mean_relabund > 0.001) %>%
+  ggplot(aes(x = days, y = reorder(cof, mean_relabund))) +
   geom_tile(aes(fill = mean_relabund), color = "white") +
   # scale_color_manual(values = custom.colors) %>%
-  scale_fill_gradientn(colors = odv.colors) +
+  scale_fill_gradientn(colors = rev(matlab.colors)) +
   # scale_fill_viridis(option = "D", begin = 0.01) +
-  labs(x = "Days", y = "Class_Order", fill = "Relative Abundance") +
+  labs(x = "Days", y = "Class: Order: Family", fill = "Relative Abundance") +
   facet_grid(~z) +
   theme_classic2(base_size = 16) +
   theme(axis.text.y = element_text(size = 12), legend.position = "top") +
-   guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) 
+   guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) +
+  ggtitle("NAAMES 2 Station 4")
 
-
-relaheat_cof 
 
 ```
 
+```{r}
+zscore_relaheat.data <- relaheat.data %>% 
+  group_by(cof, z_interv) %>% 
+  mutate(zscore_mean = mean(mean_relabund, na.rm = T),
+         zscore_sd = sd(mean_relabund, na.rm = T)) %>% 
+  ungroup() %>% 
+  mutate(zscore = ifelse(zscore_mean > 0, (mean_relabund - zscore_mean) / zscore_sd, NA)) 
+```
 
-## Save
+```{r fig.height=8, fig.width=12}
+relaheat_z <- zscore_relaheat.data  %>%
+  filter(mean_relabund > 0.001) %>%
+  ggplot(aes(x = days, y = reorder(cof, mean_relabund))) +
+  geom_tile(aes(fill = zscore), color = "white") +
+  scale_fill_gradient2(low = "#313695", mid = "#FEE090", high = "#A50026", midpoint = 0) +
+  # scale_fill_gradientn(colors = rev(odv.colors)) +
+  # scale_fill_viridis(option = "D", begin = 0.01) +
+  labs(x = "Days", y = "", fill = "z-score") +
+  facet_grid(~z) +
+  theme_classic2(base_size = 16) +
+  theme( legend.position = "top", axis.text.y = element_blank()) +
+  # theme( legend.position = "top") +
+   guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) 
+
+```
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 12, fig.align = "center"}
+relaheat.data_s6 <- relabund_s6 %>% 
+  select(-c(sample, Cruise:CampCN, mld:npp)) %>%
+  pivot_longer(.,-c(eddy,  days, z, z_interv), names_to = "taxa", values_to = "relabund") %>% 
+  separate(taxa, into = c("p", "c", "o", "f"), sep = " _ ") %>% 
+  mutate(cof = paste(c, o, f, sep = ": ")) %>% 
+  group_by(days, z, cof) %>% 
+  mutate(mean_relabund = mean(relabund, na.rm = T)) %>% 
+  ungroup() %>% 
+  select(-relabund) %>% 
+  distinct() %>% 
+  mutate_at(vars(p,c,o, cof), str_replace_all, "NA", "Unassigned") %>% 
+  arrange(desc(cof), mean_relabund) 
+
+# install.packages("viridis")
+# library(viridis)
+
+relaheat_cof_s6 <- relaheat.data_s6 %>%
+  filter(mean_relabund > 0.001) %>%
+  ggplot(aes(x = days, y = reorder(cof, mean_relabund))) +
+  geom_tile(aes(fill = mean_relabund), color = "white") +
+  # scale_color_manual(values = custom.colors) %>%
+  scale_fill_gradientn(colors = rev(matlab.colors)) +
+  # scale_fill_viridis(option = "D", begin = 0.01) +
+  labs(x = "Days", y = "Class: Order: Family", fill = "Relative Abundance") +
+  facet_grid(~z) +
+  theme_classic2(base_size = 16) +
+  theme(axis.text.y = element_text(size = 12), legend.position = "top") +
+   guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) +
+  ggtitle("NAAMES 3 Station 6")
+
+
+```
+
+```{r}
+zscore_relaheat.data_s6 <- relaheat.data_s6 %>% 
+  group_by(cof, z_interv) %>% 
+  mutate(zscore_mean = mean(mean_relabund, na.rm = T),
+         zscore_sd = sd(mean_relabund, na.rm = T)) %>% 
+  ungroup() %>% 
+  mutate(zscore = ifelse(zscore_mean > 0, (mean_relabund - zscore_mean) / zscore_sd, NA)) 
+```
+
+```{r fig.height=8, fig.width=12}
+relaheat_z_s6 <- zscore_relaheat.data_s6  %>%
+  filter(mean_relabund > 0.001) %>%
+  ggplot(aes(x = days, y = reorder(cof, mean_relabund))) +
+  geom_tile(aes(fill = zscore), color = "white") +
+  scale_fill_gradient2(low = "#313695", mid = "#FEE090", high = "#A50026", midpoint = 0) +
+  # scale_fill_gradientn(colors = rev(odv.colors)) +
+  # scale_fill_viridis(option = "D", begin = 0.01) +
+  labs(x = "Days", y = "", fill = "z-score") +
+  facet_grid(~z) +
+  theme_classic2(base_size = 16) +
+  theme( legend.position = "top", axis.text.y = element_blank()) +
+  # theme( legend.position = "top") +
+   guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) 
+
+```
+
+```{r fig.height=28, fig.width=20}
+(relaheat_cof + relaheat_z) / (relaheat_cof_s6 + relaheat_z_s6) + plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 22)) 
+```
+
+## Combined counts/relative abundnace
+
+here we combine the counts for our two main deph horizons, 5 -75 m and 100 - 200 m
+
+### Make table
+
+```{r warning = F}
+
+combine_s4 <- n2s4 %>% 
+  transform_sample_counts(., function(x) x*1) #not actually transforming counts here...just converting frpm phyloseq object
+ combine_s4.df <-  as(otu_table(combine_s4), "matrix") %>%
+   as.data.frame(.) 
+
+
+#then combine the data frames
+custom.tab_combine_s4 <- tax.df %>% 
+  rownames_to_column(., var = "asv") %>% 
+  left_join(., combine_s4.df %>% rownames_to_column(., var = "asv")) %>% 
+  #create a new index of that combines the  class, order, family, and genus values, you can play around here!!
+  mutate(#pcofg = paste(Phylum, "_", Class, "_", Order,"_", Family, "_", Genus),
+         pcof = paste(Phylum, "_", Class, "_", Order,"_", Family)) %>% 
+         # pco = paste(Phylum, "_", Class, "_", Order)) %>% 
+  select(-c(asv:Genus)) %>% 
+  select(pcof,everything()) %>%
+  group_by(pcof) %>%
+  # select(pco,everything()) %>% 
+  # group_by(pco) %>% 
+  #here we are combining the relative abundances based on our grouping
+  summarise_at(vars(!contains(c("pcof"))), sum, na.rm = T) %>% 
+  ungroup()
+
+#save the row names and then make them into the column names
+colnames <- custom.tab_combine_s4[,1] 
+
+#transpose the dataframe so we can merge with the sample info table
+t_custom.tab_combine_s4 <-  as.data.frame(t(custom.tab_combine_s4[,-1]))
+colnames(t_custom.tab_combine_s4) <- colnames$pcof
+# colnames(t_custom.tab) <- colnames$pco
+
+#merge
+sweet.tab_custom.tab_combine_s4  <- t_custom.tab_combine_s4  %>% 
+  rownames_to_column(., var = "sample") %>% 
+  left_join(., sample.tab %>% rownames_to_column(., var = "sample")) %>% 
+  select(sample, Cruise:npp, everything())
+
+
+counts_custom.tab_combine_s4  <- sweet.tab_custom.tab_combine_s4 %>% 
+  select(-c(sample:npp)) %>% 
+  #remove groups that are completely absent
+  .[ , colSums(.) > 0] %>% 
+  #arrange by biggest contributors
+  .[, order(colSums(-.))] %>% 
+  bind_cols(sweet.tab_custom.tab_combine_s4 %>% select(sample:npp), .) %>% 
+  mutate_at(vars(days), as.character) %>% 
+  group_by(days, eddy, z_interv) %>% 
+  summarise_at(vars(!c(sample:npp)), sum, na.rm = T) %>% 
+  ungroup() %>% 
+  rowwise() %>% 
+  mutate(total = sum(c_across(where(is.numeric)))) %>% 
+  ungroup() %>% 
+  select(days:z_interv, total, everything())  %>% 
+  mutate(across(c(5:148), ~ . / total)) %>% 
+  select(-total)
+  
+```
+
+## Heatmaps
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 12, fig.align = "center"}
+relaheat.data_combine_s4 <- counts_custom.tab_combine_s4 %>% 
+  pivot_longer(.,-c(days:z_interv), names_to = "taxa", values_to = "relabund") %>% 
+  separate(taxa, into = c("p", "c", "o", "f"), sep = " _ ") %>% 
+  mutate(cof = paste(c, o, f, sep = ": ")) %>% 
+  group_by(days, z_interv, cof) %>% 
+  mutate(mean_relabund = mean(relabund, na.rm = T)) %>% 
+  ungroup() %>% 
+  select(-relabund) %>% 
+  distinct() %>% 
+  mutate_at(vars(p,c,o, cof), str_replace_all, "NA", "Unassigned") %>% 
+  arrange(desc(cof), mean_relabund)
+
+# install.packages("viridis")
+# library(viridis)
+
+relaheat_combine_s4 <- relaheat.data_combine_s4 %>%
+  filter(mean_relabund > 0.001) %>%
+  ggplot(aes(x = days, y = reorder(cof, mean_relabund))) +
+  geom_tile(aes(fill = mean_relabund), color = "white") +
+  # scale_color_manual(values = custom.colors) %>%
+  scale_fill_gradientn(colors = rev(matlab.colors)) +
+  # scale_fill_viridis(option = "D", begin = 0.01) +
+  labs(x = "Days", y = "Class: Order: Family", fill = "Relative Abundance") +
+  facet_grid(~factor(z_interv, levels = levels)) +
+  theme_classic2(base_size = 16) +
+  theme(axis.text.y = element_text(size = 12), legend.position = "top") +
+   guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) +
+  ggtitle("NAAMES 2 Station 4")
+
+
+```
+
+```{r}
+zscore_data_combine_s4 <- relaheat.data_combine_s4  %>% 
+  group_by(cof, z_interv) %>% 
+  mutate(zscore_mean = mean(mean_relabund, na.rm = T),
+         zscore_sd = sd(mean_relabund, na.rm = T)) %>% 
+  ungroup() %>% 
+  mutate(zscore = ifelse(zscore_mean > 0, (mean_relabund - zscore_mean) / zscore_sd, NA)) 
+```
+
+```{r fig.height=8, fig.width=12}
+relaheat_z_combine_s4 <- zscore_data_combine_s4  %>%
+  filter(mean_relabund > 0.001) %>%
+  ggplot(aes(x = days, y = reorder(cof, mean_relabund))) +
+  geom_tile(aes(fill = zscore), color = "white") +
+  scale_fill_gradient2(low = "#313695", mid = "#FEE090", high = "#A50026", midpoint = 0) +
+  # scale_fill_gradientn(colors = rev(odv.colors)) +
+  # scale_fill_viridis(option = "D", begin = 0.01) +
+  labs(x = "Days", y = "", fill = "z-score") +
+  facet_grid(~factor(z_interv, levels = levels)) +
+  theme_classic2(base_size = 16) +
+  theme( legend.position = "top", axis.text.y = element_blank()) +
+  # theme( legend.position = "top") +
+   guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) 
+
+```
+
+```{r warning = F}
+
+combine_s6 <- n3s6 %>% 
+  transform_sample_counts(., function(x) x*1) #not actually transforming counts here...just converting frpm phyloseq object
+ combine_s6.df <-  as(otu_table(combine_s6), "matrix") %>%
+   as.data.frame(.) 
+
+
+#then combine the data frames
+custom.tab_combine_s6 <- tax.df %>% 
+  rownames_to_column(., var = "asv") %>% 
+  left_join(., combine_s6.df %>% rownames_to_column(., var = "asv")) %>% 
+  #create a new index of that combines the  class, order, family, and genus values, you can play around here!!
+  mutate(#pcofg = paste(Phylum, "_", Class, "_", Order,"_", Family, "_", Genus),
+         pcof = paste(Phylum, "_", Class, "_", Order,"_", Family)) %>% 
+         # pco = paste(Phylum, "_", Class, "_", Order)) %>% 
+  select(-c(asv:Genus)) %>% 
+  select(pcof,everything()) %>%
+  group_by(pcof) %>%
+  # select(pco,everything()) %>% 
+  # group_by(pco) %>% 
+  #here we are combining the relative abundances based on our grouping
+  summarise_at(vars(!contains(c("pcof"))), sum, na.rm = T) %>% 
+  ungroup()
+
+#save the row names and then make them into the column names
+colnames <- custom.tab_combine_s6[,1] 
+
+#transpose the dataframe so we can merge with the sample info table
+t_custom.tab_combine_s6 <-  as.data.frame(t(custom.tab_combine_s6[,-1]))
+colnames(t_custom.tab_combine_s6) <- colnames$pcof
+# colnames(t_custom.tab) <- colnames$pco
+
+#merge
+sweet.tab_custom.tab_combine_s6  <- t_custom.tab_combine_s6  %>% 
+  rownames_to_column(., var = "sample") %>% 
+  left_join(., sample.tab %>% rownames_to_column(., var = "sample")) %>% 
+  select(sample, Cruise:npp, everything())
+
+
+counts_custom.tab_combine_s6  <- sweet.tab_custom.tab_combine_s6 %>% 
+  select(-c(sample:npp)) %>% 
+  #remove groups that are completely absent
+  .[ , colSums(.) > 0] %>% 
+  #arrange by biggest contributors
+  .[, order(colSums(-.))] %>% 
+  bind_cols(sweet.tab_custom.tab_combine_s6 %>% select(sample:npp), .) %>% 
+  mutate_at(vars(days), as.character) %>% 
+  group_by(days, eddy, z_interv) %>% 
+  summarise_at(vars(!c(sample:npp)), sum, na.rm = T) %>% 
+  ungroup() %>% 
+  rowwise() %>% 
+  mutate(total = sum(c_across(where(is.numeric)))) %>% 
+  ungroup() %>% 
+  select(days:z_interv, total, everything())  %>% 
+  mutate(across(c(5:170), ~ . / total)) %>% 
+  select(-total)
+  
+```
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 12, fig.align = "center"}
+relaheat.data_combine_s6 <- counts_custom.tab_combine_s6 %>% 
+  pivot_longer(.,-c(days:z_interv), names_to = "taxa", values_to = "relabund") %>% 
+  separate(taxa, into = c("p", "c", "o", "f"), sep = " _ ") %>% 
+  mutate(cof = paste(c, o, f, sep = ": ")) %>% 
+  group_by(days, z_interv, cof) %>% 
+  mutate(mean_relabund = mean(relabund, na.rm = T)) %>% 
+  ungroup() %>% 
+  select(-relabund) %>% 
+  distinct() %>% 
+  mutate_at(vars(p,c,o, cof), str_replace_all, "NA", "Unassigned") %>% 
+  arrange(desc(cof), mean_relabund)
+
+# install.packages("viridis")
+# library(viridis)
+
+relaheat_combine_s6 <- relaheat.data_combine_s6 %>%
+  filter(mean_relabund > 0.001) %>%
+  ggplot(aes(x = days, y = reorder(cof, mean_relabund))) +
+  geom_tile(aes(fill = mean_relabund), color = "white") +
+  # scale_color_manual(values = custom.colors) %>%
+  scale_fill_gradientn(colors = rev(matlab.colors)) +
+  # scale_fill_viridis(option = "D", begin = 0.01) +
+  labs(x = "Days", y = "Class: Order: Family", fill = "Relative Abundance") +
+  facet_grid(~factor(z_interv, levels = levels)) +
+  theme_classic2(base_size = 16) +
+  theme(axis.text.y = element_text(size = 12), legend.position = "top") +
+   guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) +
+  ggtitle("NAAMES 3 Station 6")
+
+
+```
+
+```{r}
+zscore_data_combine_s6 <- relaheat.data_combine_s6  %>% 
+  group_by(cof, z_interv) %>% 
+  mutate(zscore_mean = mean(mean_relabund, na.rm = T),
+         zscore_sd = sd(mean_relabund, na.rm = T)) %>% 
+  ungroup() %>% 
+  mutate(zscore = ifelse(zscore_mean > 0, (mean_relabund - zscore_mean) / zscore_sd, NA)) 
+```
+
+```{r fig.height=8, fig.width=12}
+relaheat_z_combine_s6 <- zscore_data_combine_s6  %>%
+  filter(mean_relabund > 0.001) %>%
+  ggplot(aes(x = days, y = reorder(cof, mean_relabund))) +
+  geom_tile(aes(fill = zscore), color = "white") +
+  scale_fill_gradient2(low = "#313695", mid = "#FEE090", high = "#A50026", midpoint = 0) +
+  # scale_fill_gradientn(colors = rev(odv.colors)) +
+  # scale_fill_viridis(option = "D", begin = 0.01) +
+  labs(x = "Days", y = "", fill = "z-score") +
+  facet_grid(~factor(z_interv, levels = levels)) +
+  theme_classic2(base_size = 16) +
+  theme( legend.position = "top", axis.text.y = element_blank()) +
+  # theme( legend.position = "top") +
+   guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) 
+
+```
+
+```{r fig.height=28, fig.width=20}
+(relaheat_combine_s4 + relaheat_z_combine_s4) / (relaheat_combine_s6 + relaheat_z_combine_s6) + plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 22)) 
+```
+
+```{r fig.height=12, fig.width=17}
+(relaheat_combine_s4 + relaheat_z_combine_s4) 
+```
+
+```{r fig.height=14, fig.width=16}
+(relaheat_combine_s6 + relaheat_z_combine_s6) 
+```
+
+# Save
 
 ```{r}
 
 saveRDS(sample.tab, "~/GITHUB/naames_multiday/Output/Sample_Table.rds")
 saveRDS(relabund, "~/GITHUB/naames_multiday/Output/Relabund_Table.rds")
+saveRDS(relabund_s6, "~/GITHUB/naames_multiday/Output/Relabund_Table_s6.rds")
 saveRDS(sub_ps, "~/GITHUB/naames_multiday/Output/phyloseq_obj.rds")
 saveRDS(ps_min, "~/GITHUB/naames_multiday/Output/phyloseq_obj_min.rds")
 

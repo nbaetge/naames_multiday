@@ -1,8 +1,8 @@
 ---
-title: "S4 Integration Plots"
+title: "S6_Integration_Plots"
 author: "Nicholas Baetge"
-date: "8/12/2020"
-output: github_document
+date: "2/15/2021"
+output: html_document
 ---
 
 # Intro
@@ -29,13 +29,13 @@ odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe"
 
 ```{r import data, message=FALSE, warning=FALSE}
 data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
-  filter(Cruise == "AT34" & Station == 4) %>% 
+  filter(Cruise == "AT38" & Station == 6) %>% 
   mutate(time = ymd_hms(datetime),
          interv = interval(first(time), time),
          dur = as.duration(interv),
-         days = as.numeric(dur, "days"),
-         eddy = ifelse(Date != "2016-05-27", "Core", "Periphery")) %>% 
-  select(Cruise, Station, Date, eddy, time:days, bcd.100:npp.300) %>% 
+         days = as.numeric(dur, "days")) %>% 
+  select(Cruise, Station, Date, time:days, bcd.100:npp.300) %>% 
+  select(-contains("tdaa")) %>% 
   distinct() %>% 
    mutate_at(vars(contains(c("tdaa", "bcd", "npp", "phyc"))), funs(. / 10^3)) #nM to mmol/m3
 
@@ -95,12 +95,6 @@ pivot_doc_data <- data %>%
          depth_interval = ifelse(depth_interval == 200, "100-200 m", depth_interval),
          depth_interval = ifelse(depth_interval == 300, "200-300 m", depth_interval))
 
-pivot_tdaa_data <- data %>% 
-  select(Cruise:days, contains("tdaa")) %>% 
-  pivot_longer(tdaa.100:tdaa.300, names_to = "depth_interval", names_prefix = "tdaa.", values_to = "tdaa") %>% 
-  mutate(depth_interval = ifelse(depth_interval == 100, "0-100 m", depth_interval),
-         depth_interval = ifelse(depth_interval == 200, "100-200 m", depth_interval),
-         depth_interval = ifelse(depth_interval == 300, "200-300 m", depth_interval))
 
 pivoted <- left_join(pivot_phyc_data, pivot_npp_data) %>% 
   left_join(., pivot_phyto_data) %>% 
@@ -108,7 +102,6 @@ pivoted <- left_join(pivot_phyc_data, pivot_npp_data) %>%
   left_join(., pivot_ba_data) %>% 
   left_join(., pivot_bcd_data) %>% 
   left_join(., pivot_doc_data) %>% 
-  left_join(., pivot_tdaa_data) %>% 
   filter(depth_interval %in% c("0-100 m", "100-200 m"))
 
 ```
@@ -125,13 +118,12 @@ phyc.plot <-  pivoted %>%
             fill = "light grey", alpha = 0.1) +
   geom_rect( aes(xmin = 2.5, xmax = 3, ymin = -Inf, ymax = Inf),
             fill = "light grey", alpha = 0.1) +
-   geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 1) +
-  geom_point(aes(shape = eddy, fill = factor(depth_interval, levels = levels)), size = 6, color = "black", stroke = 1, alpha = 0.7) +  
+   geom_line(aes(color = factor(depth_interval, levels = levels)), size = 1) +
+  geom_point(aes(fill = factor(depth_interval, levels = levels)), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) +  
   labs(x = "", y = expression(paste("Phytoplankton Carbon, mmol m"^"-3")), colour = "") +
-  scale_shape_manual(values = c("Core" = 21, "Periphery" = 24)) +
   scale_fill_manual(values = custom.colors) +
   scale_color_manual(values = custom.colors) +
-  guides(color = F, fill = F, shape = F, linetype = F) +
+  guides(color = F, fill = F) +
   theme_classic2(base_size = 16)
  # facet_grid(rows = vars(depth_interval), scales = "free_y")
 
@@ -147,13 +139,12 @@ bc.plot <-  pivoted %>%
             fill = "light grey", alpha = 0.1) +
   geom_rect( aes(xmin = 2.5, xmax = 3, ymin = -Inf, ymax = Inf),
             fill = "light grey", alpha = 0.1) +
-   geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 1) +
-  geom_point(aes(shape = eddy, fill = factor(depth_interval, levels = levels)), size = 6, color = "black", stroke = 1, alpha = 0.7) +  
+   geom_line(aes(color = factor(depth_interval, levels = levels)), size = 1) +
+  geom_point(aes(fill = factor(depth_interval, levels = levels)), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) +  
   labs(x = "", y = expression(paste("Bacterioplankton Carbon, mmol m"^"-3")), colour = "") +
-  scale_shape_manual(values = c("Core" = 21, "Periphery" = 24)) +
   scale_fill_manual(values = custom.colors) +
   scale_color_manual(values = custom.colors) +
-  guides(color = F, fill = F, shape = F, linetype = F) +
+  guides(color = F, fill = F) +
   theme_classic2(base_size = 16)
  # facet_grid(rows = vars(depth_interval), scales = "free_y")
 
@@ -172,13 +163,12 @@ phyto.plot <-  pivoted %>%
             fill = "light grey", alpha = 0.1) +
   geom_rect( aes(xmin = 2.5, xmax = 3, ymin = -Inf, ymax = Inf),
             fill = "light grey", alpha = 0.1) +
-   geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 1) +
-  geom_point(aes(shape = eddy, fill = factor(depth_interval, levels = levels)), size = 6, color = "black", stroke = 1, alpha = 0.7) +  
+   geom_line(aes(color = factor(depth_interval, levels = levels)), size = 1) +
+  geom_point(aes(fill = factor(depth_interval, levels = levels)), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) +  
   labs(x = "", y = expression(paste("Phytoplankton Cells, m"^"-3")), colour = "") +
-  scale_shape_manual(values = c("Core" = 21, "Periphery" = 24)) +
   scale_fill_manual(values = custom.colors) +
   scale_color_manual(values = custom.colors) +
-  guides(color = F, fill = F, shape = F, linetype = F) +
+  guides(color = F, fill = F) +
   theme_classic2(base_size = 16)
  # facet_grid(rows = vars(depth_interval), scales = "free_y")
 
@@ -195,13 +185,12 @@ ba.plot <-  pivoted %>%
             fill = "light grey", alpha = 0.1) +
   geom_rect( aes(xmin = 2.5, xmax = 3, ymin = -Inf, ymax = Inf),
             fill = "light grey", alpha = 0.1) +
-   geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 1) +
-  geom_point(aes(shape = eddy, fill = factor(depth_interval, levels = levels)), size = 6, color = "black", stroke = 1, alpha = 0.7) +  
+   geom_line(aes(color = factor(depth_interval, levels = levels)), size = 1) +
+  geom_point(aes(fill = factor(depth_interval, levels = levels)), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) +  
   labs(x = "", y = expression(paste("Bacterioplankton Cells, m"^"-3")), colour = "") +
-  scale_shape_manual(values = c("Core" = 21, "Periphery" = 24)) +
   scale_fill_manual(values = custom.colors) +
   scale_color_manual(values = custom.colors) +
-  guides(color = F, fill = F, shape = F, linetype = F) +
+  guides(color = F, fill = F) +
   theme_classic2(base_size = 16)
  # facet_grid(rows = vars(depth_interval), scales = "free_y")
 
@@ -217,13 +206,12 @@ npp.plot <-  pivoted %>%
             fill = "light grey", alpha = 0.1) +
   geom_rect( aes(xmin = 2.5, xmax = 3, ymin = -Inf, ymax = Inf),
             fill = "light grey", alpha = 0.1) +
-   geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 1) +
-  geom_point(aes(shape = eddy, fill = factor(depth_interval, levels = levels)), size = 6, color = "black", stroke = 1, alpha = 0.7) +  
+   geom_line(aes(color = factor(depth_interval, levels = levels)), size = 1) +
+  geom_point(aes(fill = factor(depth_interval, levels = levels)), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) +  
   labs(x = "", y = expression(paste("NPP, mmol m"^"-3", "d"^-1)), colour = "") +
-  scale_shape_manual(values = c("Core" = 21, "Periphery" = 24)) +
   scale_fill_manual(values = custom.colors) +
   scale_color_manual(values = custom.colors) +
-  guides(color = F, fill = F, shape = F, linetype = F) +
+  guides(color = F, fill = F) +
   theme_classic2(base_size = 16)
  # facet_grid(rows = vars(depth_interval), scales = "free_y")
 
@@ -244,13 +232,12 @@ bcd.plot <-  pivoted %>%
             fill = "light grey", alpha = 0.1) +
   geom_rect( aes(xmin = 2.5, xmax = 3, ymin = -Inf, ymax = Inf),
             fill = "light grey", alpha = 0.1) +
-   geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 1) +
-  geom_point(aes(shape = eddy, fill = factor(depth_interval, levels = levels)), size = 6, color = "black", stroke = 1, alpha = 0.7) +  
+   geom_line(aes(color = factor(depth_interval, levels = levels)), size = 1) +
+  geom_point(aes(fill = factor(depth_interval, levels = levels)), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) +  
   labs(x = "", y = expression(paste("BCD, mmol m"^"-3", "d"^-1)), colour = "") +
-  scale_shape_manual(values = c("Core" = 21, "Periphery" = 24)) +
   scale_fill_manual(values = custom.colors) +
   scale_color_manual(values = custom.colors) +
-  guides(color = F, fill = F, shape = F, linetype = F) +
+  guides(color = F, fill = F) +
   theme_classic2(base_size = 16)
  # facet_grid(rows = vars(depth_interval), scales = "free_y")
 
@@ -268,10 +255,9 @@ doc.plot <-  pivoted %>%
             fill = "light grey", alpha = 0.1) +
   geom_rect( aes(xmin = 2.5, xmax = 3, ymin = -Inf, ymax = Inf),
             fill = "light grey", alpha = 0.1) +
-  geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 1) +
-  geom_point(aes(shape = eddy, fill = factor(depth_interval, levels = levels)), size = 6, color = "black", stroke = 1, alpha = 0.7) +  
-  labs(x = "Days on Station", y = expression(paste("DOC, mmol m"^"-3")), colour = "", fill = "Depth Interval", linetype = "Eddy Location", shape = "Eddy Location") +
-  scale_shape_manual(values = c("Core" = 21, "Periphery" = 24)) +
+  geom_line(aes(color = factor(depth_interval, levels = levels)), size = 1) +
+  geom_point(aes(fill = factor(depth_interval, levels = levels)), size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) +  
+  labs(x = "Days on Station", y = expression(paste("DOC, mmol m"^"-3")), colour = "", fill = "Depth Interval") +
   scale_fill_manual(values = custom.colors) +
   scale_color_manual(values = custom.colors) +
   guides(linetype = F, color = F, fill = guide_legend(override.aes = list(shape = 21))) +
@@ -282,35 +268,10 @@ doc.plot <-  pivoted %>%
 ```
 
 
-### TDAA
 
-```{r tdaa plot, echo = FALSE, warning = FALSE, message = FALSE}
-tdaa.plot <-  pivoted %>% 
-  drop_na(tdaa) %>% 
-  ggplot(aes(x = days, y = tdaa)) +
-  geom_rect( aes(xmin = 0.5, xmax = 1, ymin = -Inf, ymax = Inf),
-            fill = "light grey", alpha = 0.1) +
-  geom_rect( aes(xmin = 1.5, xmax = 2, ymin = -Inf, ymax = Inf),
-            fill = "light grey", alpha = 0.1) +
-  geom_rect( aes(xmin = 2.5, xmax = 3, ymin = -Inf, ymax = Inf),
-            fill = "light grey", alpha = 0.1) +
-  geom_line(aes(linetype = eddy, color = factor(depth_interval, levels = levels)), size = 1) +
-  geom_point(aes(shape = eddy, fill = factor(depth_interval, levels = levels)), size = 6, color = "black", stroke = 1, alpha = 0.7) +  
-  labs(x = "Days on Station", y = expression(paste("TDAA, mmol m"^"-3")), colour = "") +
-  scale_shape_manual(values = c("Core" = 21, "Periphery" = 24)) +
-  scale_fill_manual(values = custom.colors) +
-  scale_color_manual(values = custom.colors) +
-  guides(color = F, fill = F, shape = F, linetype = F) +
-  theme_classic2(base_size = 16)
- # facet_grid(rows = vars(depth_interval), scales = "free_y")
+```{r combine plots, echo=FALSE, fig.height=14, fig.width=14, message=FALSE, warning=FALSE}
 
-```
-
-
-
-```{r combine plots, echo=FALSE, fig.height=17, fig.width=11, message=FALSE, warning=FALSE}
-
-patchwork <- (phyto.plot + ba.plot + phyc.plot + bc.plot)   / (npp.plot + bcd.plot + doc.plot + tdaa.plot)
+patchwork <- (phyto.plot + ba.plot + phyc.plot + bc.plot + npp.plot + bcd.plot + doc.plot)
 
 patchwork +  
   plot_layout(guides = 'collect') +
@@ -319,17 +280,6 @@ patchwork +
         plot.title = element_text(size = 36)) 
 
 ```
-
-
-
-
-
-
-
-
-
-
-
 
 
 

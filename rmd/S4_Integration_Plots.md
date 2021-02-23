@@ -15,7 +15,7 @@ library(ggpubr)
 ```
 
 ``` r
-custom.colors <- c("AT39" = "#377EB8", "AT34" = "#4DAF4A", "AT38" = "#E41A1C", "AT32" = "#FF7F00", "Temperate" = "#A6CEE3", "Subpolar" = "#377EB8", "Subtropical" = "#FB9A99", "GS/Sargasso" = "#E41A1C", "Early Spring" = "#377EB8", "Late Spring" = "#4DAF4A","Early Autumn" = "#E41A1C", "Late Autumn" = "#FF7F00",  "0-100 m" = "#d31f2a", "100-200 m" = "#27ab19", "200-300 m" = "#d16cfa")
+custom.colors <- c("AT39" = "#377EB8", "AT34" = "#4DAF4A", "AT38" = "#E41A1C", "AT32" = "#FF7F00", "Temperate" = "#A6CEE3", "Subpolar" = "#377EB8", "Subtropical" = "#FB9A99", "GS/Sargasso" = "#E41A1C", "Early Spring" = "#377EB8", "Late Spring" = "#4DAF4A","Early Autumn" = "#E41A1C", "Late Autumn" = "#FF7F00",  "0-100 m" = "#A50026", "100-200 m" = "#313695")
 
 levels = c("GS/Sargasso", "Subtropical", "Temperate", "Subpolar",  "AT39-6", "AT34", "AT38", "AT32","South", "North", "Early Spring", "Late Spring","Early Autumn",  "Late Autumn", "0-100 m", "100-200 m", "200-300 m")
 
@@ -31,10 +31,10 @@ data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>%
          interv = interval(first(time), time),
          dur = as.duration(interv),
          days = as.numeric(dur, "days"),
-         eddy = ifelse(Date != "2016-05-27", "Core", "Outside")) %>% 
+         eddy = ifelse(Date != "2016-05-27", "Core", "Periphery")) %>% 
   select(Cruise, Station, Date, eddy, time:days, bcd.100:npp.300) %>% 
   distinct() %>% 
-   mutate_at(vars(contains("tdaa")), funs(. / 10^3)) #nM to mmol/m3
+   mutate_at(vars(contains(c("tdaa", "bcd", "npp", "phyc"))), funs(. / 10^3)) #nM to mmol/m3
 ```
 
 # Pivot data
@@ -43,6 +43,13 @@ data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>%
 pivot_phyc_data <- data %>% 
   select(Cruise:days,  phyc.100, phyc.200, phyc.300) %>% 
   pivot_longer(phyc.100:phyc.300, names_to = "depth_interval", names_prefix = "phyc.", values_to = "phyc") %>% 
+  mutate(depth_interval = ifelse(depth_interval == 100, "0-100 m", depth_interval),
+         depth_interval = ifelse(depth_interval == 200, "100-200 m", depth_interval),
+         depth_interval = ifelse(depth_interval == 300, "200-300 m", depth_interval))
+
+pivot_bc_data <- data %>% 
+  select(Cruise:days,  bc.100, bc.200, bc.300) %>% 
+  pivot_longer(bc.100:bc.300, names_to = "depth_interval", names_prefix = "bc.", values_to = "bc") %>% 
   mutate(depth_interval = ifelse(depth_interval == 100, "0-100 m", depth_interval),
          depth_interval = ifelse(depth_interval == 200, "100-200 m", depth_interval),
          depth_interval = ifelse(depth_interval == 300, "200-300 m", depth_interval))
@@ -93,10 +100,12 @@ pivot_tdaa_data <- data %>%
 
 pivoted <- left_join(pivot_phyc_data, pivot_npp_data) %>% 
   left_join(., pivot_phyto_data) %>% 
+  left_join(., pivot_bc_data) %>% 
   left_join(., pivot_ba_data) %>% 
   left_join(., pivot_bcd_data) %>% 
   left_join(., pivot_doc_data) %>% 
-  left_join(., pivot_tdaa_data) 
+  left_join(., pivot_tdaa_data) %>% 
+  filter(depth_interval %in% c("0-100 m", "100-200 m"))
 ```
 
 # Plot Data

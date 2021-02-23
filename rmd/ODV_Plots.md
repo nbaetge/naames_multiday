@@ -25,6 +25,9 @@ custom.colors <- c("AT39" = "#377EB8", "AT34" = "#4DAF4A", "AT38" = "#E41A1C", "
 levels = c("GS/Sargasso", "Subtropical", "Temperate", "Subpolar",  "AT39-6", "AT34", "AT38", "AT32", "Early Spring", "Late Spring","Early Autumn",  "Late Autumn")
 
 odv.colors <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe", "#d16cfa")
+
+matlab.colors <- c("#A50026", "#D73027", "#F46D43", "#FDAE61", "#FEE090", "#FFFFBF", "#E0F3F8", "#ABD9E9", "#74ADD1", "#4575B4", "#313695")
+matlab.colors2 <- c("#A50026", "#D73027", "#F46D43", "#FDAE61",  "#ABD9E9", "#74ADD1", "#4575B4", "#313695")
 ```
 
 # Import Data
@@ -161,16 +164,16 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
   filter(z >= 0) 
 ```
 
-## BCD
+## BP
 
 ``` r
 subset <- data %>% 
   filter(between(z, 0, 300)) %>% 
-  select(lat, z, bcd) %>% 
+  select(lat, z, bp) %>% 
   group_by(z) %>% 
-  mutate(mean = mean(bcd, na.rm = T),
-         sd = sd(bcd, na.rm = T),
-         zscore = (bcd - mean)/sd) %>% 
+  mutate(mean = mean(bp, na.rm = T),
+         sd = sd(bp, na.rm = T),
+         zscore = (bp - mean)/sd) %>% 
   ungroup() %>% 
   select(lat, z, zscore) %>% 
   mutate(zscore = round(zscore, 2)) %>% 
@@ -255,7 +258,7 @@ mba <- melt(mba$xyz.est$z, varnames = c('lat', 'z'), value.name = 'zscore') %>%
 ``` r
 # patchwork <- (beamt.plot / fl.plot / phyto.plot) | (ba.plot / npp.plot / bcd.plot) | (n.plot / doc.plot / aou.plot )
 
-patchwork <- (doc.plot / aou.plot) | (beamt.plot / fl.plot) 
+patchwork <- (doc.plot / aou.plot) | (beamt.plot / fl.plot) | (ba.plot / bp.plot)
 
 patchwork +  plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 22))

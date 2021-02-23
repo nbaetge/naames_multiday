@@ -1,11 +1,11 @@
-Depth\_Profiles
+S6\_Depth\_Profiles
 ================
 Nicholas Baetge
-8/6/2020
+2/15/2021
 
 # Intro
 
-Here, we plot the profiles from the multiday NAAMES station, N2S4.
+Here, we plot the profiles from the multiday NAAMES station, N3S6.
 
 ``` r
 library(tidyverse) 
@@ -30,39 +30,36 @@ matlab.colors22 <- c("#A50026", "#D73027", "#F46D43", "#FDAE61",  "#ABD9E9", "#7
 
 ``` r
 data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
-  filter(Cruise == "AT34" & Station == 4) %>% 
+  filter(Cruise == "AT38" & Station == 6) %>% 
   mutate_at(vars(contains("tdaa"), Asp:Lys), funs(. / 10^3)) %>% #nM to mmol/m3
   mutate(time = ymd_hms(datetime),
          interv = interval(first(time), time),
          dur = as.duration(interv),
          days = as.numeric(dur, "days"),
-         eddy = ifelse(Date != "2016-05-27", "Core", "Periphery"),
          tdaa_yield = round((tdaa_c/doc)*100, 2)) %>% 
   filter(z <= 200)
 
 npp <- read_rds("~/GITHUB/naames_multiday/Input/npp_data.rds") %>% 
-  mutate(interv = interval(ymd("2016-05-24"), Date),
+   filter(Cruise == "AT38" & Station == 6) %>% 
+  mutate(interv = interval(ymd("2017-09-13"), Date),
          dur = as.duration(interv),
-         days = as.numeric(dur, "days"),
-         eddy = ifelse(Date != "2016-05-27" & Station != 6, "Core", "Periphery")) %>% 
-  filter(Cruise == "AT34" & Station == 4)  %>% 
+         days = as.numeric(dur, "days")) %>% 
   filter(z <= 200)
 
 ctd <-  read_rds("~/GITHUB/naames_multiday/Input/ctd_data.rds") %>% 
-  mutate(interv = interval(ymd("2016-05-24"), Date),
+   filter(Cruise == "AT38" & Station == 6) %>% 
+  mutate(interv = interval(ymd("2017-09-13"), Date),
          dur = as.duration(interv),
-         days = as.numeric(dur, "days"),
-         eddy = ifelse(Date != "2016-05-27" & Station != 6, "Core", "Periphery")) %>% 
-  filter(Cruise == "AT34" & Station == 4) %>% 
+         days = as.numeric(dur, "days")) %>% 
   filter(z <= 200)
 
 casts <- data %>% 
-  filter(Cruise == "AT34", Date != "2016-05-27") %>% 
+  filter(Cruise == "AT38", Station == 6) %>% 
   distinct(CampCN) %>% 
   as_vector()
 ```
 
-# Station 4
+# Station 6
 
 ## Plot MLDs
 
@@ -80,14 +77,10 @@ casts <- data %>%
 
 ### DOC
 
-### TDAA
-
-### TDAA Yield
-
 ### AOU
 
 ### BactA
 
 ### BCD
 
-![](S4_Depth_Profiles_files/figure-gfm/combine%20plots-1.png)<!-- -->
+![](S6_Depth_Profiles_files/figure-gfm/combine%20plots-1.png)<!-- -->
