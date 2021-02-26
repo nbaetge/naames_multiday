@@ -14,6 +14,7 @@ library(tidyverse)
 library(lubridate)
 library(patchwork)
 library(ggpubr)
+library(viridis)
 ```
 
 ```{r aesthetics, message=FALSE, warning=FALSE}
@@ -87,6 +88,67 @@ mld.plot <-  data %>%
 
 ## Plot Profiles 
 
+### Temp
+
+```{r t plot, echo = FALSE, warning = FALSE, message = FALSE}
+t.plot <-  ctd %>% 
+  filter(z <= 300) %>% 
+  group_by(Date, z) %>% 
+  mutate(ave_t = mean(ave_temp_c, na.rm = T),
+         sd_t = sd(ave_temp_c, na.rm = T)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = z, y = ave_t, group = interaction(Date, CampCN))) +
+  geom_ribbon(aes(ymin = ave_t - sd_t, ymax = ave_t + sd_t, fill = days), alpha = 0.1) +
+  geom_line(aes(color = days), size = 0.7) +
+  labs(x = "", y = expression(paste("Temperature, ˚C")), colour = "", fill = "Days") +
+  scale_x_reverse() +
+  coord_flip() +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
+  guides(colour = F, fill = F, shape = F, linetype = F) +
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm"))
+
+```
+
+### Sal
+
+```{r s plot, echo = FALSE, warning = FALSE, message = FALSE}
+s.plot <-  ctd %>% 
+  filter(z <= 300) %>% 
+  group_by(Date, z) %>% 
+  mutate(ave_s = mean(ave_sal_psu, na.rm = T),
+         sd_s = sd(ave_sal_psu, na.rm = T)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = z, y = ave_s, group = interaction(Date, CampCN))) +
+  geom_ribbon(aes(ymin = ave_s - sd_s, ymax = ave_s + sd_s, fill = days), alpha = 0.1) +
+  geom_line(aes(color = days), size = 0.7) +
+  labs(x = "", y = expression(paste("Salinity, psu")), colour = "", fill = "Days") +
+  scale_x_reverse() +
+  coord_flip() +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
+  guides(colour = F, fill = F, shape = F, linetype = F) +
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm"))
+
+```
+
+
 ### Chl
 
 ```{r chl plot, echo = FALSE, warning = FALSE, message = FALSE}
@@ -101,8 +163,10 @@ chl.plot <-  data %>%
   expand_limits(x = 200) +
   scale_x_reverse() +
   coord_flip() +
-  scale_fill_gradientn(colors = matlab.colors2) +
-  scale_color_gradientn(colors = matlab.colors2) +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
   guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) +
   theme_classic2(base_size = 20) +
   theme(panel.spacing.x = unit(1, "cm"),
@@ -129,8 +193,10 @@ phyto.plot <-  data %>%
   expand_limits(x = 200) +
   scale_x_reverse() +
   coord_flip() +
-  scale_fill_gradientn(colors = matlab.colors2) +
-  scale_color_gradientn(colors = matlab.colors2) +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
   guides(colour = F, fill = F, shape = F, linetype = F) +
   theme_classic2(base_size = 20) +
   theme(legend.title = element_blank(),
@@ -159,8 +225,10 @@ phyc.plot <-  data %>%
   expand_limits(x = 200) +
   scale_x_reverse() +
   coord_flip() +
-  scale_fill_gradientn(colors = matlab.colors2) +
-  scale_color_gradientn(colors = matlab.colors2) +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
   guides(colour = F, fill = F) +
   theme_classic2(base_size = 20) +
   theme(legend.title = element_blank(),
@@ -181,8 +249,10 @@ npp.plot <-  npp %>%
   expand_limits(x = 200) +
   scale_x_reverse() +
   coord_flip() +
-  scale_fill_gradientn(colors = matlab.colors2) +
-  scale_color_gradientn(colors = matlab.colors2) +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
   guides(colour = F, fill = F) +
   theme_classic2(base_size = 20) +
   theme(legend.title = element_blank(),
@@ -205,8 +275,10 @@ n.plot <-  data %>%
   labs(x = "", y = expression(paste("N + N, mmol m"^"-3")), colour = "", fill = "Days") +
   scale_x_reverse() +
   coord_flip() +
-  scale_fill_gradientn(colors = matlab.colors2) +
-  scale_color_gradientn(colors = matlab.colors2) +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
   guides(colour = F, fill = F) +
   theme_classic2(base_size = 20) +
   theme(legend.title = element_blank(),
@@ -230,8 +302,10 @@ doc.plot <-  data %>%
   labs(x = "", y = expression(paste("DOC, mmol m"^"-3")), colour = "", fill = "Days") +
   scale_x_reverse() +
   coord_flip() +
-  scale_fill_gradientn(colors = matlab.colors2) +
-  scale_color_gradientn(colors = matlab.colors2) +
+ # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
   guides(fill = F, color = F) +
   theme_classic2(base_size = 20) +
   theme(legend.title = element_blank(),
@@ -248,8 +322,8 @@ doc.plot <-  data %>%
 aou.plot <-  ctd %>% 
   filter(z <= 300) %>% 
   group_by(Date, z) %>% 
-  mutate(ave_aou = mean(deriv_aou_umol_kg, na.rm = T),
-         sd_aou = sd(deriv_aou_umol_kg, na.rm = T)) %>% 
+  mutate(ave_aou = mean(deriv_aou_umol_l, na.rm = T),
+         sd_aou = sd(deriv_aou_umol_l, na.rm = T)) %>% 
   ungroup() %>% 
   ggplot(aes(x = z, y = ave_aou, group = interaction(Date, CampCN))) +
   geom_ribbon(aes(ymin = ave_aou - sd_aou, ymax = ave_aou + sd_aou, fill = days), alpha = 0.1) +
@@ -257,8 +331,10 @@ aou.plot <-  ctd %>%
   labs(x = "", y = expression(paste("AOU, mmol m"^"-3")), colour = "", fill = "Days") +
   scale_x_reverse() +
   coord_flip() +
-  scale_fill_gradientn(colors = matlab.colors2) +
-  scale_color_gradientn(colors = matlab.colors2) +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
   guides(colour = F, fill = F) +
   theme_classic2(base_size = 20) +
   theme(legend.title = element_blank(),
@@ -282,9 +358,41 @@ ba.plot <-  data %>%
   labs(x = "", y = expression(paste("Bacterioplankton Cells, m"^"-3")), colour = "", fill = "Days") +
   scale_x_reverse() +
   coord_flip() +
-  scale_fill_gradientn(colors = matlab.colors2) +
-  scale_color_gradientn(colors = matlab.colors2) +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
   guides(colour = F, fill = F) +
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm"))
+
+```
+
+### BP
+
+```{r bp plot, echo = FALSE, warning = FALSE, message = FALSE}
+bp.plot <-  data %>% 
+  drop_na(bp) %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  mutate(bp = bp/10^3,
+         sd_bp = sd_bp/10^3) %>% 
+  ggplot(aes(x = z, y = bp, group = interaction(Date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = bp - sd_bp, ymax = bp + sd_bp, color = days)) +
+  geom_line(aes(color = days), size = 0.7) +
+  geom_point(aes(fill = days), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = "", y = expression(paste("BP, mmol C m"^"-3","d"^-1)), colour = "", fill = "Days") +
+  scale_x_reverse() +
+  coord_flip() +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
+  guides(fill = F, color = F, linetype = F, shape = F) +
   theme_classic2(base_size = 20) +
   theme(legend.title = element_blank(),
         panel.spacing.x = unit(1, "cm"),
@@ -308,8 +416,10 @@ bcd.plot <-  data %>%
   labs(x = "", y = expression(paste("BCD, mmol C m"^"-3","d"^-1)), colour = "", fill = "Days") +
   scale_x_reverse() +
   coord_flip() +
-  scale_fill_gradientn(colors = matlab.colors2) +
-  scale_color_gradientn(colors = matlab.colors2) +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
   guides(fill = F, color = F) +
   theme_classic2(base_size = 20) +
   theme(legend.title = element_blank(),
@@ -320,9 +430,9 @@ bcd.plot <-  data %>%
 ```
 
 
-```{r combine plots, echo = FALSE, warning = FALSE, message = FALSE, fig.height = 20, fig.width = 14}
+```{r combine plots, echo = FALSE, warning = FALSE, message = FALSE, fig.height = 18, fig.width = 22}
 
-patchwork <- (mld.plot  / chl.plot / phyc.plot / phyto.plot / npp.plot) | (n.plot / aou.plot / doc.plot / ba.plot / bcd.plot)
+patchwork <- mld.plot  + t.plot +  chl.plot + phyc.plot + phyto.plot +   npp.plot + n.plot + aou.plot + doc.plot  +  ba.plot + bp.plot + bcd.plot
 
 patchwork +  
   plot_layout(guides = 'collect') +

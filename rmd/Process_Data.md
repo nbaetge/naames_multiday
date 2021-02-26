@@ -16,6 +16,8 @@ library(zoo)
 library(oce)
 ```
 
+    ## Error in get(genname, envir = envir) : object 'testthat_print' not found
+
 We’ll use a CCF of 5 from N2S4 surface and deep experiments to convert
 bact abund to bact
 c
@@ -115,6 +117,29 @@ interpolated.df <- left_join(bf, interpolations.df) %>%
          sd_phyc = sd_PhytoC)
 ```
 
+# Fill 0m data for CTD parmaters (AOU)
+
+``` r
+#split the df by CampCN  
+ctd.list <- split(ctd, ctd$CampCN)
+
+add.func <- function(morty){
+  morty[nrow(morty) + 1,] <- NA
+  morty$z[is.na(morty$z)] <- 0
+  rick <- morty %>% 
+    fill(., Cruise:id, .direction = c("updown")) %>% 
+    arrange(CampCN, z) %>% 
+    fill(., pres_db:Date, .direction = c("updown"))
+   }
+
+#apply function to list 
+added.list <- lapply(ctd.list, add.func)
+
+#save the list as a data frame 
+ctd.df <- plyr::ldply(added.list, data.frame) %>% 
+  select(-.id)  
+```
+
 # Estimate BCD and BC
 
 We’ll estimate BCD for each cast of each station of all the cruises
@@ -147,20 +172,21 @@ bcd <- interpolated.df %>%
 # Integrations
 
 ``` r
-integ_100 <- bcd %>% 
+integ_75 <- bcd %>% 
   group_by(CampCN) %>% 
-  filter(z <= 100) %>% 
-  mutate(bcd.100 = integrateTrapezoid(z, bcd, type = "A"),
-         ba.100 = integrateTrapezoid(z, ba, type = "A"),
-         bc.100 = integrateTrapezoid(z, bc, type = "A"),
-         doc.100 = integrateTrapezoid(z, doc, type = "A"),
-         phyc.100 = integrateTrapezoid(z, phyc, type = "A"),
-         phyto.100 = integrateTrapezoid(z, phyto, type = "A"),
-         tdaa.100 = integrateTrapezoid(z, tdaa_c, type = "A")) %>% 
-  mutate_at(vars(contains(".100")), round) %>% 
+  filter(z <= 75) %>% 
+  mutate(bcd.75 = integrateTrapezoid(z, bcd, type = "A"),
+         ba.75 = integrateTrapezoid(z, ba, type = "A"),
+         bp.75 = integrateTrapezoid(z, bp, type = "A"),
+         bc.75 = integrateTrapezoid(z, bc, type = "A"),
+         doc.75 = integrateTrapezoid(z, doc, type = "A"),
+         phyc.75 = integrateTrapezoid(z, phyc, type = "A"),
+         phyto.75 = integrateTrapezoid(z, phyto, type = "A"),
+         tdaa.75 = integrateTrapezoid(z, tdaa_c, type = "A")) %>% 
+  mutate_at(vars(contains(".75")), round) %>% 
   # depth normalize 
-  mutate_at(vars(contains(".100")), funs(./100)) %>% 
-  select(Cruise, Station, CampCN, contains(".100")) %>% 
+  mutate_at(vars(contains(".75")), funs(./75)) %>% 
+  select(Cruise, Station, CampCN, contains(".75")) %>% 
   # mutate(
   # ######### Estimate BCD:NPP #########
   #        bcd.npp = int.bcd/int.NPP * 100) %>%
@@ -170,9 +196,10 @@ integ_100 <- bcd %>%
 
 integ_200 <- bcd %>% 
   group_by(CampCN) %>% 
-  filter(between(z, 100, 200)) %>% 
+  filter(between(z, 75, 200)) %>% 
   mutate(bcd.200 = integrateTrapezoid(z, bcd, type = "A"),
          ba.200 = integrateTrapezoid(z, ba, type = "A"),
+         bp.200 = integrateTrapezoid(z, bp, type = "A"),
          bc.200 = integrateTrapezoid(z, bc, type = "A"),
          doc.200 = integrateTrapezoid(z, doc, type = "A"),
          phyc.200 = integrateTrapezoid(z, phyc, type = "A"),
@@ -180,7 +207,7 @@ integ_200 <- bcd %>%
          tdaa.200 = integrateTrapezoid(z, tdaa_c, type = "A")) %>% 
   mutate_at(vars(contains(".200")), round) %>% 
   # depth normalize 
-  mutate_at(vars(contains(".200")), funs(./100)) %>% 
+  mutate_at(vars(contains(".200")), funs(./125)) %>% 
   select(Cruise, Station, CampCN, contains(".200")) %>% 
   # mutate(
   # ######### Estimate BCD:NPP #########
@@ -193,7 +220,8 @@ integ_300 <- bcd %>%
   filter(between(z, 200, 300)) %>% 
   mutate(bcd.300 = integrateTrapezoid(z, bcd, type = "A"),
          ba.300 = integrateTrapezoid(z, ba, type = "A"),
-          bc.300 = integrateTrapezoid(z, bc, type = "A"),
+         bp.300 = integrateTrapezoid(z, bp, type = "A"),
+         bc.300 = integrateTrapezoid(z, bc, type = "A"),
          doc.300 = integrateTrapezoid(z, doc, type = "A"),
          phyc.300 = integrateTrapezoid(z, phyc, type = "A"),
          phyto.300 = integrateTrapezoid(z, phyto, type = "A"),
@@ -208,24 +236,24 @@ integ_300 <- bcd %>%
   distinct() %>% 
   ungroup()
 
-npp_100 <- npp %>% 
+npp_75 <- npp %>% 
   group_by(Cruise, Station, Date) %>% 
-  filter(z <= 100) %>% 
-  mutate(npp.100 = integrateTrapezoid(z, npp, type = "A")) %>% 
-  mutate_at(vars(contains(".100")), round) %>% 
+  filter(z <= 75) %>% 
+  mutate(npp.75 = integrateTrapezoid(z, npp, type = "A")) %>% 
+  mutate_at(vars(contains(".75")), round) %>% 
   # depth normalize 
-  mutate_at(vars(contains(".100")), funs(./100)) %>% 
-  select(Cruise, Station, Date, contains(".100"))  %>%
+  mutate_at(vars(contains(".75")), funs(./75)) %>% 
+  select(Cruise, Station, Date, contains(".75"))  %>%
   distinct() %>% 
   ungroup()
 
 npp_200 <- npp %>% 
   group_by(Cruise, Station, Date) %>% 
-  filter(between(z, 100, 200)) %>% 
+  filter(between(z, 75, 200)) %>% 
   mutate(npp.200 = integrateTrapezoid(z, npp, type = "A")) %>% 
   mutate_at(vars(contains(".200")), round) %>% 
   # depth normalize 
-  mutate_at(vars(contains(".200")), funs(./100)) %>% 
+  mutate_at(vars(contains(".200")), funs(./125)) %>% 
   select(Cruise, Station, Date, contains(".200"))  %>%
   distinct() %>% 
   ungroup()
@@ -242,13 +270,50 @@ npp_300 <- npp %>%
   ungroup()
 
 
+aou_75 <- ctd.df %>% 
+  group_by(Cruise, Station, CampCN) %>% 
+  filter(z <= 75) %>% 
+  mutate(aou.75 = integrateTrapezoid(z, deriv_aou_umol_l , type = "A")) %>% 
+  mutate_at(vars(contains(".75")), round) %>% 
+  # depth normalize 
+  mutate_at(vars(contains(".75")), funs(./75)) %>% 
+  select(Cruise, Station, CampCN, contains(".75"))  %>%
+  distinct() %>% 
+  ungroup()
 
-integrated.df <- left_join(bcd, integ_100) %>% 
+aou_200 <- ctd.df %>% 
+  group_by(Cruise, Station, CampCN) %>%  
+  filter(between(z, 75, 200)) %>% 
+  mutate(aou.200 = integrateTrapezoid(z, deriv_aou_umol_l , type = "A")) %>% 
+  mutate_at(vars(contains(".200")), round) %>% 
+  # depth normalize 
+  mutate_at(vars(contains(".200")), funs(./125)) %>% 
+  select(Cruise, Station, CampCN, contains(".200"))  %>%
+  distinct() %>% 
+  ungroup()
+
+aou_300 <- ctd.df %>% 
+  group_by(Cruise, Station, CampCN) %>% 
+  filter(between(z, 200, 300)) %>% 
+  mutate(aou.300 = integrateTrapezoid(z, deriv_aou_umol_l , type = "A")) %>%  
+  mutate_at(vars(contains(".300")), round) %>% 
+  # depth normalize 
+  mutate_at(vars(contains(".300")), funs(./100)) %>% 
+  select(Cruise, Station, CampCN, contains(".300"))  %>%
+  distinct() %>% 
+  ungroup()
+
+
+
+integrated.df <- left_join(bcd, integ_75) %>% 
   left_join(., integ_200) %>% 
   left_join(., integ_300) %>% 
-  left_join(., npp_100) %>% 
+  left_join(., npp_75) %>% 
   left_join(., npp_200) %>% 
-  left_join(., npp_300)
+  left_join(., npp_300) %>% 
+  left_join(., aou_75) %>% 
+  left_join(., aou_200) %>% 
+  left_join(., aou_300)
 ```
 
 # Save Data

@@ -1,0 +1,534 @@
+---
+title: "S4_Depth_Profiles_CORE"
+author: "Nicholas Baetge"
+date: "2/25/2021"
+output: github_document
+---
+
+# Intro
+
+Here, we plot the profiles from the multiday NAAMES station, N2S4.
+
+```{r load libraries, message=FALSE, warning=FALSE}
+library(tidyverse) 
+library(lubridate)
+library(patchwork)
+library(ggpubr)
+library(viridis)
+```
+
+```{r aesthetics, message=FALSE, warning=FALSE}
+
+custom.colors <- c("AT39" = "#377EB8", "AT34" = "#4DAF4A", "AT38" = "#E41A1C", "AT32" = "#FF7F00", "Temperate" = "#A6CEE3", "Subpolar" = "#377EB8", "Subtropical" = "#FB9A99", "GS/Sargasso" = "#E41A1C", "Early Spring" = "#377EB8", "Late Spring" = "#4DAF4A","Early Autumn" = "#E41A1C", "Late Autumn" = "#FF7F00")
+
+levels = c("GS/Sargasso", "Subtropical", "Temperate", "Subpolar",  "AT39-6", "AT34", "AT38", "AT32","South", "North", "Early Spring", "Late Spring","Early Autumn",  "Late Autumn")
+
+# matlab.colors2 <- c("#feb483", "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe", "#d16cfa")
+odv.colors <- c( "#d31f2a", "#ffc000", "#27ab19", "#0db5e6", "#7139fe", "#d16cfa")
+
+matlab.colors2 <- c("#A50026", "#D73027", "#F46D43", "#FDAE61", "#FEE090", "#FFFFBF", "#E0F3F8", "#ABD9E9", "#74ADD1", "#4575B4", "#313695")
+matlab.colors22 <- c("#A50026", "#D73027", "#F46D43", "#FDAE61",  "#ABD9E9", "#74ADD1", "#4575B4", "#313695")
+```
+
+# Import Data
+
+```{r import data, message=FALSE, warning=FALSE}
+data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
+  filter(Cruise == "AT34" & Station == 4) %>% 
+  mutate_at(vars(contains("tdaa"), Asp:Lys), funs(. / 10^3)) %>% #nM to mmol/m3
+  mutate(time = ymd_hms(datetime),
+         interv = interval(first(time), time),
+         dur = as.duration(interv),
+         days = as.numeric(dur, "days"),
+         eddy = ifelse(Date != "2016-05-27", "Core", "Periphery"),
+         tdaa_yield = round((tdaa_c/doc)*100, 2)) %>% 
+  filter(z <= 200) %>% 
+  filter(eddy == "Core")
+
+npp <- read_rds("~/GITHUB/naames_multiday/Input/npp_data.rds") %>% 
+  mutate(interv = interval(ymd("2016-05-24"), Date),
+         dur = as.duration(interv),
+         days = as.numeric(dur, "days"),
+         eddy = ifelse(Date != "2016-05-27" & Station != 6, "Core", "Periphery")) %>% 
+  filter(Cruise == "AT34" & Station == 4)  %>% 
+  filter(z <= 200) %>% 
+  filter(eddy == "Core")
+
+ctd <-  read_rds("~/GITHUB/naames_multiday/Input/ctd_data.rds") %>% 
+  mutate(interv = interval(ymd("2016-05-24"), Date),
+         dur = as.duration(interv),
+         days = as.numeric(dur, "days"),
+         eddy = ifelse(Date != "2016-05-27" & Station != 6, "Core", "Periphery")) %>% 
+  filter(Cruise == "AT34" & Station == 4) %>% 
+  filter(z <= 200) %>% 
+  filter(eddy == "Core")
+
+casts <- data %>% 
+  filter(Cruise == "AT34", Date != "2016-05-27") %>% 
+  distinct(CampCN) %>% 
+  as_vector()
+
+```
+
+# Station 4
+
+## Plot MLDs
+
+```{r mld plot, message=FALSE, warning=FALSE, echo = FALSE}
+mld.plot <-  data %>% 
+  drop_na(mld) %>% 
+  ggplot(aes(x = days, y = mld)) +
+  geom_line(size = 0.7) +
+  geom_point(size = 6, fill = "white", color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = "Days", y = expression(paste("MLD, m")), colour = "") +
+  guides(linetype = F, shape = F) +
+  expand_limits(y = 200) +
+  scale_y_reverse() +
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm"))
+
+```
+
+
+## Plot Profiles 
+
+### Temp
+
+```{r t plot, echo = FALSE, warning = FALSE, message = FALSE}
+t.plot <-  ctd %>% 
+  filter(Cruise == "AT34", Date != "2016-05-28") %>%
+  filter(z <= 300) %>% 
+  group_by(Date, z) %>% 
+  mutate(ave_t = mean(ave_temp_c, na.rm = T),
+         sd_t = sd(ave_temp_c, na.rm = T)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = z, y = ave_t, group = interaction(Date, CampCN))) +
+  geom_ribbon(aes(ymin = ave_t - sd_t, ymax = ave_t + sd_t, fill = days), alpha = 0.1) +
+  geom_line(aes(color = days), size = 0.7) +
+  labs(x = "", y = expression(paste("Temperature, ˚C")), colour = "", fill = "Days") +
+  scale_x_reverse() +
+  coord_flip() +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
+  guides(colour = F, fill = F, shape = F, linetype = F) +
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm"))
+
+```
+
+### Sal
+
+```{r s plot, echo = FALSE, warning = FALSE, message = FALSE}
+s.plot <-  ctd %>% 
+  filter(Cruise == "AT34", Date != "2016-05-28") %>%
+  filter(z <= 300) %>% 
+  group_by(Date, z) %>% 
+  mutate(ave_s = mean(ave_sal_psu, na.rm = T),
+         sd_s = sd(ave_sal_psu, na.rm = T)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = z, y = ave_s, group = interaction(Date, CampCN))) +
+  geom_ribbon(aes(ymin = ave_s - sd_s, ymax = ave_s + sd_s, fill = days), alpha = 0.1) +
+  geom_line(aes(color = days), size = 0.7) +
+  labs(x = "", y = expression(paste("Salinity, psu")), colour = "", fill = "Days") +
+  scale_x_reverse() +
+  coord_flip() +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
+  guides(colour = F, fill = F, shape = F, linetype = F) +
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm"))
+
+```
+
+
+
+### Chl
+
+```{r chl plot, echo = FALSE, warning = FALSE, message = FALSE}
+chl.plot <-  data %>% 
+  drop_na(chl) %>% 
+  # µg / L = mg / m3
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  ggplot(aes(x = z, y = chl, group = interaction(Date, CampCN))) +
+  geom_line(aes(color = days), size = 0.7) +
+  geom_point(aes(fill = days), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = "Depth, m", y = expression(paste("Chl a, mg m"^"-3")), colour = "", fill = "Days") +
+  expand_limits(x = 200) +
+  scale_x_reverse() +
+  coord_flip() +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
+  guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) +
+  theme_classic2(base_size = 20) +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm"))
+
+```
+
+### Phyto Cells
+
+```{r phyto plot, echo = FALSE, warning = FALSE, message = FALSE}
+phyto.plot <-  data %>% 
+  drop_na(phyto) %>% 
+  mutate(phyto = phyto * 10^3) %>% 
+  group_by(days, z) %>% 
+  mutate_at(vars(pro:nano, phyto:rel.nano), mean) %>% 
+  select(days,  z, phyto, eddy) %>% 
+  distinct() %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  ggplot(aes(x = z, y = phyto, group = interaction(days))) +
+  geom_line(aes(colour = days), size = 0.7) +
+  geom_point(aes(fill = days), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = "Depth, m", y = expression(paste("Phytoplankton Cells, m"^"-3")), colour = "", fill = "Days") +
+  expand_limits(x = 200) +
+  scale_x_reverse() +
+  coord_flip() +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
+  guides(colour = F, fill = F, shape = F, linetype = F) +
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 45, vjust = 0.5),
+        legend.key.size = unit(1, "cm"))
+```
+
+
+### PhytoC
+
+```{r phytoC plot, echo = FALSE, warning = FALSE, message = FALSE}
+phyc.plot <-  data %>% 
+  drop_na(phyc) %>%
+ filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  group_by(Date, z) %>% 
+  mutate(phyc = phyc / 10^3,
+         ave_phyc = mean(phyc, na.rm = T), 
+         sd_phyc = sd(phyc, na.rm = T)) %>%
+  ungroup() %>% 
+  ggplot(aes(x = z, y = ave_phyc, group = interaction(Date, CampCN))) +
+  geom_errorbar(aes(ymin = ave_phyc - sd_phyc, ymax = ave_phyc + sd_phyc, color = days), width = 1.5, alpha = 0.7) +
+  geom_line(aes(colour = days), size = 0.7) +
+  geom_point(aes(fill = days), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = "Depth, m", y = expression(paste("Phytoplankton Carbon, mmol m"^"-3")), colour = "", fill = "Days") +
+  expand_limits(x = 200) +
+  scale_x_reverse() +
+  coord_flip() +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
+  guides(colour = F, fill = F, shape = F, linetype = F) +
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm"))
+
+```
+
+### NPP
+
+```{r npp plot, echo = FALSE, warning = FALSE, message = FALSE}
+npp.plot <-  npp %>% 
+  mutate(npp = npp/10^3) %>% 
+  ggplot(aes(x = z, y = npp, group = days)) +
+  geom_line(aes(colour = days), size = 2) +
+  labs(x = "Depth, m", y = expression(paste("Modeled NPP, mmol m"^-3, "d"^-1)), colour = "",fill = "Days") +
+  expand_limits(x = 200) +
+  scale_x_reverse() +
+  coord_flip() +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
+  guides(colour = F, fill = F, shape = F, linetype = F) +
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm"))
+
+```
+
+### N
+
+```{r n plot, echo = FALSE, warning = FALSE, message = FALSE}
+n.plot <-  data %>% 
+  drop_na(n) %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  ggplot(aes(x = z, y = n, group = interaction(Date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = n - sd_n, ymax = n + sd_n)) +
+  geom_line(aes(color = days), size = 0.7) +
+  geom_point(aes(fill = days), shape = 21, size = 6,  color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = "", y = expression(paste("N + N, mmol m"^"-3")), colour = "", fill = "Days") +
+  scale_x_reverse() +
+  coord_flip() +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
+  guides(colour = F, fill = F, shape = F, linetype = F) +
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm"))
+
+```
+
+
+### DOC
+
+```{r doc plot, echo = FALSE, warning = FALSE, message = FALSE}
+doc.plot <-  data %>% 
+  drop_na(doc) %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  ggplot(aes(x = z, y = doc, group = interaction(Date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = doc - sd_doc, ymax = doc + sd_doc, color = days)) +
+  geom_line(aes(color = days), size = 0.7) +
+  geom_point(aes(fill = days), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = "", y = expression(paste("DOC, mmol m"^"-3")), colour = "", fill = "Days") +
+  scale_x_reverse() +
+  coord_flip() +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
+  guides(fill = F, color = F, linetype = F, shape = F) +
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm"))
+
+```
+
+### TDAA
+
+```{r tdaa plot, echo = FALSE, warning = FALSE, message = FALSE}
+tdaa.plot <-  data %>% 
+  drop_na(tdaa_c) %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  ggplot(aes(x = z, y = tdaa_c, group = interaction(Date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = tdaa_c - sd_tdaa, ymax = tdaa_c + sd_tdaa, color = days)) +
+  geom_line(aes(color = days), size = 0.7) +
+  geom_point(aes(fill = days), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = "", y = expression(paste("TDAA, mmol C m"^-3)), colour = "", fill = "Days") +
+  scale_x_reverse() +
+  coord_flip() +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
+  guides(fill = F, color = F, linetype = F, shape = F) +
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm"))
+
+```
+
+
+### TDAA Yield
+
+```{r tdaa yield plot, echo = FALSE, warning = FALSE, message = FALSE}
+tdaaY.plot <-  data %>% 
+  drop_na(tdaa_yield) %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  ggplot(aes(x = z, y = tdaa_yield, group = interaction(Date, CampCN))) +
+  geom_line(aes(color = days), size = 0.7) +
+  geom_point(aes(fill = days), shape = 21, size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = "", y = expression(paste("TDAA Yield, %")), colour = "", fill = "Days") +
+  scale_x_reverse() +
+  coord_flip() +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
+  guides(fill = F, color = F, linetype = F, shape = F) +
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm"))
+
+```
+
+### AOU
+
+```{r aou plot, echo = FALSE, warning = FALSE, message = FALSE}
+aou.plot <-  ctd %>% 
+  filter(Cruise == "AT34", Date != "2016-05-28") %>%
+  filter(z <= 300) %>% 
+  group_by(Date, z) %>% 
+  mutate(ave_aou = mean(deriv_aou_umol_l, na.rm = T),
+         sd_aou = sd(deriv_aou_umol_l, na.rm = T)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = z, y = ave_aou, group = interaction(Date, CampCN))) +
+  geom_ribbon(aes(ymin = ave_aou - sd_aou, ymax = ave_aou + sd_aou, fill = days), alpha = 0.1) +
+  geom_line(aes(color = days), size = 0.7) +
+  labs(x = "", y = expression(paste("AOU, mmol m"^"-3")), colour = "", fill = "Days") +
+  scale_x_reverse() +
+  coord_flip() +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
+  guides(colour = F, fill = F, shape = F, linetype = F) +
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm"))
+
+```
+
+### BactA
+
+```{r bactC plot, echo = FALSE, warning = FALSE, message = FALSE}
+ba.plot <-  data %>% 
+  filter(Cruise == "AT34") %>% 
+  drop_na(ba) %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  ggplot(aes(x = z, y = ba, group = interaction(Date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = ba - sd_ba, ymax = ba + sd_ba, color = days)) +
+  geom_line(aes(color = days), size = 0.7) +
+  geom_point(aes(fill = days), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = "", y = expression(paste("Bacterioplankton Cells, m"^"-3")), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
+  scale_x_reverse() +
+  coord_flip() +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
+  guides(colour = F, fill = F, shape = F, linetype = F) +
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm"))
+
+```
+
+### BP
+
+```{r bp plot, echo = FALSE, warning = FALSE, message = FALSE}
+bp.plot <-  data %>% 
+  drop_na(bp) %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  mutate(bp = bp/10^3,
+         sd_bp = sd_bp/10^3) %>% 
+  ggplot(aes(x = z, y = bp, group = interaction(Date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = bp - sd_bp, ymax = bp + sd_bp, color = days)) +
+  geom_line(aes(color = days), size = 0.7) +
+  geom_point(aes(fill = days), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = "", y = expression(paste("BP, mmol C m"^"-3","d"^-1)), colour = "", fill = "Days") +
+  scale_x_reverse() +
+  coord_flip() +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
+  guides(fill = F, color = F, linetype = F, shape = F) +
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm"))
+
+```
+
+
+
+### BCD
+
+```{r bcd plot, echo = FALSE, warning = FALSE, message = FALSE}
+bcd.plot <-  data %>% 
+  drop_na(bcd) %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  mutate(bcd = bcd/10^3,
+         sd_bcd = sd_bp/10^3) %>% 
+  ggplot(aes(x = z, y = bcd, group = interaction(Date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = bcd - sd_bcd, ymax = bcd + sd_bcd, color = days)) +
+  geom_line(aes(color = days), size = 0.7) +
+  geom_point(aes(fill = days), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = "", y = expression(paste("BCD, mmol C m"^"-3","d"^-1)), colour = "", fill = "Days") +
+  scale_x_reverse() +
+  coord_flip() +
+  # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
+  # scale_fill_gradientn(colors = matlab.colors2) +
+  # scale_color_gradientn(colors = matlab.colors2) +
+  scale_fill_viridis() +
+  scale_color_viridis() +
+  guides(fill = F, color = F, linetype = F, shape = F) +
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm"))
+
+```
+
+
+```{r combine plots, echo = FALSE, warning = FALSE, message = FALSE, fig.height = 20, fig.width = 22}
+
+patchwork <- mld.plot  + t.plot +  chl.plot + phyc.plot + phyto.plot +   npp.plot + n.plot + aou.plot + doc.plot  + tdaa.plot + tdaaY.plot + ba.plot + bp.plot + bcd.plot
+
+patchwork +  
+  plot_layout(guides = 'collect') +
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 22)) 
+
+```
+
+
+
+
+
+

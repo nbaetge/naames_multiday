@@ -324,8 +324,8 @@ aou.plot <-  ctd %>%
   filter(Cruise == "AT34", Date != "2016-05-28") %>%
   filter(z <= 300) %>% 
   group_by(Date, z) %>% 
-  mutate(ave_aou = mean(deriv_aou_umol_kg, na.rm = T),
-         sd_aou = sd(deriv_aou_umol_kg, na.rm = T)) %>% 
+  mutate(ave_aou = mean(deriv_aou_umol_l, na.rm = T),
+         sd_aou = sd(deriv_aou_umol_l, na.rm = T)) %>% 
   ungroup() %>% 
   ggplot(aes(x = z, y = ave_aou, group = interaction(Date, CampCN))) +
   geom_ribbon(aes(ymin = ave_aou - sd_aou, ymax = ave_aou + sd_aou, fill = days, linetype = eddy), alpha = 0.1) +
