@@ -12,6 +12,7 @@ library(tidyverse)
 library(lubridate)
 library(patchwork)
 library(ggpubr)
+library(viridis)
 ```
 
 ``` r
@@ -31,45 +32,45 @@ matlab.colors22 <- c("#A50026", "#D73027", "#F46D43", "#FDAE61",  "#ABD9E9", "#7
 ``` r
 data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
   filter(Cruise == "AT38" & Station == 6) %>% 
-  mutate_at(vars(contains("tdaa"), Asp:Lys), funs(. / 10^3)) %>% #nM to mmol/m3
+  # mutate_at(vars(contains("tdaa"), Asp:Lys), funs(. / 10^3)) %>% #nM to mmol/m3
   mutate(time = ymd_hms(datetime),
          interv = interval(first(time), time),
          dur = as.duration(interv),
          days = as.numeric(dur, "days"),
          tdaa_yield = round((tdaa_c/doc)*100, 2)) %>% 
-  filter(z <= 200)
+  filter(z <= 200) 
 
 npp <- read_rds("~/GITHUB/naames_multiday/Input/npp_data.rds") %>% 
-   filter(Cruise == "AT38" & Station == 6) %>% 
   mutate(interv = interval(ymd("2017-09-13"), Date),
          dur = as.duration(interv),
          days = as.numeric(dur, "days")) %>% 
-  filter(z <= 200)
+  filter(Cruise == "AT38" & Station == 6) %>% 
+  filter(z <= 200) 
 
 ctd <-  read_rds("~/GITHUB/naames_multiday/Input/ctd_data.rds") %>% 
-   filter(Cruise == "AT38" & Station == 6) %>% 
-  mutate(interv = interval(ymd("2017-09-13"), Date),
+  mutate( interv = interval(ymd("2017-09-13"), Date),
          dur = as.duration(interv),
          days = as.numeric(dur, "days")) %>% 
-  filter(z <= 200)
+  filter(Cruise == "AT38" & Station == 6) %>% 
+  filter(z <= 200) 
 
 casts <- data %>% 
-  filter(Cruise == "AT38", Station == 6) %>% 
+  filter(Cruise == "AT38" & Station == 6) %>% 
   distinct(CampCN) %>% 
   as_vector()
 ```
 
-# Station 6
+# Station 4
 
 ## Plot MLDs
 
 ## Plot Profiles
 
+### Temp
+
 ### Chl
 
 ### Phyto Cells
-
-### PhytoC
 
 ### NPP
 
@@ -81,6 +82,6 @@ casts <- data %>%
 
 ### BactA
 
-### BCD
+### Leu
 
 ![](S6_Depth_Profiles_files/figure-gfm/combine%20plots-1.png)<!-- -->

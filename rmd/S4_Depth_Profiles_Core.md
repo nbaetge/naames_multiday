@@ -32,7 +32,7 @@ matlab.colors22 <- c("#A50026", "#D73027", "#F46D43", "#FDAE61",  "#ABD9E9", "#7
 ``` r
 data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
   filter(Cruise == "AT34" & Station == 4) %>% 
-  mutate_at(vars(contains("tdaa"), Asp:Lys), funs(. / 10^3)) %>% #nM to mmol/m3
+  # mutate_at(vars(contains("tdaa"), Asp:Lys), funs(. / 10^3)) %>% #nM to mmol/m3
   mutate(time = ymd_hms(datetime),
          interv = interval(first(time), time),
          dur = as.duration(interv),
@@ -74,13 +74,9 @@ casts <- data %>%
 
 ### Temp
 
-### Sal
-
 ### Chl
 
 ### Phyto Cells
-
-### PhytoC
 
 ### NPP
 
@@ -96,8 +92,6 @@ casts <- data %>%
 
 ### BactA
 
-### BP
-
-### BCD
+### Leu
 
 ![](S4_Depth_Profiles_Core_files/figure-gfm/combine%20plots-1.png)<!-- -->
