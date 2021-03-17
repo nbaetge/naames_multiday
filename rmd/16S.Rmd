@@ -180,6 +180,9 @@ n3s6 <- ps_min %>%
 
 s4s6_core <- ps_min %>% 
   subset_samples(Cruise == "AT38" & Station == 6 | Cruise == "AT34" & Station == 4 & eddy == "Core")
+
+s4_core_s6_mz <- s4s6_core %>% 
+  subset_samples(Cruise != "AT38" | Station != 6 | z_interv != "Euphotic")
 ```
 
 ## Unconstrained Ordination
@@ -453,6 +456,19 @@ richness_n3s6 <- estimate_richness(n3s6, measures = c("Chao1", "Shannon")) %>%
   mutate_at(vars(DNA_ID), str_replace_all, pattern = "N3S6C10.", "N3S6C10-")  
 ```
 
+
+```{r}
+richness_s4_core_s6_mz <- estimate_richness(s4_core_s6_mz, measures = c("Chao1", "Shannon")) %>% 
+  rownames_to_column(., var = "DNA_ID") %>% 
+  mutate_at(vars(DNA_ID), str_replace_all, pattern = "NAAMES2.", "NAAMES2-") %>% 
+  mutate_at(vars(DNA_ID), str_replace_all, pattern = "N3S6C4.", "N3S6C4-") %>% 
+  mutate_at(vars(DNA_ID), str_replace_all, pattern = "N3S6C5.", "N3S6C5-") %>% 
+  mutate_at(vars(DNA_ID), str_replace_all, pattern = "N3S6C7.", "N3S6C7-") %>% 
+  mutate_at(vars(DNA_ID), str_replace_all, pattern = "N3S6C10.", "N3S6C10-")  
+```
+
+
+
 Let’s add the sample metadata into these dataframes 
 
 
@@ -462,6 +478,11 @@ alphadiv_n2s4 <- left_join(richness_n2s4, sample.tab2 %>% rownames_to_column(., 
 ```{r}
 alphadiv_n3s6 <- left_join(richness_n3s6, sample.tab2 %>% rownames_to_column(., var = "DNA_ID")) 
 ```
+
+```{r}
+alphadiv_s4_core_s6_mz <- left_join(richness_s4_core_s6_mz, sample.tab2 %>% rownames_to_column(., var = "DNA_ID"))  
+```
+
 
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center"}
@@ -484,15 +505,10 @@ my_comparisons <- list( c("0", "1"), c("0", "2"), c("0", "3"), c("1", "2"), c("1
   #                    tip.length = 0.01) +
   facet_grid(~ factor(days), scales = "free") +
    ylim(250, 850) +
-   ggtitle("NAAMES 2 Station 4") +
+   ggtitle("NAAMES 2 Station 4 (N2S4)") +
    guides(colour = guide_colorbar(reverse = T),
          fill = guide_colorbar(reverse = T))
 ```
-
-
-
-
-
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center"}
 
@@ -506,7 +522,7 @@ alpha.plot_n3s6 <- alphadiv_n3s6 %>%
   scale_color_viridis_c(option = "viridis") +
   scale_fill_viridis_c(option = "viridis") +
   theme_classic2(base_size = 16) +
-  labs(x = "Depth Horizon", y =  "Chao1", fill = "Depth, m") + 
+  labs(x = "", y =  "Chao1", fill = "Depth, m") + 
   stat_compare_means(method = "t.test")  +
   # stat_compare_means(comparisons = my_comparisons,
   #                    label = "p.adj",
@@ -514,12 +530,37 @@ alpha.plot_n3s6 <- alphadiv_n3s6 %>%
   #                    tip.length = 0.01) +
   facet_grid(~ factor(days), scales = "free") +
   ylim(250, 850) +
-  ggtitle("NAAMES 3 Station 6") +
+  ggtitle("NAAMES 3 Station 6 (N3S6)") +
   guides(fill = F)
 ```
 
-```{r fig.height=10, fig.width=11}
-alpha.plot_n2s4 / alpha.plot_n3s6 + 
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 8, fig.align = "center"}
+
+my_comparisons <- list( c("0", "1"), c("0", "2"),  c("1", "2")) 
+
+
+alpha.plot_s4_core_s6_mz <- alphadiv_s4_core_s6_mz %>% 
+   ggplot(aes(x = Cruise2, y = Chao1)) +
+   geom_boxplot(width = 0.3, outlier.shape = NA) +
+   geom_point(aes(fill = factor(z_interv)), shape = 21, size = 3, alpha = 0.7) +
+   scale_color_manual(values = custom.colors) +
+  scale_fill_manual(values = custom.colors) +
+  theme_classic2(base_size = 16) +
+  labs(x = "", y =  "Chao1", fill = "Depth Horizon") + 
+  stat_compare_means(method = "t.test")  +
+  # stat_compare_means(comparisons = my_comparisons,
+  #                    label = "p.adj",
+  #                    step.increase = 0.11,
+  #                    tip.length = 0.01) +
+  facet_grid(~ factor(days), scales = "free") +
+  ylim(250, 850) +
+  ggtitle("N2S4 & Upper Mesopelagic N3S6") +
+  guides()
+```
+
+
+```{r fig.height=12, fig.width=12}
+alpha.plot_n2s4 / alpha.plot_n3s6 / alpha.plot_s4_core_s6_mz + 
   
   plot_layout(guides = 'collect') +
   plot_annotation(tag_levels = "a") &
@@ -846,6 +887,60 @@ counts_custom.tab_combine_s4  <- sweet.tab_custom.tab_combine_s4 %>%
   
 ```
 
+
+### Make table at order level
+
+```{r warning = F}
+
+#then combine the data frames
+custom.tab_combine_s4_order <- tax.df %>% 
+  rownames_to_column(., var = "asv") %>% 
+  left_join(., combine_s4.df %>% rownames_to_column(., var = "asv")) %>% 
+  #create a new index of that combines the  class, order, family, and genus values, you can play around here!!
+  mutate( pco = paste(Phylum, "_", Class, "_", Order)) %>% 
+  select(-c(asv:Genus)) %>% 
+  select(pco,everything()) %>%
+  group_by(pco) %>%
+  #here we are combining the relative abundances based on our grouping
+  summarise_at(vars(!contains(c("pco"))), sum, na.rm = T) %>% 
+  ungroup()
+
+#save the row names and then make them into the column names
+colnames <- custom.tab_combine_s4_order[,1] 
+
+#transpose the dataframe so we can merge with the sample info table
+t_custom.tab_combine_s4_order <-  as.data.frame(t(custom.tab_combine_s4_order[,-1]))
+colnames(t_custom.tab_combine_s4_order) <- colnames$pco
+# colnames(t_custom.tab) <- colnames$pco
+
+#merge
+sweet.tab_custom.tab_combine_s4_order  <- t_custom.tab_combine_s4_order  %>% 
+  rownames_to_column(., var = "sample") %>% 
+  left_join(., sample.tab %>% rownames_to_column(., var = "sample")) %>% 
+  select(sample, Cruise:npp, everything())
+
+
+counts_custom.tab_combine_s4_order  <- sweet.tab_custom.tab_combine_s4_order %>% 
+  select(-c(sample:npp)) %>% 
+  #remove groups that are completely absent
+  .[ , colSums(.) > 0] %>% 
+  #arrange by biggest contributors
+  .[, order(colSums(-.))] %>% 
+  bind_cols(sweet.tab_custom.tab_combine_s4_order %>% select(sample:npp), .) %>% 
+  mutate_at(vars(days), as.character) %>% 
+  group_by(days, z_interv) %>% 
+  summarise_at(vars(!c(sample:npp)), sum, na.rm = T) %>% 
+  ungroup() %>% 
+  rowwise() %>% 
+  mutate(total = sum(c_across(where(is.numeric)))) %>% 
+  ungroup() %>% 
+  select(days:z_interv, total, everything())  %>% 
+  mutate(across(c(4:87), ~ . / total)) %>% 
+  select(-total)
+  
+```
+
+
 ## Heatmaps
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 12, fig.align = "center"}
@@ -939,6 +1034,78 @@ relaheat_del_combine_s4 <- zscore_data_combine_s4  %>%
 ```
 
 
+#### heat map order level
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 12, fig.align = "center"}
+relaheat.data_combine_s4_order <- counts_custom.tab_combine_s4_order %>% 
+  pivot_longer(.,-c(days:z_interv), names_to = "taxa", values_to = "relabund") %>% 
+  separate(taxa, into = c("p", "c", "o" ), sep = " _ ") %>% 
+  mutate(co = paste(c, o, sep = ": ")) %>% 
+  group_by(days, z_interv, co) %>% 
+  mutate(mean_relabund = mean(relabund, na.rm = T)) %>% 
+  ungroup() %>% 
+  select(-relabund) %>% 
+  distinct() %>% 
+  mutate_at(vars(p,c,o, co), str_replace_all, "NA", "Unassigned") %>% 
+  arrange(desc(co), mean_relabund)
+
+
+relaheat_combine_s4_order <- relaheat.data_combine_s4_order %>%
+  filter(mean_relabund > 0.001) %>%
+  select(days, z_interv, co, mean_relabund) %>% 
+  distinct() %>% 
+  mutate(font_col = ifelse(mean_relabund < 0.03, "white", "black")) %>% 
+  ggplot(aes(x = days, y = reorder(co, mean_relabund))) +
+  geom_tile(aes(fill = mean_relabund), color = "white") +
+  # scale_color_manual(values = custom.colors) %>%
+  # scale_fill_gradientn(colors = rev(matlab.colors)) +
+  scale_fill_viridis_b(option = "D",  trans = 'log10') +
+  geom_text(aes(label = round(mean_relabund, 3), color = font_col), size = 4) +
+  scale_color_manual(values = c("white" = "white", "black" = "black")) +
+  labs(x = "Days", y = "Class: Order", fill = "Relative Abundance") +
+  facet_grid(~factor(z_interv, levels = levels)) +
+  theme_classic2(base_size = 16) +
+  theme(axis.text.y = element_text(size = 12), legend.position = "top") +
+   guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) +
+  ggtitle("NAAMES 2 Station 4")
+
+
+```
+
+```{r}
+zscore_data_combine_s4_order <- relaheat.data_combine_s4_order  %>% 
+  group_by(co) %>% 
+  mutate(zscore_mean = mean(mean_relabund, na.rm = T),
+         zscore_sd = sd(mean_relabund, na.rm = T)) %>% 
+  ungroup() %>% 
+  mutate(zscore = ifelse(zscore_mean > 0, (mean_relabund - zscore_mean) / zscore_sd, NA))  %>% 
+  group_by(z_interv, co) %>% 
+  mutate(init_relabund = ifelse(days == 0, mean_relabund, NA)) %>% 
+  fill(init_relabund, .direction = "updown") %>% 
+  mutate(del_relabund = ifelse(days > 0, mean_relabund - init_relabund, 0)) %>% 
+  ungroup()
+```
+
+```{r fig.height=8, fig.width=12}
+relaheat_del_combine_s4_order <- zscore_data_combine_s4_order  %>%
+  select(days, z_interv, co, mean_relabund, del_relabund) %>% 
+  distinct() %>% 
+  filter(mean_relabund > 0.001, days > 0) %>%
+  mutate(font_col = ifelse(del_relabund < 0.01, "white", "black")) %>% 
+  ggplot(aes(x = days, y = reorder(co, mean_relabund))) +
+  geom_tile(aes(fill = round(del_relabund, 3)), color = "white") +
+  scale_fill_viridis_c() +
+  geom_text(aes(label = round(del_relabund, 3), color = font_col), size = 4) +
+  scale_color_manual(values = c("white" = "white", "black" = "black")) +
+  labs(x = "Days", y = "", fill = "∆ Relative Abundance") +
+  facet_grid(~factor(z_interv, levels = levels)) +
+  theme_classic2(base_size = 16) +
+  theme( legend.position = "top", axis.text.y = element_blank()) +
+   guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) 
+
+```
+
+#### s6
 
 ```{r warning = F}
 
@@ -1089,6 +1256,12 @@ relaheat_del_combine_s6 <- zscore_data_combine_s6  %>%
   # theme( legend.position = "top") +
    guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) 
 
+```
+
+#### combine
+
+```{r fig.height=12, fig.width=21}
+(relaheat_combine_s4_order + relaheat_del_combine_s4_order) 
 ```
 
 

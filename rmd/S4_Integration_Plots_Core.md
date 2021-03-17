@@ -38,7 +38,9 @@ data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>%
   mutate(ou.ez = (aou_c.ez - first(aou_c.ez)),
          ou.200 = (aou_c.200 - first(aou_c.200)),
          ou.300 = (aou_c.300 - first(aou_c.300))) %>% 
-   mutate_at(vars(contains(c("tdaa", "bcd", "bp", "phyc"))), funs(. / 10^3)) #nM to mmol/m3 
+   mutate_at(vars(contains(c("tdaa", "bcd", "bp", "phyc"))), funs(. / 10^3)) %>% #nM to mmol/m3 
+  mutate( tdaaY.ez = (tdaa.ez/doc.ez) * 100,
+         tdaaY.200 = (tdaa.200/doc.200) * 100)
 ```
 
 # Pivot data
@@ -82,6 +84,20 @@ pivot_doc_data <- data %>%
          depth_interval = ifelse(depth_interval == 200, "Upper Mesopelagic", depth_interval),
          depth_interval = ifelse(depth_interval == 300, "200-300 m", depth_interval))
 
+pivot_tdaa_data <- data %>% 
+  select(Cruise:days, contains("tdaa")) %>% 
+  pivot_longer(tdaa.ez:tdaa.300, names_to = "depth_interval", names_prefix = "tdaa.", values_to = "tdaa") %>% 
+  mutate(depth_interval = ifelse(depth_interval == "ez", "Euphotic", depth_interval),
+         depth_interval = ifelse(depth_interval == 200, "Upper Mesopelagic", depth_interval),
+         depth_interval = ifelse(depth_interval == 300, "200-300 m", depth_interval))
+
+pivot_tdaaY_data <- data %>% 
+  select(Cruise:days, contains("tdaaY")) %>% 
+  pivot_longer(tdaaY.ez:tdaaY.200, names_to = "depth_interval", names_prefix = "tdaaY.", values_to = "tdaaY") %>% 
+  mutate(depth_interval = ifelse(depth_interval == "ez", "Euphotic", depth_interval),
+         depth_interval = ifelse(depth_interval == 200, "Upper Mesopelagic", depth_interval),
+         depth_interval = ifelse(depth_interval == 300, "200-300 m", depth_interval))
+
 
 pivot_aou_data <- data %>% 
   select(Cruise:days, contains("aou")) %>% 
@@ -102,10 +118,39 @@ pivoted <- left_join(pivot_phyc_data, pivot_npp_data) %>%
   left_join(., pivot_bc_data) %>% 
   left_join(., pivot_bcd_data) %>% 
   left_join(., pivot_doc_data) %>% 
+  left_join(., pivot_tdaa_data) %>% 
+  left_join(., pivot_tdaaY_data) %>% 
   left_join(., pivot_aou_data) %>% 
   left_join(., pivot_ou_data) %>% 
   filter(depth_interval %in% c("Euphotic", "Upper Mesopelagic"))
 ```
+
+``` r
+fc <- pivoted %>% 
+  arrange(depth_interval, days) %>% 
+  group_by(depth_interval) %>% 
+  mutate(phyc_fc = (phyc - first(phyc)) / first(phyc),
+         npp_fc = (npp - first(npp)) / first(npp),
+         bc_fc = (bc - first(bc)) / first(bc),
+         bcd_fc = (bcd - first(bcd)) / first(bcd),
+         doc_fc = (doc - first(doc)) / first(doc),
+         tdaa_fc = (tdaa - first(tdaa)) / first(tdaa),
+         aou_fc = (aou_c - first(aou_c)) / first(aou_c)) %>% 
+  select(Date, time, days, depth_interval, phyc:aou_fc) %>% 
+  select(-c(tdaaY.ez, tdaaY.200))
+
+
+fc %>% 
+  group_by(depth_interval) %>% 
+  drop_na(doc) %>% 
+  summarise_at(vars(doc), list(mean = mean, sd = sd))
+```
+
+    ## # A tibble: 2 x 3
+    ##   depth_interval     mean    sd
+    ## * <chr>             <dbl> <dbl>
+    ## 1 Euphotic           47.5 0.173
+    ## 2 Upper Mesopelagic  46.1 0.260
 
 # Plot Data
 
@@ -118,6 +163,10 @@ pivoted <- left_join(pivot_phyc_data, pivot_npp_data) %>%
 ### BCD
 
 ### DOC
+
+### TDAAy
+
+## TDAA
 
 ### AOU
 
