@@ -101,7 +101,7 @@ mld.plot <-  data %>%
 t.plot <-  ctd %>% 
   filter(Cruise == "AT34", Date != "2016-05-28") %>%
   filter(z <= 300) %>% 
-  group_by(Date, z) %>% 
+  group_by(CampCN, z) %>% 
   mutate(ave_t = mean(ave_temp_c, na.rm = T),
          sd_t = sd(ave_temp_c, na.rm = T)) %>% 
   ungroup() %>% 
@@ -175,7 +175,7 @@ phyto.plot <-  data %>%
   geom_errorbar(aes(x = z, ymin = ave_phyto - sd_phyto, ymax = ave_phyto + sd_phyto, color = days2)) +
   geom_line(aes(colour = days2), size = 0.7) +
   geom_point(aes(fill = days2), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = "", y = expression(paste("Phytoplankton Cells, L"^"-1")), colour = "", fill = "Days") +
+  labs(x = "", y = expression(paste("Phytoplankton, cells L"^"-1")), colour = "", fill = "Days") +
   expand_limits(x = 200) +
   scale_x_reverse() +
   coord_flip() +
@@ -334,15 +334,18 @@ tdaaY.plot <-  data %>%
 
 ```
 
+
+
+
 ### AOU
 
 ```{r aou plot, echo = FALSE, warning = FALSE, message = FALSE}
 aou.plot <-  ctd %>% 
   filter(Cruise == "AT34", Date != "2016-05-28") %>%
   filter(z <= 300) %>% 
-  group_by(Date, z) %>% 
-  mutate(ave_aou = mean(deriv_aou_umol_l, na.rm = T),
-         sd_aou = sd(deriv_aou_umol_l, na.rm = T)) %>% 
+  group_by(CampCN, z) %>% 
+  mutate(ave_aou = mean(aou, na.rm = T),
+         sd_aou = sd(aou, na.rm = T)) %>% 
   ungroup() %>% 
   ggplot(aes(x = z, y = ave_aou, group = interaction(Date, CampCN))) +
   geom_ribbon(aes(ymin = ave_aou - sd_aou, ymax = ave_aou + sd_aou, fill = days), alpha = 0.1) +
@@ -378,7 +381,7 @@ ba.plot <-  data %>%
   geom_errorbar(aes(x = z, ymin = ba - sd_ba, ymax = ba + sd_ba, color = days)) +
   geom_line(aes(color = days), size = 0.7) +
   geom_point(aes(fill = days), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = "Depth, m", y = expression(paste("Bacterioplankton Cells, L"^"-1")), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
+  labs(x = "Depth, m", y = expression(paste("Bacterioplankton, cells L"^"-1")), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Days") +
   scale_x_reverse() +
   coord_flip() +
   # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
@@ -428,7 +431,7 @@ leu.plot <-  data %>%
 
 ```{r combine plots, echo = FALSE, warning = FALSE, message = FALSE, fig.height = 20, fig.width = 22}
 
-patchwork <- mld.plot  + t.plot +  n.plot + plot_spacer() + chl.plot + phyto.plot + npp.plot + aou.plot  + ba.plot + leu.plot + doc.plot  + tdaa.plot 
+patchwork <- mld.plot  + t.plot +  n.plot + guide_area() + chl.plot + phyto.plot + npp.plot + aou.plot  + ba.plot + leu.plot + doc.plot  + tdaa.plot 
 
 patchwork +  
   plot_layout(guides = 'collect') +
@@ -438,6 +441,44 @@ patchwork +
 ```
 
 
+# Plots for powerpoint
+
+```{r}
+library(officer)
+```
+
+
+```{r}
+
+
+p1a <- mld.plot + theme_classic2(16)
+p1b <- t.plot + theme_classic2(16)
+p1c <- n.plot + theme_classic2(16)
+p1d <- chl.plot + guides(fill = guide_colourbar(barheight = 8, barwidth = 6, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) +  theme_classic2(16)
+p1e <- phyto.plot + theme_classic2(16)
+p1f <- npp.plot + theme_classic2(16)
+p1g <- aou.plot + theme_classic2(16)
+p1h <- ba.plot + theme_classic2(16) 
+p1i <- leu.plot + theme_classic2(16)
+p1j <- doc.plot + theme_classic2(16)
+p1k <- tdaa.plot + theme_classic2(16)
+  
+p1 <-  p1a + p1b +  p1c + guide_area() + p1d + p1e + p1f + p1g  + p1h + p1i + p1j  + p1k + plot_layout(guides = 'collect') 
+  
+  
+# initialize PowerPoint slide
+officer::read_pptx() %>%
+  # add slide ----
+  officer::add_slide() %>%
+  # specify object and location of object 
+  officer::ph_with(p1, ph_location(width = 16, height = 10)) %>%
+  
+  # export slide 
+  base::print(
+    target = "~/Desktop/Dissertation/MS_N2S4/Presentations/profiles.pptx"
+    )
+
+```
 
 
 

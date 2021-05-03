@@ -33,11 +33,11 @@ data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>%
          days = as.numeric(dur, "days"),
          eddy = ifelse(Date != "2016-05-27", "Core", "Periphery")) %>% 
   filter(eddy == "Core") %>% 
-  select(Cruise, Station, Date, ez, sd_ez, eddy, time:days, bcd.ez:aou_c.300) %>% 
+  select(Cruise, Station, Date, ez, sd_ez, eddy, time:days, bcd.ez:aou.300) %>% 
   distinct() %>% 
-  mutate(ou.ez = (aou_c.ez - first(aou_c.ez)),
-         ou.200 = (aou_c.200 - first(aou_c.200)),
-         ou.300 = (aou_c.300 - first(aou_c.300))) %>% 
+  mutate(ou.ez = (aou.ez - first(aou.ez)),
+         ou.200 = (aou.200 - first(aou.200)),
+         ou.300 = (aou.300 - first(aou.300))) %>% 
    mutate_at(vars(contains(c("tdaa", "bcd", "bp", "phyc"))), funs(. / 10^3)) %>% #nM to mmol/m3 
   mutate( tdaaY.ez = (tdaa.ez/doc.ez) * 100,
          tdaaY.200 = (tdaa.200/doc.200) * 100)
@@ -46,17 +46,17 @@ data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>%
 # Pivot data
 
 ``` r
-pivot_phyc_data <- data %>% 
-  select(Cruise:days,  phyc.ez, phyc.200, phyc.300) %>% 
-  pivot_longer(phyc.ez:phyc.300, names_to = "depth_interval", names_prefix = "phyc.", values_to = "phyc") %>% 
+pivot_phyto_data <- data %>% 
+  select(Cruise:days,  phyto.ez, phyto.200, phyto.300) %>% 
+  pivot_longer(phyto.ez:phyto.300, names_to = "depth_interval", names_prefix = "phyto.", values_to = "phyto") %>% 
   mutate(depth_interval = ifelse(depth_interval == "ez", "Euphotic", depth_interval),
          depth_interval = ifelse(depth_interval == 200, "Upper Mesopelagic", depth_interval),
          depth_interval = ifelse(depth_interval == 300, "200-300 m", depth_interval))
 
 
-pivot_bc_data <- data %>% 
-  select(Cruise:days,  bc.ez, bc.200, bc.300) %>% 
-  pivot_longer(bc.ez:bc.300, names_to = "depth_interval", names_prefix = "bc.", values_to = "bc") %>% 
+pivot_ba_data <- data %>% 
+  select(Cruise:days,  ba.ez, ba.200, ba.300) %>% 
+  pivot_longer(ba.ez:ba.300, names_to = "depth_interval", names_prefix = "ba.", values_to = "ba") %>% 
   mutate(depth_interval = ifelse(depth_interval == "ez", "Euphotic", depth_interval),
          depth_interval = ifelse(depth_interval == 200, "Upper Mesopelagic", depth_interval),
          depth_interval = ifelse(depth_interval == 300, "200-300 m", depth_interval))
@@ -101,7 +101,7 @@ pivot_tdaaY_data <- data %>%
 
 pivot_aou_data <- data %>% 
   select(Cruise:days, contains("aou")) %>% 
-  pivot_longer(aou_c.ez:aou_c.300, names_to = "depth_interval", names_prefix = "aou_c.", values_to = "aou_c") %>% 
+  pivot_longer(aou.ez:aou.300, names_to = "depth_interval", names_prefix = "aou.", values_to = "aou") %>% 
   mutate(depth_interval = ifelse(depth_interval == "ez", "Euphotic", depth_interval),
          depth_interval = ifelse(depth_interval == 200, "Upper Mesopelagic", depth_interval),
          depth_interval = ifelse(depth_interval == 300, "200-300 m", depth_interval))
@@ -114,8 +114,8 @@ pivot_ou_data <- data %>%
          depth_interval = ifelse(depth_interval == 200, "Upper Mesopelagic", depth_interval),
          depth_interval = ifelse(depth_interval == 300, "200-300 m", depth_interval))
 
-pivoted <- left_join(pivot_phyc_data, pivot_npp_data) %>% 
-  left_join(., pivot_bc_data) %>% 
+pivoted <- left_join(pivot_phyto_data, pivot_npp_data) %>% 
+  left_join(., pivot_ba_data) %>% 
   left_join(., pivot_bcd_data) %>% 
   left_join(., pivot_doc_data) %>% 
   left_join(., pivot_tdaa_data) %>% 
@@ -129,14 +129,14 @@ pivoted <- left_join(pivot_phyc_data, pivot_npp_data) %>%
 fc <- pivoted %>% 
   arrange(depth_interval, days) %>% 
   group_by(depth_interval) %>% 
-  mutate(phyc_fc = (phyc - first(phyc)) / first(phyc),
+  mutate(phyto_fc = (phyto - first(phyto)) / first(phyto),
          npp_fc = (npp - first(npp)) / first(npp),
-         bc_fc = (bc - first(bc)) / first(bc),
+         ba_fc = (ba - first(ba)) / first(ba),
          bcd_fc = (bcd - first(bcd)) / first(bcd),
          doc_fc = (doc - first(doc)) / first(doc),
          tdaa_fc = (tdaa - first(tdaa)) / first(tdaa),
-         aou_fc = (aou_c - first(aou_c)) / first(aou_c)) %>% 
-  select(Date, time, days, depth_interval, phyc:aou_fc) %>% 
+         aou_fc = (aou - first(aou)) / first(aou)) %>% 
+  select(Date, time, days, depth_interval, phyto:aou_fc) %>% 
   select(-c(tdaaY.ez, tdaaY.200))
 
 
@@ -149,12 +149,12 @@ fc %>%
     ## # A tibble: 2 x 3
     ##   depth_interval     mean    sd
     ## * <chr>             <dbl> <dbl>
-    ## 1 Euphotic           47.5 0.173
-    ## 2 Upper Mesopelagic  46.1 0.260
+    ## 1 Euphotic           53.4 0.160
+    ## 2 Upper Mesopelagic  53.0 0.365
 
 # Plot Data
 
-### PhyC
+### Phyto
 
 ### BC
 
@@ -171,3 +171,39 @@ fc %>%
 ### AOU
 
 ![](S4_Integration_Plots_Core_files/figure-gfm/combine%20plots-1.png)<!-- -->
+
+# Plots for powerpoint
+
+``` r
+library(officer)
+```
+
+    ## Warning: package 'officer' was built under R version 4.0.2
+
+``` r
+p1a <- phyto.plot + theme_classic2(16)
+p1b <- npp.plot + theme_classic2(16)
+p1c <- aou.plot + theme_classic2(16)
+
+p1d <- ba.plot + theme_classic2(16)
+p1e <- bcd.plot + theme_classic2(16)
+p1f <- doc.plot + labs(x = "Days") + theme(legend.position = "top") + theme_classic2(16)
+
+p1g <- tdaa.plot + theme_classic2(16)
+p1h <- tdaaY.plot + theme_classic2(16) 
+  
+p1 <-  p1a + p1b + p1c + p1d + p1e + p1f + p1g  +  guide_area() + plot_layout(guides = 'collect', ncol = 2) 
+
+
+# initialize PowerPoint slide
+officer::read_pptx() %>%
+  # add slide ----
+  officer::add_slide() %>%
+  # specify object and location of object 
+  officer::ph_with(p1, ph_location(width = 12, height = 13)) %>%
+  
+  # export slide 
+  base::print(
+    target = "~/Desktop/Dissertation/MS_N2S4/Presentations/integrated.pptx"
+    )
+```

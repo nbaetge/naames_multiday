@@ -95,3 +95,112 @@ casts <- data %>%
 ### Leu
 
 ![](S4_Depth_Profiles_Core_files/figure-gfm/combine%20plots-1.png)<!-- -->
+
+# Plots for powerpoint
+
+``` r
+library(officer)
+```
+
+    ## Warning: package 'officer' was built under R version 4.0.2
+
+``` r
+p1a <- mld.plot + theme_classic2(16)
+p1b <- t.plot + theme_classic2(16)
+p1c <- n.plot + theme_classic2(16)
+p1d <- chl.plot + guides(fill = guide_colourbar(barheight = 8, barwidth = 6, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) +  theme_classic2(16)
+p1e <- phyto.plot + theme_classic2(16)
+p1f <- npp.plot + theme_classic2(16)
+p1g <- aou.plot + theme_classic2(16)
+p1h <- ba.plot + theme_classic2(16) 
+p1i <- leu.plot + theme_classic2(16)
+p1j <- doc.plot + theme_classic2(16)
+p1k <- tdaa.plot + theme_classic2(16)
+  
+p1 <-  p1a + p1b +  p1c + guide_area() + p1d + p1e + p1f + p1g  + p1h + p1i + p1j  + p1k + plot_layout(guides = 'collect') 
+  
+  
+# initialize PowerPoint slide
+officer::read_pptx() %>%
+  # add slide ----
+  officer::add_slide() %>%
+  # specify object and location of object 
+  officer::ph_with(p1, ph_location(width = 16, height = 10)) %>%
+  
+  # export slide 
+  base::print(
+    target = "~/Desktop/Dissertation/MS_N2S4/Presentations/profiles.pptx"
+    )
+```
+
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+    
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+    
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+    
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+    
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+    
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+    
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+    
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+    
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+    
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+    
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+    
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+    
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+    
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+    
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+    
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+    
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+    
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+    
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+    
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+    
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+    
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+    
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+    
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
