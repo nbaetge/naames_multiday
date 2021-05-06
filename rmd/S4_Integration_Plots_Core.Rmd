@@ -44,6 +44,35 @@ data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>%
   mutate( tdaaY.ez = (tdaa.ez/doc.ez) * 100,
          tdaaY.200 = (tdaa.200/doc.200) * 100)
 
+
+data2 <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
+  filter(Cruise == "AT34" & Station == 4) %>% 
+  mutate(time = ymd_hms(datetime),
+         interv = interval(first(time), time),
+         dur = as.duration(interv),
+         days = as.numeric(dur, "days"),
+         eddy = ifelse(Date != "2016-05-27", "Core", "Periphery")) %>% 
+  filter(eddy == "Core") %>% 
+  select(Cruise, Station, Date, time:days, z, contains("leu")) %>% 
+  distinct() %>% 
+  filter(between(z, 100, 200)) %>% 
+  drop_na(leu_incorp) %>% 
+  group_by(days) %>% 
+  summarize_at(vars(leu_incorp), list(mean = mean, sd = sd))
+
+data3 <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
+  filter(Cruise == "AT38" & Station == 6) %>% 
+  mutate(time = ymd_hms(datetime),
+         interv = interval(first(time), time),
+         dur = as.duration(interv),
+         days = as.numeric(dur, "days")) %>% 
+  select(Cruise, Station, Date, time:days, z, contains("leu")) %>% 
+  distinct() %>% 
+  filter(between(z, 100, 200)) %>% 
+  drop_na(leu_incorp) %>% 
+  summarize_at(vars(leu_incorp), list(mean = mean, sd = sd))
+
+
 ```
 
 # Pivot data
@@ -64,10 +93,24 @@ pivot_ba_data <- data %>%
          depth_interval = ifelse(depth_interval == 200, "Upper Mesopelagic", depth_interval),
          depth_interval = ifelse(depth_interval == 300, "200-300 m", depth_interval))
 
+pivot_bp_data <- data %>% 
+  select(Cruise:days,  bp.ez, bp.200, bp.300) %>% 
+  pivot_longer(bp.ez:bp.300, names_to = "depth_interval", names_prefix = "bp.", values_to = "bp") %>% 
+  mutate(depth_interval = ifelse(depth_interval == "ez", "Euphotic", depth_interval),
+         depth_interval = ifelse(depth_interval == 200, "Upper Mesopelagic", depth_interval),
+         depth_interval = ifelse(depth_interval == 300, "200-300 m", depth_interval))
+
 
 pivot_npp_data <- data %>% 
   select(Cruise:days, contains("npp")) %>% 
   pivot_longer(npp.ez:npp.300, names_to = "depth_interval", names_prefix = "npp.", values_to = "npp") %>% 
+  mutate(depth_interval = ifelse(depth_interval == "ez", "Euphotic", depth_interval),
+         depth_interval = ifelse(depth_interval == 200, "Upper Mesopelagic", depth_interval),
+         depth_interval = ifelse(depth_interval == 300, "200-300 m", depth_interval))
+
+pivot_chl_data <- data %>% 
+  select(Cruise:days, contains("chl")) %>% 
+  pivot_longer(chl.ez:chl.300, names_to = "depth_interval", names_prefix = "chl.", values_to = "chl") %>% 
   mutate(depth_interval = ifelse(depth_interval == "ez", "Euphotic", depth_interval),
          depth_interval = ifelse(depth_interval == 200, "Upper Mesopelagic", depth_interval),
          depth_interval = ifelse(depth_interval == 300, "200-300 m", depth_interval))
@@ -117,6 +160,14 @@ pivot_ou_data <- data %>%
          depth_interval = ifelse(depth_interval == 200, "Upper Mesopelagic", depth_interval),
          depth_interval = ifelse(depth_interval == 300, "200-300 m", depth_interval))
 
+
+pivot_n_data <- data %>% 
+  select(Cruise:days, contains("n.")) %>% 
+  pivot_longer(n.ez:n.300, names_to = "depth_interval", names_prefix = "n.", values_to = "n") %>% 
+  mutate(depth_interval = ifelse(depth_interval == "ez", "Euphotic", depth_interval),
+         depth_interval = ifelse(depth_interval == 200, "Upper Mesopelagic", depth_interval),
+         depth_interval = ifelse(depth_interval == 300, "200-300 m", depth_interval))
+
 pivoted <- left_join(pivot_phyto_data, pivot_npp_data) %>% 
   left_join(., pivot_ba_data) %>% 
   left_join(., pivot_bcd_data) %>% 
@@ -125,6 +176,8 @@ pivoted <- left_join(pivot_phyto_data, pivot_npp_data) %>%
   left_join(., pivot_tdaaY_data) %>% 
   left_join(., pivot_aou_data) %>% 
   left_join(., pivot_ou_data) %>% 
+  left_join(., pivot_n_data) %>% 
+  left_join(., pivot_chl_data) %>% 
   filter(depth_interval %in% c("Euphotic", "Upper Mesopelagic"))
 
 ```
@@ -204,14 +257,12 @@ ba.plot <-  pivoted %>%
 ```
 
 
-### NPP
+### Chl
 
-```{r npp plot, echo = FALSE, warning = FALSE, message = FALSE}
-npp.plot <-  pivoted %>% 
-  mutate(days2 = round(days, 2)) %>% 
-  filter(days2 %in% c(0,1,2)) %>% 
-  drop_na(npp) %>% 
-  ggplot(aes(x = days, y = npp)) +
+```{r chl plot, echo = FALSE, warning = FALSE, message = FALSE}
+chl.plot <-  pivoted %>% 
+   drop_na(chl) %>% 
+  ggplot(aes(x = days, y = chl)) +
   geom_rect( aes(xmin = 0.5, xmax = 1, ymin = -Inf, ymax = Inf),
             fill = "light grey", alpha = 0.1) +
   geom_rect( aes(xmin = 1.5, xmax = 2, ymin = -Inf, ymax = Inf),
@@ -220,14 +271,16 @@ npp.plot <-  pivoted %>%
             fill = "light grey", alpha = 0.1) +
    geom_line(aes(color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(fill = factor(depth_interval, levels = levels)), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) +  
-  labs(x = "", y = expression(paste("Modeled NPP, µmol C L"^-1, " d"^-1)), colour = "") +
+  labs(x = "", y = expression(paste("Chl ",italic("a"), ", µg L"^"-1")), colour = "") +
     scale_fill_manual(values = custom.colors) +
     scale_color_manual(values = custom.colors) +
   guides(color = F, fill = F, shape = F, linetype = F) +
   theme_classic2(base_size = 16)
  # facet_grid(rows = vars(depth_interval), scales = "free_y")
 
+
 ```
+
 
 
 ### BCD
@@ -276,6 +329,32 @@ doc.plot <-  pivoted %>%
  # facet_grid(rows = vars(depth_interval), scales = "free_y")
 
 ```
+
+
+### N+N
+
+```{r doc plot, echo = FALSE, warning = FALSE, message = FALSE}
+n.plot <-  pivoted %>% 
+  drop_na(n) %>% 
+  ggplot(aes(x = days, y = n)) +
+  geom_rect( aes(xmin = 0.5, xmax = 1, ymin = -Inf, ymax = Inf),
+            fill = "light grey", alpha = 0.1) +
+  geom_rect( aes(xmin = 1.5, xmax = 2, ymin = -Inf, ymax = Inf),
+            fill = "light grey", alpha = 0.1) +
+  geom_rect( aes(xmin = 2.5, xmax = 3, ymin = -Inf, ymax = Inf),
+            fill = "light grey", alpha = 0.1) +
+  geom_line(aes(color = factor(depth_interval, levels = levels)), size = 1) +
+  geom_point(aes(fill = factor(depth_interval, levels = levels)), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) +  
+  labs(x = "", y = expression(paste("N+N, µmol N L"^"-1")), colour = "", fill = "Depth Horizon") +
+    scale_fill_manual(values = custom.colors) +
+    scale_color_manual(values = custom.colors) +
+  guides(linetype = F, color = F, fill = F) +
+  theme_classic2(base_size = 16) +
+  theme( legend.key.size = unit(1, "cm"))
+ # facet_grid(rows = vars(depth_interval), scales = "free_y")
+
+```
+
 
 ### TDAAy
 
@@ -377,7 +456,7 @@ ou.plot <-  pivoted %>%
 
 ```{r combine plots, echo=FALSE, fig.height=14, fig.width=18, message=FALSE, warning=FALSE}
 
-patchwork <-  phyto.plot + npp.plot + ba.plot +  bcd.plot + aou.plot + doc.plot + tdaa.plot + guide_area()
+patchwork <-  phyto.plot + chl.plot + ba.plot +  bcd.plot + n.plot + aou.plot + doc.plot + tdaa.plot
 
 patchwork +  
   plot_layout(guides = 'collect', ncol = 2) +
@@ -400,7 +479,7 @@ library(officer)
 
 
 p1a <- phyto.plot + theme_classic2(16)
-p1b <- npp.plot + theme_classic2(16)
+p1b <- chl.plot + theme_classic2(16)
 p1c <- aou.plot + theme_classic2(16)
 
 p1d <- ba.plot + theme_classic2(16)
@@ -408,9 +487,9 @@ p1e <- bcd.plot + theme_classic2(16)
 p1f <- doc.plot + labs(x = "Days") + theme(legend.position = "top") + theme_classic2(16)
 
 p1g <- tdaa.plot + theme_classic2(16)
-p1h <- tdaaY.plot + theme_classic2(16) 
+p1h <- n.plot + theme_classic2(16) 
   
-p1 <-  p1a + p1b + p1c + p1d + p1e + p1f + p1g  +  guide_area() + plot_layout(guides = 'collect', ncol = 2) 
+p1 <-  p1a + p1b + p1d + p1e + p1h + p1c + p1f  +  p1g + plot_layout(guides = 'collect', ncol = 2) 
 
 
 # initialize PowerPoint slide

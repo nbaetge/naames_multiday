@@ -893,7 +893,8 @@ relaheat.data_combine_s4 <- counts_custom.tab_combine_s4 %>%
   separate(taxa, into = c("p", "c", "o", "f"), sep = " _ ") %>% 
   mutate(cof = paste(c, o, f, sep = ": ")) %>% 
   group_by(days, z_interv, cof) %>% 
-  mutate(mean_relabund = mean(relabund, na.rm = T)) %>% 
+  mutate(mean_relabund = mean(relabund, na.rm = T),
+         sd_relabund = sd(relabund, na.rm = T)) %>% 
   ungroup() %>% 
   select(-relabund) %>% 
   distinct() %>% 
@@ -918,15 +919,14 @@ rela.counts <-  read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %
   select(eddy:z_interv, ba) %>% 
   distinct() %>% 
   group_by(days, z_interv) %>% 
-  mutate(mean_ba = mean(ba),
-         sd_ba = sd(ba)) %>% 
+  mutate(sum_ba = sum(ba)) %>% 
   ungroup() %>% 
-  select(days, z_interv, mean_ba, sd_ba) %>% 
+  select(days, z_interv, sum_ba) %>% 
   distinct() %>% 
   arrange(days) %>% 
   mutate_at(vars(days), as.character) %>% 
   left_join(., relaheat.data_combine_s4) %>% 
-  mutate(relacount = mean_relabund * mean_ba)
+  mutate(relacount = mean_relabund * sum_ba)
 
 relaheat_combine_s4 <- relaheat.data_combine_s4 %>%
   filter(mean_relabund > 0.001) %>%
@@ -956,7 +956,7 @@ relacounts_combine_s4 <- rela.counts %>%
   select(days, z_interv, cof, mean_relabund, relacount) %>% 
   distinct() %>% 
   mutate(font_col = ifelse(relacount < 1 * 10^10, "white", "black")) %>% 
-  ggplot(aes(x = days, y = reorder(cof, relacount))) +
+  ggplot(aes(x = days, y = reorder(cof, mean_relabund))) +
   geom_tile(aes(fill = relacount), color = "white") +
   # scale_color_manual(values = custom.colors) %>%
   # scale_fill_gradientn(colors = rev(matlab.colors)) +
@@ -1066,15 +1066,14 @@ rela.counts_order <-  read_rds("~/GITHUB/naames_multiday/Output/processed_data.r
   select(eddy:z_interv, ba) %>% 
   distinct() %>% 
   group_by(days, z_interv) %>% 
-  mutate(mean_ba = mean(ba),
-         sd_ba = sd(ba)) %>% 
+  mutate(sum_ba = sum(ba)) %>% 
   ungroup() %>% 
-  select(days, z_interv, mean_ba, sd_ba) %>% 
+  select(days, z_interv, sum_ba) %>% 
   distinct() %>% 
   arrange(days) %>% 
   mutate_at(vars(days), as.character) %>% 
   left_join(., relaheat.data_combine_s4_order) %>% 
-  mutate(relacount = mean_relabund * mean_ba)
+  mutate(relacount = mean_relabund * sum_ba)
 
 
 relaheat_combine_s4_order <- rela.counts_order %>% 
@@ -1172,6 +1171,9 @@ relacount_del_combine_s4_order <- del_data_combine_s4_order  %>%
   theme( legend.position = "top", axis.text.y = element_blank()) +
   # theme( legend.position = "top") +
    guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) 
+
+
+
 
 ```
 
@@ -1330,6 +1332,9 @@ relaheat_del_combine_s6 <- del_data_combine_s6  %>%
 (relaheat_combine_s6 + relaheat_del_combine_s6) 
 ```
 
+```{r fig.height=12, fig.width=21}
+relaheat_combine_s4 + (relacounts_combine_s4 + labs(y = "") + theme( legend.position = "top", axis.text.y = element_blank()) )
+```
 
 
 # Plots for powerpoint
@@ -1363,10 +1368,12 @@ p2 <- p2a + p2b + p2c
 
 ###
 
+
+
 p3a <- relaheat_combine_s4 + theme_classic2(16) + theme( legend.position = "top") +
   # theme( legend.position = "top") +
    guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) 
-p3b <- relaheat_del_combine_s4 +  theme_classic2(16) + theme( legend.position = "top", axis.text.y = element_blank()) +
+p3b <- relacounts_combine_s4 +  labs(y = "") +  theme_classic2(16) + theme( legend.position = "top", axis.text.y = element_blank()) +
   # theme( legend.position = "top") +
    guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) 
 
@@ -1375,10 +1382,11 @@ p3 <- p3a + p3b
 
 ###
 
-p4a <- relacounts_combine_s4 + theme_classic2(16) + theme( legend.position = "top") +
+
+p4a <- relaheat_combine_s6 + theme_classic2(16) + theme( legend.position = "top") +
   # theme( legend.position = "top") +
    guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) 
-p4b <- relacount_del_combine_s4 + theme_classic2(16) + theme( legend.position = "top", axis.text.y = element_blank()) +
+p4b <- relaheat_del_combine_s6 + theme_classic2(16) + theme( legend.position = "top", axis.text.y = element_blank()) +
   # theme( legend.position = "top") +
    guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) 
 
