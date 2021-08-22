@@ -333,7 +333,7 @@ doc.plot <-  pivoted %>%
 
 ### N+N
 
-```{r doc plot, echo = FALSE, warning = FALSE, message = FALSE}
+```{r nn plot, echo = FALSE, warning = FALSE, message = FALSE}
 n.plot <-  pivoted %>% 
   drop_na(n) %>% 
   ggplot(aes(x = days, y = n)) +
@@ -480,16 +480,18 @@ library(officer)
 
 p1a <- phyto.plot + theme_classic2(16)
 p1b <- chl.plot + theme_classic2(16)
-p1c <- aou.plot + theme_classic2(16)
+p1c <- aou.plot + theme_classic2(16) + labs(x = "Days") 
 
 p1d <- ba.plot + theme_classic2(16)
 p1e <- bcd.plot + theme_classic2(16)
 p1f <- doc.plot + labs(x = "Days") + theme(legend.position = "top") + theme_classic2(16)
 
 p1g <- tdaa.plot + theme_classic2(16)
-p1h <- n.plot + theme_classic2(16) 
+p1h <- n.plot + labs(x = "Days") + theme_classic2(16) 
   
-p1 <-  p1a + p1b + p1d + p1e + p1h + p1c + p1f  +  p1g + plot_layout(guides = 'collect', ncol = 2) 
+p1 <-  p1a + p1b + p1d + p1e + p1h + p1c + p1f  +  p1g + plot_layout(guides = 'collect', ncol = 4) +
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 22)) 
 
 
 # initialize PowerPoint slide
@@ -497,7 +499,7 @@ officer::read_pptx() %>%
   # add slide ----
   officer::add_slide() %>%
   # specify object and location of object 
-  officer::ph_with(p1, ph_location(width = 12, height = 13)) %>%
+  officer::ph_with(p1, ph_location(width = 14, height = 6)) %>%
   
   # export slide 
   base::print(
@@ -508,7 +510,36 @@ officer::read_pptx() %>%
 
 
 
+```{r}
 
+
+p1a <- phyto.plot + theme_classic2(16)
+p1b <- chl.plot + theme_classic2(16)
+
+p1c <- doc.plot + labs(x = "Days") + theme(legend.position = "top") + theme_classic2(16)
+p1d <- tdaa.plot + theme_classic2(16)
+
+p1e <- ba.plot + labs(x = "Days") + theme_classic2(16)
+p1f <- bcd.plot + labs(x = "Days") + theme_classic2(16)
+
+
+  
+p1 <-  p1a + p1b + p1c + p1d + p1e + p1f  + plot_spacer() + guide_area() + plot_layout(guides = 'collect', ncol = 4) 
+
+
+# initialize PowerPoint slide
+officer::read_pptx() %>%
+  # add slide ----
+  officer::add_slide() %>%
+  # specify object and location of object 
+  officer::ph_with(p1, ph_location(width = 14, height = 6)) %>%
+  
+  # export slide 
+  base::print(
+    target = "~/Desktop/Dissertation/MS_N2S4/Presentations/integrated2.pptx"
+    )
+
+```
 
 
 

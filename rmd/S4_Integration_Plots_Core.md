@@ -41,6 +41,34 @@ data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>%
    mutate_at(vars(contains(c("tdaa", "bcd", "bp", "phyc"))), funs(. / 10^3)) %>% #nM to mmol/m3 
   mutate( tdaaY.ez = (tdaa.ez/doc.ez) * 100,
          tdaaY.200 = (tdaa.200/doc.200) * 100)
+
+
+data2 <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
+  filter(Cruise == "AT34" & Station == 4) %>% 
+  mutate(time = ymd_hms(datetime),
+         interv = interval(first(time), time),
+         dur = as.duration(interv),
+         days = as.numeric(dur, "days"),
+         eddy = ifelse(Date != "2016-05-27", "Core", "Periphery")) %>% 
+  filter(eddy == "Core") %>% 
+  select(Cruise, Station, Date, time:days, z, contains("leu")) %>% 
+  distinct() %>% 
+  filter(between(z, 100, 200)) %>% 
+  drop_na(leu_incorp) %>% 
+  group_by(days) %>% 
+  summarize_at(vars(leu_incorp), list(mean = mean, sd = sd))
+
+data3 <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
+  filter(Cruise == "AT38" & Station == 6) %>% 
+  mutate(time = ymd_hms(datetime),
+         interv = interval(first(time), time),
+         dur = as.duration(interv),
+         days = as.numeric(dur, "days")) %>% 
+  select(Cruise, Station, Date, time:days, z, contains("leu")) %>% 
+  distinct() %>% 
+  filter(between(z, 100, 200)) %>% 
+  drop_na(leu_incorp) %>% 
+  summarize_at(vars(leu_incorp), list(mean = mean, sd = sd))
 ```
 
 # Pivot data
@@ -61,10 +89,24 @@ pivot_ba_data <- data %>%
          depth_interval = ifelse(depth_interval == 200, "Upper Mesopelagic", depth_interval),
          depth_interval = ifelse(depth_interval == 300, "200-300 m", depth_interval))
 
+pivot_bp_data <- data %>% 
+  select(Cruise:days,  bp.ez, bp.200, bp.300) %>% 
+  pivot_longer(bp.ez:bp.300, names_to = "depth_interval", names_prefix = "bp.", values_to = "bp") %>% 
+  mutate(depth_interval = ifelse(depth_interval == "ez", "Euphotic", depth_interval),
+         depth_interval = ifelse(depth_interval == 200, "Upper Mesopelagic", depth_interval),
+         depth_interval = ifelse(depth_interval == 300, "200-300 m", depth_interval))
+
 
 pivot_npp_data <- data %>% 
   select(Cruise:days, contains("npp")) %>% 
   pivot_longer(npp.ez:npp.300, names_to = "depth_interval", names_prefix = "npp.", values_to = "npp") %>% 
+  mutate(depth_interval = ifelse(depth_interval == "ez", "Euphotic", depth_interval),
+         depth_interval = ifelse(depth_interval == 200, "Upper Mesopelagic", depth_interval),
+         depth_interval = ifelse(depth_interval == 300, "200-300 m", depth_interval))
+
+pivot_chl_data <- data %>% 
+  select(Cruise:days, contains("chl")) %>% 
+  pivot_longer(chl.ez:chl.300, names_to = "depth_interval", names_prefix = "chl.", values_to = "chl") %>% 
   mutate(depth_interval = ifelse(depth_interval == "ez", "Euphotic", depth_interval),
          depth_interval = ifelse(depth_interval == 200, "Upper Mesopelagic", depth_interval),
          depth_interval = ifelse(depth_interval == 300, "200-300 m", depth_interval))
@@ -114,6 +156,14 @@ pivot_ou_data <- data %>%
          depth_interval = ifelse(depth_interval == 200, "Upper Mesopelagic", depth_interval),
          depth_interval = ifelse(depth_interval == 300, "200-300 m", depth_interval))
 
+
+pivot_n_data <- data %>% 
+  select(Cruise:days, contains("n.")) %>% 
+  pivot_longer(n.ez:n.300, names_to = "depth_interval", names_prefix = "n.", values_to = "n") %>% 
+  mutate(depth_interval = ifelse(depth_interval == "ez", "Euphotic", depth_interval),
+         depth_interval = ifelse(depth_interval == 200, "Upper Mesopelagic", depth_interval),
+         depth_interval = ifelse(depth_interval == 300, "200-300 m", depth_interval))
+
 pivoted <- left_join(pivot_phyto_data, pivot_npp_data) %>% 
   left_join(., pivot_ba_data) %>% 
   left_join(., pivot_bcd_data) %>% 
@@ -122,6 +172,8 @@ pivoted <- left_join(pivot_phyto_data, pivot_npp_data) %>%
   left_join(., pivot_tdaaY_data) %>% 
   left_join(., pivot_aou_data) %>% 
   left_join(., pivot_ou_data) %>% 
+  left_join(., pivot_n_data) %>% 
+  left_join(., pivot_chl_data) %>% 
   filter(depth_interval %in% c("Euphotic", "Upper Mesopelagic"))
 ```
 
@@ -158,11 +210,13 @@ fc %>%
 
 ### BC
 
-### NPP
+### Chl
 
 ### BCD
 
 ### DOC
+
+### N+N
 
 ### TDAAy
 
@@ -182,17 +236,19 @@ library(officer)
 
 ``` r
 p1a <- phyto.plot + theme_classic2(16)
-p1b <- npp.plot + theme_classic2(16)
-p1c <- aou.plot + theme_classic2(16)
+p1b <- chl.plot + theme_classic2(16)
+p1c <- aou.plot + theme_classic2(16) + labs(x = "Days") 
 
 p1d <- ba.plot + theme_classic2(16)
 p1e <- bcd.plot + theme_classic2(16)
 p1f <- doc.plot + labs(x = "Days") + theme(legend.position = "top") + theme_classic2(16)
 
 p1g <- tdaa.plot + theme_classic2(16)
-p1h <- tdaaY.plot + theme_classic2(16) 
+p1h <- n.plot + labs(x = "Days") + theme_classic2(16) 
   
-p1 <-  p1a + p1b + p1c + p1d + p1e + p1f + p1g  +  guide_area() + plot_layout(guides = 'collect', ncol = 2) 
+p1 <-  p1a + p1b + p1d + p1e + p1h + p1c + p1f  +  p1g + plot_layout(guides = 'collect', ncol = 4) +
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 22)) 
 
 
 # initialize PowerPoint slide
@@ -200,10 +256,38 @@ officer::read_pptx() %>%
   # add slide ----
   officer::add_slide() %>%
   # specify object and location of object 
-  officer::ph_with(p1, ph_location(width = 12, height = 13)) %>%
+  officer::ph_with(p1, ph_location(width = 14, height = 6)) %>%
   
   # export slide 
   base::print(
     target = "~/Desktop/Dissertation/MS_N2S4/Presentations/integrated.pptx"
+    )
+```
+
+``` r
+p1a <- phyto.plot + theme_classic2(16)
+p1b <- chl.plot + theme_classic2(16)
+
+p1c <- doc.plot + labs(x = "Days") + theme(legend.position = "top") + theme_classic2(16)
+p1d <- tdaa.plot + theme_classic2(16)
+
+p1e <- ba.plot + labs(x = "Days") + theme_classic2(16)
+p1f <- bcd.plot + labs(x = "Days") + theme_classic2(16)
+
+
+  
+p1 <-  p1a + p1b + p1c + p1d + p1e + p1f  + plot_spacer() + guide_area() + plot_layout(guides = 'collect', ncol = 4) 
+
+
+# initialize PowerPoint slide
+officer::read_pptx() %>%
+  # add slide ----
+  officer::add_slide() %>%
+  # specify object and location of object 
+  officer::ph_with(p1, ph_location(width = 14, height = 6)) %>%
+  
+  # export slide 
+  base::print(
+    target = "~/Desktop/Dissertation/MS_N2S4/Presentations/integrated2.pptx"
     )
 ```

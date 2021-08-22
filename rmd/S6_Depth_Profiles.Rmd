@@ -15,6 +15,8 @@ library(lubridate)
 library(patchwork)
 library(ggpubr)
 library(viridis)
+library(oce)
+library(PlotSvalbard)
 ```
 
 ```{r aesthetics, message=FALSE, warning=FALSE}
@@ -51,12 +53,14 @@ npp <- read_rds("~/GITHUB/naames_multiday/Input/npp_data.rds") %>%
   filter(Cruise == "AT38" & Station == 6) %>% 
   filter(z <= 200) 
 
-ctd <-  read_rds("~/GITHUB/naames_multiday/Input/ctd_data.rds") %>% 
-  mutate( interv = interval(ymd("2017-09-13"), Date),
-         dur = as.duration(interv),
-         days = as.numeric(dur, "days")) %>% 
-  filter(Cruise == "AT38" & Station == 6) %>% 
-  filter(z <= 200) 
+ctd <- read_rds("~/GITHUB/naames_multiday/Input/master/deriv_naames_ctd.rds") %>%
+    rename(lat = "Latitude [degrees_north]",
+         z = bin_depth) %>%
+  mutate(bin = round(lat, 1),
+         Date = ymd_hm(`yyyy-mm-ddThh:mm:ss.sss`),
+         Date = as_date(round_date(Date, unit = "day")),
+         aou_c = deriv_aou_umol_l * 0.72) %>%
+  rename(aou = deriv_aou_umol_l)
 
 casts <- data %>% 
   filter(Cruise == "AT38" & Station == 6) %>% 
@@ -66,6 +70,28 @@ casts <- data %>%
 ```
 
 # Station 6
+
+# T-S 
+
+```{r}
+ts <- ctd %>% 
+  filter(CampCN %in% c(casts), z <= 200, SCN < 13) %>%
+  select(Date, SCN, ave_temp_c, pres_db, ave_sal_psu) %>% 
+  mutate(potT = swTheta(salinity = ave_sal_psu, temperature = ave_temp_c, pressure = pres_db)) %>%
+     mutate(interv = interval(ymd("2017-09-13"), Date),
+         dur = as.duration(interv),
+         days = as.numeric(dur, "days")) %>%
+  mutate_at(vars(Date), as.character) %>% 
+  distinct() 
+
+ts.plot <- ts_plot(ts, temp_col = "potT", sal_col = "ave_sal_psu", color = "days", symbol_size = 2, symbol_shape = 16, color_isopyc = "black") +
+  scale_color_viridis() +
+  theme_classic2(18) +
+  scale_x_continuous(name = "Practical Salinity", sec.axis = sec_axis(~.,name = expression(paste("Potential Density, kg m"^-3)))) +
+  scale_y_continuous(name = "Potential Temperature, ˚C") +
+  guides(colour = F) 
+```
+
 
 ## Plot MLDs
 
@@ -94,13 +120,16 @@ mld.plot <-  data %>%
 
 ```{r t plot, echo = FALSE, warning = FALSE, message = FALSE}
 t.plot <-  ctd %>% 
-  filter(z <= 300) %>% 
-  group_by(CampCN, z) %>% 
-  mutate(ave_t = mean(ave_temp_c, na.rm = T),
-         sd_t = sd(ave_temp_c, na.rm = T)) %>% 
-  ungroup() %>% 
+  filter(CampCN %in% c(casts), z <= 300, SCN < 13) %>%
+  select(Date, CampCN, SCN, z, ave_temp_c) %>% 
+  rename(ave_t = ave_temp_c) %>% 
+   mutate(interv = interval(ymd("2016-05-24"), Date),
+         dur = as.duration(interv),
+         days = as.numeric(dur, "days")) %>%
+  mutate_at(vars(Date), as.character) %>% 
+  distinct() %>% 
   ggplot(aes(x = z, y = ave_t, group = interaction(Date, CampCN))) +
-  geom_ribbon(aes(ymin = ave_t - sd_t, ymax = ave_t + sd_t, fill = days), alpha = 0.1) +
+  # geom_ribbon(aes(ymin = ave_t - sd_t, ymax = ave_t + sd_t, fill = days), alpha = 0.1) +
   geom_line(aes(color = days), size = 0.7) +
   labs(x = "Depth, m", y = expression(paste("Temperature, ˚C")), colour = "", fill = "Days") +
   scale_x_reverse() +
@@ -140,7 +169,7 @@ chl.plot <-  data %>%
   # scale_color_gradientn(colors = matlab.colors2) +
   scale_fill_viridis() +
   scale_color_viridis() +
-  guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) +
+  guides(fill = guide_colourbar(barheight = 20, barwidth = 2, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1, reverse = T), color = F) +
   theme_classic2(base_size = 20) +
   theme(panel.spacing.x = unit(1, "cm"),
         axis.text.x = element_text(angle = 0),
@@ -275,15 +304,19 @@ doc.plot <-  data %>%
 
 ### AOU
 
+
 ```{r aou plot, echo = FALSE, warning = FALSE, message = FALSE}
 aou.plot <-  ctd %>% 
-  filter(z <= 300) %>% 
-  group_by(CampCN, z) %>% 
-  mutate(ave_aou = mean(aou, na.rm = T),
-         sd_aou = sd(aou, na.rm = T)) %>% 
-  ungroup() %>% 
+  filter(CampCN %in% c(casts), z <= 300, SCN < 13) %>%
+  select(Date, CampCN, SCN, z, deriv_aou_umol_kg) %>% 
+  rename(ave_aou = deriv_aou_umol_kg) %>% 
+   mutate(interv = interval(ymd("2016-05-24"), Date),
+         dur = as.duration(interv),
+         days = as.numeric(dur, "days")) %>%
+  mutate_at(vars(Date), as.character) %>% 
+  distinct() %>% 
   ggplot(aes(x = z, y = ave_aou, group = interaction(Date, CampCN))) +
-  geom_ribbon(aes(ymin = ave_aou - sd_aou, ymax = ave_aou + sd_aou, fill = days), alpha = 0.1) +
+  # geom_ribbon(aes(ymin = ave_aou - sd_aou, ymax = ave_aou + sd_aou, fill = days), alpha = 0.1) +
   geom_line(aes(color = days), size = 0.7) +
   labs(x = "", y = expression(paste("AOU, µmol O"[2]," L"^"-1")), colour = "", fill = "Days") +
   scale_x_reverse() +
@@ -317,6 +350,7 @@ ba.plot <-  data %>%
   geom_point(aes(fill = days), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = "Depth, m", y = expression(paste("Bacterioplankton, cells L"^"-1")), colour = "",  fill = "Days") +
   scale_x_reverse() +
+  scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
   coord_flip() +
   # scale_fill_date(low = "#0db5e6", high = "#d31f2a") +
   # scale_color_date(low = "#0db5e6", high = "#d31f2a") +
@@ -363,9 +397,9 @@ leu.plot <-  data %>%
 
 
 
-```{r combine plots, echo = FALSE, warning = FALSE, message = FALSE, fig.height = 20, fig.width = 22}
+```{r combine plots, echo = FALSE, warning = FALSE, message = FALSE, fig.height = 20, fig.width = 24}
 
-patchwork <- mld.plot  + t.plot +  n.plot + guide_area() + chl.plot + phyto.plot + npp.plot + aou.plot  + ba.plot + leu.plot + doc.plot  
+patchwork <-  ts.plot + mld.plot  + n.plot + guide_area() + chl.plot + phyto.plot + npp.plot + aou.plot  + ba.plot + leu.plot + doc.plot  
 
 patchwork +  
   plot_layout(guides = 'collect') +
@@ -381,12 +415,12 @@ patchwork +
 library(officer)
 ```
 
-
 ```{r}
 
 
-p1a <- mld.plot + theme_classic2(16)
-p1b <- t.plot + theme_classic2(16)
+
+p1a <- ts.plot + theme_classic2(16)
+p1b <- mld.plot + theme_classic2(16)
 p1c <- n.plot + theme_classic2(16)
 p1d <- chl.plot + guides(fill = guide_colourbar(barheight = 8, barwidth = 6, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = F) +  theme_classic2(16)
 p1e <- phyto.plot + theme_classic2(16)
@@ -396,7 +430,9 @@ p1h <- ba.plot + theme_classic2(16)
 p1i <- leu.plot + theme_classic2(16)
 p1j <- doc.plot + theme_classic2(16)
   
-p1 <-  p1a + p1b +  p1c + guide_area() + p1d + p1e + p1f + p1g  + p1h + p1i + p1j  +  plot_layout(guides = 'collect') 
+p1 <-  p1a + p1b +  p1c + guide_area() + p1d + p1e + p1f + p1g  + p1h + p1i + p1j  +  plot_layout(guides = 'collect') +
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 22)) 
   
   
 # initialize PowerPoint slide

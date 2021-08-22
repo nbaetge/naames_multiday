@@ -26,7 +26,7 @@ c
 
 ``` r
 bf <- read_rds("~/GITHUB/naames_multiday/Input/master/processed_bf.8.2020.rds") %>%  
-  select(Cruise:degree_bin, CampCN, Z_MLD, EZD, Target_Z, interp_DOC, DOC_sd, interp_TDAA, interp_tdaa_c, TDAA_sd, Asp:Lys, interp_O2_Winkler, O2_Winkler_sd, interp_N_N, N_N_sd,  interp_Chl_a_Fluor,interp_Pro_Influx:interp_Nano_Influx, interp_BactProd, BactProd_sd, interp_BactProd_C, BactProd_C_sd, interp_BactAbund, BactAbund_sd) %>% 
+  select(Cruise:degree_bin, CampCN, Z_MLD, N2, EZD, Target_Z, interp_DOC, DOC_sd, interp_TDAA, interp_tdaa_c, TDAA_sd, Asp:Lys, interp_O2_Winkler, O2_Winkler_sd, interp_N_N, N_N_sd,  interp_Chl_a_Fluor,interp_Pro_Influx:interp_Nano_Influx, interp_BactProd, BactProd_sd, interp_BactProd_C, BactProd_C_sd, interp_BactAbund, BactAbund_sd) %>% 
   group_by(CampCN) %>% 
   mutate(surf_bala = ifelse(Target_Z == 5, Bala, NA),
          surf_gaba = ifelse(Target_Z == 5, GABA, NA),
@@ -236,12 +236,10 @@ bcd <- interpolated.df %>%
          #units are  µmol C / m3 / d 
          #bp in nmol C / L / d is equivalent to  µmol C / m3 / d 
          bcd = ifelse(Cruise == "AT34" & Station == 4, round(bp/0.24), NA),
-         ba = ba * 10^3,
          bc = ba * (5/12) / (10^12),
          bc = ifelse(Cruise == "AT34" & Station == 4, bc, NA),
           # bc = ifelse(Cruise == "AT38" & Station == 6, ba * (43/12) / (10^12), bc),
-         phyto = phyto * 10^3,
-         sd_ba = sd_ba * 10^3) %>% 
+         phyto = phyto * 10^3) %>% 
   rename(z = Target_Z,
          mld = Z_MLD)
 
@@ -274,6 +272,7 @@ integ_ez <- integ_data %>%
          bp.ez = integrateTrapezoid(z, bp, type = "A"),
          bc.ez = integrateTrapezoid(z, bc, type = "A"),
          doc.ez = integrateTrapezoid(z, doc, type = "A"),
+         n.ez = integrateTrapezoid(z, n, type = "A"),
          chl.ez = integrateTrapezoid(z, chl, type = "A"),
          phyc.ez = integrateTrapezoid(z, phyc, type = "A"),
          phyto.ez = integrateTrapezoid(z, phyto, type = "A"),
@@ -300,6 +299,7 @@ integ_200 <- integ_data %>%
          bp.200 = integrateTrapezoid(z, bp, type = "A"),
          bc.200 = integrateTrapezoid(z, bc, type = "A"),
          doc.200 = integrateTrapezoid(z, doc, type = "A"),
+         n.200 = integrateTrapezoid(z, n, type = "A"),
          chl.200 = integrateTrapezoid(z, chl, type = "A"),
          phyc.200 = integrateTrapezoid(z, phyc, type = "A"),
          phyto.200 = integrateTrapezoid(z, phyto, type = "A"),
@@ -325,6 +325,7 @@ integ_300 <- integ_data %>%
          bp.300 = integrateTrapezoid(z, bp, type = "A"),
          bc.300 = integrateTrapezoid(z, bc, type = "A"),
          doc.300 = integrateTrapezoid(z, doc, type = "A"),
+         n.300 = integrateTrapezoid(z, n, type = "A"),
          chl.300 = integrateTrapezoid(z, chl, type = "A"),
          phyc.300 = integrateTrapezoid(z, phyc, type = "A"),
          phyto.300 = integrateTrapezoid(z, phyto, type = "A"),
