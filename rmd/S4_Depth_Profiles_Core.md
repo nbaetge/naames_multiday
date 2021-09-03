@@ -89,7 +89,7 @@ ts <- ctd %>%
   distinct() %>% 
   mutate_at(vars(days), as.character)
 
-ts.plot <- ts_plot(ts, temp_col = "potT", sal_col = "ave_sal_psu", color = "days", symbol_size = 3, symbol_shape = 16, symbol_alpha = 0.7, color_isopyc = "black") +
+ts.plot <- ts_plot(ts, temp_col = "potT", sal_col = "ave_sal_psu", color = "days", symbol_size = 3, symbol_shape = 16, symbol_alpha = 0.7, color_isopyc = "black", WM = NULL) +
   scale_color_viridis_d() +
   theme_classic2(18) +
   scale_x_continuous(name = "Practical Salinity", sec.axis = sec_axis(~.,name = expression(paste("Potential Density, kg m"^-3)))) +
