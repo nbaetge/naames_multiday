@@ -25,6 +25,62 @@ c
 # Import Data
 
 ``` r
+s4_stations <- read_rds("~/GITHUB/naames_multiday/Input/master/processed_bf.8.2020.rds") %>% filter(Cruise == "AT34", Station == 4) %>% select(CampCN) %>% distinct() %>% as_vector()
+
+#mld for N2S4 based on density threshold
+# sigt_mld <- read_rds("~/GITHUB/naames_multiday/Input/master/deriv_naames_ctd.rds") %>% 
+#   filter(CampCN %in% c(s4_stations), bin_depth < 500) %>% 
+#   select(Cruise, Station, CampCN, bin_depth, deriv_sigT_kg_m3) %>% 
+#   mutate_at(vars(deriv_sigT_kg_m3), round, 3) %>% 
+#   group_by(Cruise, Station, CampCN) %>% 
+#   filter(bin_depth >= 5) %>% 
+#   mutate(surf_sigt = ifelse(bin_depth == 5, deriv_sigT_kg_m3, NA)) %>% 
+#   fill(surf_sigt, .direction = "downup") %>% 
+#   mutate(mld_sigt =  surf_sigt + 0.03) %>% 
+#   group_modify(~ add_row(.))  %>% 
+#   fill(mld_sigt, .direction = "downup") %>% 
+#   mutate(mld = ifelse(mld_sigt == deriv_sigT_kg_m3, bin_depth, NA), 
+#          mld = mean(mld, na.rm = T)) %>% 
+#    mutate(deriv_sigT_kg_m3 = ifelse(is.na(deriv_sigT_kg_m3), mld_sigt, deriv_sigT_kg_m3)) %>% 
+#   arrange(CampCN, deriv_sigT_kg_m3) %>% 
+#   mutate(mld = ifelse(is.na(bin_depth), na.approx(bin_depth), mld)) %>% 
+#   drop_na(mld) %>% 
+#   select(Cruise, Station, CampCN, mld) %>% 
+#   distinct() %>% 
+#   ungroup() %>% 
+#   group_by(CampCN) %>% 
+#   mutate(mld = mean(mld)) %>% 
+#   distinct() %>% 
+#   rename(sigt_mld = mld)
+
+#mld for N2S4 based on temp threshold
+# temp_mld <- read_rds("~/GITHUB/naames_multiday/Input/master/deriv_naames_ctd.rds") %>% 
+#   filter(CampCN %in% c(s4_stations), bin_depth < 500) %>% 
+#   select(Cruise, Station, CampCN, bin_depth, ave_temp_c) %>% 
+#   mutate_at(vars(ave_temp_c), round, 2) %>% 
+#   group_by(Cruise, Station, CampCN) %>% 
+#   filter(bin_depth >= 5) %>% 
+#   mutate(surf_temp = ifelse(bin_depth == 5, ave_temp_c, NA)) %>% 
+#   fill(surf_temp, .direction = "downup") %>% 
+#   mutate(mld_temp =  surf_temp - 0.2) %>% 
+#   group_modify(~ add_row(.))  %>% 
+#   fill(mld_temp, .direction = "downup") %>% 
+#   mutate(mld = ifelse(mld_temp == ave_temp_c, bin_depth, NA), 
+#          mld = mean(mld, na.rm = T)) %>% 
+#    mutate(ave_temp_c = ifelse(is.na(ave_temp_c), mld_temp, ave_temp_c)) %>% 
+#   arrange(CampCN, ave_temp_c) %>% 
+#   mutate(mld = ifelse(is.na(bin_depth), na.approx(bin_depth), mld)) %>% 
+#   drop_na(mld) %>% 
+#   select(Cruise, Station, CampCN, mld) %>% 
+#   distinct() %>% 
+#   ungroup() %>% 
+#   group_by(CampCN) %>% 
+#   mutate(mld = mean(mld)) %>% 
+#   distinct() %>% 
+#   rename(t_mld = mld)
+```
+
+``` r
 bf <- read_rds("~/GITHUB/naames_multiday/Input/master/processed_bf.8.2020.rds") %>%  
   select(Cruise:degree_bin, CampCN, Z_MLD, N2, EZD, Target_Z, interp_DOC, DOC_sd, interp_TDAA, interp_tdaa_c, TDAA_sd, Asp:Lys, interp_O2_Winkler, O2_Winkler_sd, interp_N_N, N_N_sd,  interp_Chl_a_Fluor,interp_Pro_Influx:interp_Nano_Influx, interp_BactProd, BactProd_sd, interp_BactProd_C, BactProd_C_sd, interp_BactAbund, BactAbund_sd) %>% 
   group_by(CampCN) %>% 
@@ -117,6 +173,12 @@ npp <- read_rds("~/GITHUB/naames_multiday/Input/master/Z_resolved_model_NPP.rds"
          npp = NPP) %>% 
   mutate(npp = (npp)/12)
 saveRDS(npp, "~/GITHUB/naames_multiday/Input/npp_data.rds")
+```
+
+``` r
+# compare_mld <- bf %>% filter(Cruise == "AT34", Station == 4) %>% select(Cruise, Station, CampCN, Z_MLD) %>% distinct() %>% 
+#   left_join(., sigt_mld) %>% 
+#   left_join(., temp_mld)
 ```
 
 ## note on C-OPS PAR
@@ -237,9 +299,9 @@ bcd <- interpolated.df %>%
          #bp in nmol C / L / d is equivalent to  µmol C / m3 / d 
          bcd = ifelse(Cruise == "AT34" & Station == 4, round(bp/0.24), NA),
          bc = ba * (5/12) / (10^12),
-         bc = ifelse(Cruise == "AT34" & Station == 4, bc, NA),
-          # bc = ifelse(Cruise == "AT38" & Station == 6, ba * (43/12) / (10^12), bc),
-         phyto = phyto * 10^3) %>% 
+         bc = ifelse(Cruise == "AT34" & Station == 4, bc, NA)
+          # bc = ifelse(Cruise == "AT38" & Station == 6, ba * (43/12) / (10^12), bc)) 
+         ) %>% 
   rename(z = Target_Z,
          mld = Z_MLD)
 

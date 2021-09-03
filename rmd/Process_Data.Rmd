@@ -298,9 +298,9 @@ bcd <- interpolated.df %>%
          #bp in nmol C / L / d is equivalent to  µmol C / m3 / d 
          bcd = ifelse(Cruise == "AT34" & Station == 4, round(bp/0.24), NA),
          bc = ba * (5/12) / (10^12),
-         bc = ifelse(Cruise == "AT34" & Station == 4, bc, NA),
-          # bc = ifelse(Cruise == "AT38" & Station == 6, ba * (43/12) / (10^12), bc),
-         phyto = phyto * 10^3) %>% 
+         bc = ifelse(Cruise == "AT34" & Station == 4, bc, NA)
+          # bc = ifelse(Cruise == "AT38" & Station == 6, ba * (43/12) / (10^12), bc)) 
+         ) %>% 
   rename(z = Target_Z,
          mld = Z_MLD)
 

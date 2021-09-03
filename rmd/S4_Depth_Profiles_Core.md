@@ -75,7 +75,7 @@ casts <- data %>%
 
 # Station 4
 
-# T-S
+## T-S
 
 ``` r
 ts <- ctd %>% 
@@ -86,27 +86,27 @@ ts <- ctd %>%
          dur = as.duration(interv),
          days = as.numeric(dur, "days")) %>%
   mutate_at(vars(Date), as.character) %>% 
-  distinct() 
+  distinct() %>% 
+  mutate_at(vars(days), as.character)
 
-ts.plot <- ts_plot(ts, temp_col = "potT", sal_col = "ave_sal_psu", color = "days", symbol_size = 2, symbol_shape = 16, color_isopyc = "black") +
-  scale_color_viridis() +
+ts.plot <- ts_plot(ts, temp_col = "potT", sal_col = "ave_sal_psu", color = "days", symbol_size = 3, symbol_shape = 16, symbol_alpha = 0.7, color_isopyc = "black") +
+  scale_color_viridis_d() +
   theme_classic2(18) +
-  scale_x_continuous(name = "Practical Salinity", sec.axis = sec_axis(~.,name = expression(paste("Density, kg m"^-3)))) +
+  scale_x_continuous(name = "Practical Salinity", sec.axis = sec_axis(~.,name = expression(paste("Potential Density, kg m"^-3)))) +
   scale_y_continuous(name = "Potential Temperature, ˚C") +
-  guides(colour = F) 
+  labs(color = "Day") +
+   theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_text(size = 14),
+        legend.key.size = unit(0.4, "cm"),
+        legend.position = c(0.9, 0.35),
+        legend.text = element_text(size = 12),
+        legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"))
 ```
-
-    ## Scale for 'x' is already present. Adding another scale for 'x', which will
-    ## replace the existing scale.
-
-    ## Scale for 'y' is already present. Adding another scale for 'y', which will
-    ## replace the existing scale.
 
 ## Plot MLDs
 
 ## Plot Profiles
-
-### Temp
 
 ### Chl
 
@@ -127,6 +127,8 @@ ts.plot <- ts_plot(ts, temp_col = "potT", sal_col = "ave_sal_psu", color = "days
 ### BactA
 
 ### Leu
+
+## Combine Plots
 
 ![](S4_Depth_Profiles_Core_files/figure-gfm/combine%20plots-1.png)<!-- -->
 
@@ -179,3 +181,10 @@ officer::read_pptx() %>%
     target = "~/Desktop/Dissertation/MS_N2S4/Presentations/profiles.pptx"
     )
 ```
+
+    ## Warning: colourbar guide needs continuous scales.
+
+    ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
+    ## Inf
+
+    ## Warning: colourbar guide needs continuous scales.

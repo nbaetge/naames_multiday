@@ -225,8 +225,9 @@ phyto.plot <-  pivoted %>%
    geom_line(aes(color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(fill = factor(depth_interval, levels = levels)), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) +  
   labs(x = "", y = expression(paste("Phytoplankton, cells L"^"-1")), colour = "") +
-    scale_fill_manual(values = custom.colors) +
-    scale_color_manual(values = custom.colors) +
+  scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
+    scale_fill_viridis_d(end = 0.7) +
+    scale_color_viridis_d(end = 0.7) +
   guides(color = F, fill = F, shape = F, linetype = F) +
   theme_classic2(base_size = 16)
  # facet_grid(rows = vars(depth_interval), scales = "free_y")
@@ -248,8 +249,8 @@ ba.plot <-  pivoted %>%
    geom_line(aes(color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(fill = factor(depth_interval, levels = levels)), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) +  
   labs(x = "", y = expression(paste("Bacterioplankton, cells L"^"-1")), colour = "") +
-    scale_fill_manual(values = custom.colors) +
-    scale_color_manual(values = custom.colors) +
+    scale_fill_viridis_d(end = 0.7) +
+    scale_color_viridis_d(end = 0.7) +
   guides(color = F, fill = F, shape = F, linetype = F) +
   theme_classic2(base_size = 16)
  # facet_grid(rows = vars(depth_interval), scales = "free_y")
@@ -272,8 +273,8 @@ chl.plot <-  pivoted %>%
    geom_line(aes(color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(fill = factor(depth_interval, levels = levels)), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) +  
   labs(x = "", y = expression(paste("Chl ",italic("a"), ", µg L"^"-1")), colour = "") +
-    scale_fill_manual(values = custom.colors) +
-    scale_color_manual(values = custom.colors) +
+   scale_fill_viridis_d(end = 0.7) +
+    scale_color_viridis_d(end = 0.7) +
   guides(color = F, fill = F, shape = F, linetype = F) +
   theme_classic2(base_size = 16)
  # facet_grid(rows = vars(depth_interval), scales = "free_y")
@@ -298,8 +299,8 @@ bcd.plot <-  pivoted %>%
    geom_line(aes(color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(fill = factor(depth_interval, levels = levels)), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) +  
   labs(x = "", y = expression(paste("BCD, µmol C L"^"-1", "d"^-1)), colour = "") +
-    scale_fill_manual(values = custom.colors) +
-    scale_color_manual(values = custom.colors) +
+   scale_fill_viridis_d(end = 0.7) +
+    scale_color_viridis_d(end = 0.7) +
   guides(color = F, fill = F, shape = F, linetype = F) +
   theme_classic2(base_size = 16)
  # facet_grid(rows = vars(depth_interval), scales = "free_y")
@@ -321,8 +322,8 @@ doc.plot <-  pivoted %>%
   geom_line(aes(color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(fill = factor(depth_interval, levels = levels)), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) +  
   labs(x = "", y = expression(paste("DOC, µmol C L"^"-1")), colour = "", fill = "Depth Horizon") +
-    scale_fill_manual(values = custom.colors) +
-    scale_color_manual(values = custom.colors) +
+  scale_fill_viridis_d(end = 0.7) +
+    scale_color_viridis_d(end = 0.7) +
   guides(linetype = F, color = F, fill = guide_legend(override.aes = list(shape = 21))) +
   theme_classic2(base_size = 16) +
   theme( legend.key.size = unit(1, "cm"))
@@ -346,8 +347,8 @@ n.plot <-  pivoted %>%
   geom_line(aes(color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(fill = factor(depth_interval, levels = levels)), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) +  
   labs(x = "", y = expression(paste("N+N, µmol N L"^"-1")), colour = "", fill = "Depth Horizon") +
-    scale_fill_manual(values = custom.colors) +
-    scale_color_manual(values = custom.colors) +
+   scale_fill_viridis_d(end = 0.7) +
+    scale_color_viridis_d(end = 0.7) +
   guides(linetype = F, color = F, fill = F) +
   theme_classic2(base_size = 16) +
   theme( legend.key.size = unit(1, "cm"))
@@ -371,8 +372,8 @@ tdaaY.plot <-  pivoted %>%
   geom_line(aes(color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(fill = factor(depth_interval, levels = levels)), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) +  
   labs(x = "Days", y = expression(paste("TDAA Yield, % DOC")), colour = "", fill = "Depth Horizon") +
-    scale_fill_manual(values = custom.colors) +
-    scale_color_manual(values = custom.colors) +
+   scale_fill_viridis_d(end = 0.7) +
+    scale_color_viridis_d(end = 0.7) +
   guides(linetype = F, color = F, fill = F) +
   theme_classic2(base_size = 16) +
   theme( legend.key.size = unit(1, "cm"))
@@ -395,8 +396,8 @@ tdaa.plot <-  pivoted %>%
   geom_line(aes(color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(fill = factor(depth_interval, levels = levels)), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) +  
   labs(x = "Days", y = expression(paste("TDAA, µmol C L"^"-1")), colour = "", fill = "Depth Horizon") +
-    scale_fill_manual(values = custom.colors) +
-    scale_color_manual(values = custom.colors) +
+   scale_fill_viridis_d(end = 0.7) +
+    scale_color_viridis_d(end = 0.7) +
   guides(linetype = F, color = F, fill = F) +
   theme_classic2(base_size = 16) +
   theme( legend.key.size = unit(1, "cm"))
@@ -422,8 +423,8 @@ aou.plot <-  pivoted %>%
   geom_line(aes(color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(fill = factor(depth_interval, levels = levels)), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) +  
   labs(x = "", y = expression(paste("AOU, µmol O"[2], " L"^"-1")), colour = "") +
-    scale_fill_manual(values = custom.colors) +
-    scale_color_manual(values = custom.colors) +
+   scale_fill_viridis_d(end = 0.7) +
+    scale_color_viridis_d(end = 0.7) +
   guides(color = F, fill = F, shape = F, linetype = F) +
   theme_classic2(base_size = 16)
  # facet_grid(rows = vars(depth_interval), scales = "free_y")
@@ -444,8 +445,8 @@ ou.plot <-  pivoted %>%
   geom_line(aes(color = factor(depth_interval, levels = levels)), size = 1) +
   geom_point(aes(fill = factor(depth_interval, levels = levels)), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) +  
   labs(x = "", y = expression(paste("∆AOU, µmol O"[2], " L"^"-1")), colour = "") +
-    scale_fill_manual(values = custom.colors) +
-    scale_color_manual(values = custom.colors) +
+   scale_fill_viridis_d(end = 0.7) +
+    scale_color_viridis_d(end = 0.7) +
   guides(color = F, fill = F, shape = F, linetype = F) +
   theme_classic2(base_size = 16)
  # facet_grid(rows = vars(depth_interval), scales = "free_y")
