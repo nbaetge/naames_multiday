@@ -328,6 +328,16 @@ sample.tab2 <- sample.tab %>%
   column_to_rownames(var = "rowname")
 
 
+####
+
+subset_sample_IDs_n2s4 <-  row.names(sample.tab2)[sample.tab2$Station == 4 & sample.tab2$Cruise == "AT34" & sample.tab2$eddy == "Core"]
+
+dist_n2s4 <- vegdist(t(deseq_count_tab[ , colnames(deseq_count_tab) %in% subset_sample_IDs_n2s4]), method = "bray")
+
+sample_info_tab_n2s4 <- sample.tab2[row.names(sample.tab2) %in% subset_sample_IDs_n2s4, ]
+
+####
+
 subset_sample_IDs_n2s4_ez <-  row.names(sample.tab2)[sample.tab2$Station == 4 & sample.tab2$Cruise == "AT34" & sample.tab2$eddy == "Core" & sample.tab2$z <= 75]
 
 dist_n2s4_ez <- vegdist(t(deseq_count_tab[ , colnames(deseq_count_tab) %in% subset_sample_IDs_n2s4_ez]), method = "bray")
@@ -375,6 +385,9 @@ Betadisper first calculates the average distance of group members to the group c
 
 In the function below: we are using the distance matrix to calculate the multivariate dispersions (variances; average distance to centroids). We then use group dispersions to perform an ANOVA test.
 
+```{r}
+anova(betadisper(dist_n2s4, sample_info_tab_n2s4$z_interv)) 
+```
 
 
 ```{r}
@@ -400,6 +413,11 @@ anova(betadisper(dist_n3s6_mz, sample_info_tab_n3s6_mz$days))
 ```
 
 **Our groups (depth horizon, Days) within N2S4 and N3S6 do present homogeneity among group dispersions (compositions vary similarly). The exception is euphotic zone N3S6 (p = 0.02)** 
+
+```{r}
+adonis(dist_n2s4~sample_info_tab_n2s4$z_interv)
+```
+
 
 ```{r}
 adonis(dist_n2s4_ez~sample_info_tab_n2s4_ez$days)
