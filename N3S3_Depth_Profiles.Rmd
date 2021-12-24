@@ -1,0 +1,595 @@
+---
+title: "N3S3 Depth Profiles"
+author: "Nicholas Baetge"
+date: "12/14/2021"
+output: github_document
+---
+
+# Intro
+
+Here, we plot the profiles from the multiday NAAMES station, N2S4.
+
+```{r load libraries, message=FALSE, warning=FALSE}
+library(tidyverse) 
+library(lubridate)
+library(patchwork)
+library(ggpubr)
+library(viridis)
+library(oce)
+library(PlotSvalbard)
+library(hms)
+library(readxl)
+```
+
+
+# Import Data
+
+```{r import data, message=FALSE, warning=FALSE}
+data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
+  filter(Cruise == "AT34" & Station == 4) %>% 
+  mutate_at(vars(contains("tdaa"), Asp:Lys), funs(. / 10^3)) %>% #nM to mmol/m3
+  mutate(time = ymd_hms(datetime),
+         plot_date = paste(month(datetime, label = T), day(datetime), format(parse_date_time(datetime, c('ymd_hms', 'HM')), '%H:%M')),
+         interv = interval(first(time), time),
+         dur = as.duration(interv),
+         days = as.numeric(dur, "days"),
+         eddy = ifelse(Date != "2016-05-27", "Core", "Periphery"),
+         tdaa_yield = round((tdaa_c/doc)*100, 2)) %>% 
+  filter(z <= 200) 
+  # filter(eddy == "Core")
+
+npp <- read_rds("~/GITHUB/naames_multiday/Input/npp_data.rds") %>% 
+  mutate(interv = interval(ymd("2016-05-24"), Date),
+         dur = as.duration(interv),
+         days = as.numeric(dur, "days"),
+         eddy = ifelse(Date != "2016-05-27" & Station != 6, "Core", "Periphery")) %>% 
+  filter(Cruise == "AT34" & Station == 4)  %>% 
+  filter(z <= 200) %>% 
+  mutate(plot_date = paste(month(Date, label = T), day(Date)))
+  # filter(eddy == "Core")
+
+ctd <- read_rds("~/GITHUB/naames_multiday/Input/master/deriv_naames_ctd.rds") %>%
+    rename(lat = "Latitude [degrees_north]",
+         z = bin_depth) %>%
+  mutate(bin = round(lat, 1),
+         Date = ymd_hm(`yyyy-mm-ddThh:mm:ss.sss`),
+         Date = as_date(round_date(Date, unit = "day")),
+         datetime = ymd_hm(`yyyy-mm-ddThh:mm:ss.sss`),
+        plot_date = paste(month(datetime, label = T), day(datetime), format(parse_date_time(datetime, c('ymd_hms', 'HM')), '%H:%M')),
+         aou_c = deriv_aou_umol_l * 0.72) %>%
+  rename(aou = deriv_aou_umol_l)
+
+casts <- data %>% 
+  filter(Cruise == "AT34") %>% 
+  # filter(Cruise == "AT34", Date != "2016-05-27") %>% 
+  distinct(CampCN) %>% 
+  as_vector()
+
+phyto <- read_excel("~/GITHUB/naames_multiday/Input/Behrenfeld_Flow_Cytometry_NAAMES2.xlsx", sheet = "data") %>% 
+  mutate(phyto = prochlorococcus_abun + synechococcus_abun + picoeukaryote_abun + nanoeukaryote_abun) %>% 
+  filter(station == "S4", profile == "T", depth <= 200) %>% 
+  select(-profile) %>% 
+  mutate(time = as_hms(time), date = ymd(date)) %>% 
+  group_by(date, time, station, lat, lon) %>% 
+  group_modify(~ add_row(., depth = c(0, 5, 10))) %>% 
+  fill(date, time) %>% 
+  arrange(date, time, depth) %>% 
+  ungroup() %>% 
+  group_by(date, time, depth) %>% 
+  fill(prochlorococcus_abun:phyto) %>% 
+  ungroup() %>% 
+  distinct() %>% 
+  mutate(upper10 = ifelse(depth <= 10, T, F)) %>% 
+  group_by(date, time, upper10) %>% 
+  fill(prochlorococcus_abun:phyto, .direction = "up") %>% 
+  ungroup() %>% 
+  group_by(date, time) %>%
+  mutate(phyto = zoo::na.approx(phyto, na.rm = F)) %>%
+  fill(phyto, .direction = "up") %>% 
+  ungroup() %>% 
+  drop_na(phyto) %>% 
+  mutate(plot_date = paste(month(date, label = T), day(date), format(parse_date_time(time, c('hms', 'HM')), '%H:%M')))
+  
+
+int.phyto <- phyto %>% 
+  filter(depth <= 75) %>% 
+  group_by(date, time) %>% 
+  mutate(phyto.ez = integrateTrapezoid(depth, phyto, type = "A")) %>% 
+  select(date:lon, phyto.ez) %>% 
+  distinct() %>% 
+  left_join(., phyto %>% 
+              filter(depth > 75) %>% 
+              group_by(date, time) %>% 
+              mutate(phyto.mz = integrateTrapezoid(depth, phyto, type = "A")) %>% 
+              select(date:lon, phyto.mz) %>% 
+              distinct())
+
+all.phyto <- left_join(phyto, int.phyto) %>% 
+  write_rds("~/GITHUB/naames_multiday/Input/phyto_data.rds")
+
+```
+
+# Station 4
+
+## T-S 
+
+```{r message=FALSE, warning=FALSE}
+ts <- ctd %>% 
+  # filter(CampCN %in% c(casts), z <= 300, SCN < 13) %>%
+  filter(CampCN %in% c(casts), z <= 300) %>%
+  select(Date, plot_date, SCN, ave_temp_c, pres_db, ave_sal_psu) %>% 
+  mutate(potT = swTheta(salinity = ave_sal_psu, temperature = ave_temp_c, pressure = pres_db)) %>%
+     mutate(interv = interval(ymd("2016-05-24"), Date),
+         dur = as.duration(interv),
+         days = as.numeric(dur, "days")) %>%
+  mutate_at(vars(Date), as.character) %>% 
+  distinct() %>% 
+  mutate_at(vars(days), as.character) %>%   
+  mutate(sigT = oce::swSigmaTheta(salinity = ave_sal_psu, temperature = ave_temp_c, pressure = pres_db, referencePressure = 0))
+
+ts.plot <- ts_plot(ts, temp_col = "potT", sal_col = "ave_sal_psu", color = "plot_date", symbol_size = 3, symbol_shape = 16, symbol_alpha = 0.7, color_isopyc = "black", WM = NULL) +
+  scale_color_viridis_d() +
+  theme_classic2(18) +
+  scale_x_continuous(name = "Practical Salinity", sec.axis = sec_axis(~.,name = expression(paste("Potential Density, kg m"^-3)))) +
+  scale_y_continuous(name = "Potential Temperature, ˚C") +
+  labs(color = "Day") +
+   theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_blank(),
+        legend.key.size = unit(0.4, "cm"),
+        legend.position = c(0.8, 0.25),
+        legend.text = element_text(size = 12),
+        legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
+        legend.spacing.y = unit(0, "pt"))
+```
+
+
+```{r}
+sigT.plot <-  ts %>% 
+  filter(pres_db < 200) %>% 
+  ggplot(aes(x = pres_db, y = sigT, color = plot_date, fill = plot_date)) +
+  geom_line(size = 1) +
+  # geom_point(shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = "Depth, m", y = expression(paste("σ"[T])), colour = "", fill = "Date") +
+  expand_limits(x = 200) +
+  scale_x_reverse() +
+  coord_flip() +
+  # scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  # guides(color = F) +
+  theme_classic2(base_size = 20) +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_blank(),
+        legend.key.size = unit(0.4, "cm"),
+        legend.position = c(0.2, 0.25),
+        legend.text = element_text(size = 12),
+        legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
+        legend.spacing.y = unit(0, "pt")) 
+```
+
+```{r fig.height=4, fig.width=12}
+ts.plot + (sigT.plot + guides(color = F)) + plot_layout(guides = "collect")
+```
+
+
+## Plot MLDs
+
+```{r mld plot, message=FALSE, warning=FALSE, echo = FALSE}
+mld.plot <-  data %>%
+  drop_na(mld) %>% 
+  mutate( mld_day = paste(month(datetime, label = T), day(datetime))) %>% 
+  ggplot(aes(x = datetime, y = mld, fill = mld_day)) +
+  geom_line(size = 0.7) +
+  geom_point(size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = "Hour", y = expression(paste("MLD, m")), colour = "") +
+  guides(linetype = F, shape = F) +
+  expand_limits(y = 200) +
+   scale_fill_viridis_d() +
+  scale_y_reverse() +
+  scale_x_datetime(date_labels = "%H",
+                   date_breaks = "8 hours") +
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
+        legend.key.size = unit(0.4, "cm"),
+        legend.position = c(0.8, 0.15),
+        legend.text = element_text(size = 12),
+        legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
+        legend.spacing.y = unit(0, "pt"))
+        # axis.text.x = element_text(angle = 60,  hjust = 1))
+
+# (%b %e)
+
+```
+
+
+
+## Plot Profiles 
+
+
+### Chl
+
+
+
+```{r chl plot, echo = FALSE, warning = FALSE, message = FALSE}
+# plot_dates <- pretty(data$datetime)
+
+chl.plot <-  data %>% 
+  drop_na(chl) %>% 
+  # µg / L = mg / m3
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  # mutate_at(vars(days), floor) %>% 
+  # mutate_at(vars(days), as.character) %>% 
+  ggplot(aes(x = z, y = chl, color = plot_date, fill = plot_date, group = interaction(datetime, CampCN))) +
+  geom_line(size = 0.7) +
+  geom_point(shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = "Depth, m", y = expression(paste("Chl ", italic("a"), ", ug L"^"-1")), colour = "", fill = "Date") +
+  expand_limits(x = 200) +
+  scale_x_reverse() +
+  coord_flip() +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  guides(color = F) +
+  theme_classic2(base_size = 20) +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_blank(),
+        legend.key.size = unit(0.4, "cm"),
+        legend.position = c(0.8, 0.15),
+        legend.text = element_text(size = 12),
+        legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
+        legend.spacing.y = unit(0, "pt"))
+
+```
+
+### Phyto Cells
+
+```{r phyto plot, echo = FALSE, warning = FALSE, message = FALSE}
+phyto.plot <-  phyto %>% 
+  # mutate(phyto = phyto * 10^3) %>% 
+  select(plot_date, depth, phyto) %>% 
+  ggplot(aes(x = depth, y = phyto, group = interaction(plot_date))) +
+  # geom_errorbar(aes(x = z, ymin = ave_phyto - sd_phyto, ymax = ave_phyto + sd_phyto, color = plot_date)) +
+  geom_line(aes(colour = plot_date), size = 0.7) +
+  geom_point(aes(fill = plot_date), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = "", y = expression(paste("Phytoplankton, cells L"^"-1")), colour = "", fill = "Date") +
+  expand_limits(x = 200) +
+  scale_x_reverse() +
+  coord_flip() +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  guides(colour = F, shape = F, linetype = F) +
+  theme_classic2(base_size = 20) +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_blank(),
+        legend.key.size = unit(0.4, "cm"),
+        legend.position = c(0.8, 0.3),
+        legend.text = element_text(size = 12),
+        legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
+        legend.spacing.y = unit(0, "pt"))
+```
+
+
+
+### NPP
+
+```{r npp plot, echo = FALSE, warning = FALSE, message = FALSE}
+npp.plot <-  npp %>% 
+  # mutate(npp = npp/10^3) %>% 
+  ggplot(aes(x = z, y = npp, group = plot_date)) +
+  geom_line(aes(colour = plot_date), size = 2) +
+  labs(x = "", y = expression(paste("Modeled NPP, µmol C L"^-1, " d"^-1)), colour = "Date") +
+  expand_limits(x = 200) +
+  scale_x_reverse() +
+  coord_flip() +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  guides(fill = F, shape = F, linetype = F) +
+  theme_classic2(base_size = 20) +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_blank(),
+        legend.key.size = unit(0.4, "cm"),
+        legend.position = c(0.85, 0.15),
+        legend.text = element_text(size = 12),
+        legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
+        legend.spacing.y = unit(0, "pt"))
+
+```
+
+### N
+
+```{r n plot, echo = FALSE, warning = FALSE, message = FALSE}
+n.plot <-  data %>% 
+  drop_na(n) %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  ggplot(aes(x = z, y = n, group = interaction(plot_date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = n - sd_n, ymax = n + sd_n)) +
+  geom_line(aes(color = plot_date), size = 0.7) +
+  geom_point(aes(fill = plot_date), shape = 21, size = 6,  color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = "Depth, m", y = expression(paste("N + N, µmol N L"^"-1")), colour = "", fill = "Date") +
+  scale_x_reverse() +
+  coord_flip() +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  guides(colour = F, shape = F, linetype = F) +
+  theme_classic2(base_size = 20) +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_blank(),
+        legend.key.size = unit(0.4, "cm"),
+        legend.position = c(0.25, 0.15),
+        legend.text = element_text(size = 12),
+        legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
+        legend.spacing.y = unit(0, "pt"))
+
+```
+
+
+### DOC
+
+```{r doc plot, echo = FALSE, warning = FALSE, message = FALSE}
+doc.plot <-  data %>% 
+  drop_na(doc) %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  ggplot(aes(x = z, y = doc, group = interaction(plot_date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = doc - sd_doc, ymax = doc + sd_doc, color = plot_date)) +
+  geom_line(aes(color = plot_date), size = 0.7) +
+  geom_point(aes(fill = plot_date), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = "", y = expression(paste("DOC, µmol C L"^"-1")), colour = "", fill = "Date") +
+  scale_x_reverse() +
+  coord_flip() +
+  scale_y_continuous(limits = c(50, 60)) +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  guides( color = F, linetype = F, shape = F) +
+  theme_classic2(base_size = 20) +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_blank(),
+        legend.key.size = unit(0.4, "cm"),
+        legend.position = c(0.8, 0.2),
+        legend.text = element_text(size = 12),
+        legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
+        legend.spacing.y = unit(0, "pt"))
+
+```
+
+### TDAA
+
+```{r tdaa plot, echo = FALSE, warning = FALSE, message = FALSE}
+tdaa.plot <-  data %>% 
+  drop_na(tdaa_c) %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  ggplot(aes(x = z, y = tdaa_c, group = interaction(plot_date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = tdaa_c - sd_tdaa, ymax = tdaa_c + sd_tdaa, color = plot_date)) +
+  geom_line(aes(color = plot_date), size = 0.7) +
+  geom_point(aes(fill = plot_date), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = "", y = expression(paste("TDAA, µmol C L"^-1)), colour = "", fill = "Date") +
+  scale_x_reverse() +
+  coord_flip() +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  guides(color = F, linetype = F, shape = F) +
+  theme_classic2(base_size = 20) +
+  theme(legend.title = element_blank(),
+        panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.key.size = unit(1, "cm")) +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_blank(),
+        legend.key.size = unit(0.4, "cm"),
+        legend.position = c(0.8, 0.15),
+        legend.text = element_text(size = 12),
+        legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
+        legend.spacing.y = unit(0, "pt"))
+
+```
+
+
+### TDAA Yield
+
+```{r tdaa yield plot, echo = FALSE, warning = FALSE, message = FALSE}
+tdaaY.plot <-  data %>% 
+  drop_na(tdaa_yield) %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  ggplot(aes(x = z, y = tdaa_yield, group = interaction(Date, CampCN))) +
+  geom_line(aes(color = plot_date), size = 0.7) +
+  geom_point(aes(fill = plot_date), shape = 21, size = 6, shape = 21, color = "black", stroke = 1, alpha = 0.7) +
+  labs(x = "", y = expression(paste("TDAA Yield, %")), colour = "", fill = "Date") +
+  scale_x_reverse() +
+  coord_flip() +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  guides(color = F, linetype = F, shape = F) +
+  theme_classic2(base_size = 20) +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_blank(),
+        legend.key.size = unit(0.4, "cm"),
+        legend.position = c(0.8, 0.15),
+        legend.text = element_text(size = 12),
+        legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
+        legend.spacing.y = unit(0, "pt"))
+
+```
+
+
+
+
+### AOU
+
+```{r aou plot, echo = FALSE, warning = FALSE, message = FALSE}
+aou.plot <-  ctd %>% 
+  # filter(CampCN %in% c(casts), z <= 300, SCN < 13) %>%
+  filter(CampCN %in% c(casts), z <= 300) %>%
+  select(plot_date, z, deriv_aou_umol_kg) %>% 
+  rename(ave_aou = deriv_aou_umol_kg) %>% 
+  group_by(plot_date, z) %>% 
+  mutate(aou = mean(ave_aou),
+         sd_aou = sd(ave_aou)) %>% 
+  ungroup() %>% 
+  select(plot_date, z, aou, sd_aou) %>% 
+  distinct() %>% 
+  ggplot(aes(x = z, y = aou)) +
+  geom_ribbon(aes(ymin = aou - sd_aou, ymax = aou + sd_aou, fill = plot_date), alpha = 0.5) +
+  geom_line(aes(color = plot_date), size = 0.7) +
+  labs(x = "", y = expression(paste("AOU, µmol O"[2]," L"^"-1")), colour = "Date", fill = "") +
+  scale_x_reverse() +
+  coord_flip() +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  guides(fill = F, shape = F, linetype = F) +
+  theme_classic2(base_size = 20) +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_blank(),
+        legend.key.size = unit(0.4, "cm"),
+        legend.position = c(0.8, 0.7),
+        legend.text = element_text(size = 12),
+        legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
+        legend.spacing.y = unit(0, "pt"))
+
+```
+
+### BactA
+
+```{r bactC plot, echo = FALSE, warning = FALSE, message = FALSE}
+ba.plot <-  data %>% 
+  drop_na(ba) %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  ggplot(aes(x = z, y = ba, group = interaction(plot_date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = ba - sd_ba, ymax = ba + sd_ba, color = plot_date)) +
+  geom_line(aes(color = plot_date), size = 0.7) +
+  geom_point(aes(fill = plot_date), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = "Depth, m", y = expression(paste("Bacterioplankton, cells L"^"-1")), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Date") +
+  scale_x_reverse() +
+  coord_flip() +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  guides(colour = F, shape = F, linetype = F) +
+  theme_classic2(base_size = 20) +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_blank(),
+        legend.key.size = unit(0.4, "cm"),
+        legend.position = c(0.8, 0.15),
+        legend.text = element_text(size = 12),
+        legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
+        legend.spacing.y = unit(0, "pt"))
+
+```
+
+### Leu
+
+```{r bp plot, echo = FALSE, warning = FALSE, message = FALSE}
+leu.plot <-  data %>% 
+  drop_na(leu_incorp) %>% 
+  filter(z %in% c(0, 5, 10, 25, 50, 75, 100, 150, 200, 300)) %>% 
+  group_by(plot_date, z) %>% 
+  mutate(ave = mean(leu_incorp, na.rm = T),
+         sd = sd(leu_incorp), na.rm = T) %>% 
+  ungroup() %>% 
+  select(plot_date, z, ave, sd) %>% 
+  distinct() %>% 
+  ggplot(aes(x = z, y = ave)) +
+  geom_errorbar(aes(x = z, ymin = ave - sd, ymax = ave + sd, color = plot_date)) +
+  geom_line(aes(color = plot_date), size = 0.7) +
+  geom_point(aes(fill = plot_date), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = "", y = expression(paste("BP, pmol", " "^3,"H-Leu L"^"-1","h"^-1)), colour = "", fill = "Date") +
+  scale_x_reverse() +
+  coord_flip() +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  guides(color = F, linetype = F, shape = F) +
+  theme_classic2(base_size = 20) +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_blank(),
+        legend.key.size = unit(0.4, "cm"),
+        legend.position = c(0.8, 0.25),
+        legend.text = element_text(size = 12),
+        legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
+        legend.spacing.y = unit(0, "pt"))
+
+```
+
+## Combine Plots
+
+```{r combine plots, echo = FALSE, warning = FALSE, message = FALSE, fig.height = 20, fig.width = 23}
+
+patchwork <-  (ts.plot) + (sigT.plot) + (mld.plot) + n.plot + (chl.plot ) + (phyto.plot ) + (npp.plot  ) + (aou.plot)  + (ba.plot + theme(legend.background = element_rect(size = 0.2, linetype = "solid", color = "black", fill = "transparent"), legend.box.background = element_rect(fill = 'transparent'))) + (leu.plot ) + (doc.plot) + (tdaa.plot)
+
+patchwork +  
+  # plot_layout(guides = 'collect') +
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 22)) 
+
+```
+
+
+# Plots for powerpoint
+
+```{r}
+# library(officer)
+```
+
+
+```{r}
+
+# p1a <- ts.plot
+# p1b <- mld.plot 
+# p1c <- n.plot 
+# p1d <- chl.plot 
+# p1e <- phyto.plot + theme_classic2(16)
+# p1f <- npp.plot + theme_classic2(16) +  geom_segment(aes( x = 75, xend = 75, y = -Inf, yend = Inf), colour = "black", linetype = 3, size = 2 ) 
+# p1g <- aou.plot + theme_classic2(16)
+# p1h <- ba.plot + theme_classic2(16) +  geom_segment(aes( x = 75, xend = 75, y = -Inf, yend = Inf), colour = "black", linetype = 3, size = 2 ) 
+# p1i <- leu.plot + theme_classic2(16) +  geom_segment(aes( x = 75, xend = 75, y = -Inf, yend = Inf), colour = "black", linetype = 3, size = 2 ) 
+# p1j <- doc.plot + theme_classic2(16) +  geom_segment(aes( x = 75, xend = 75, y = -Inf, yend = Inf), colour = "black", linetype = 3, size = 2 ) 
+# p1k <- tdaa.plot + theme_classic2(16)
+#   
+# p1 <-  p1a + p1b +  p1c + guide_area() + p1d + p1e + p1f + p1g  + p1h + p1i + p1j  + p1k + plot_annotation(tag_levels = "a") &
+#   theme(plot.tag = element_text(size = 22)) 
+# 
+# p2 <- p1a + p1b 
+# 
+# p3 <- (p1c + p1d + p1f) / (p1j + p1i + p1h) + plot_layout(guides = 'collect') 
+#   
+# # initialize PowerPoint slide
+# officer::read_pptx() %>%
+#   # add slide ----
+#   officer::add_slide() %>%
+#   # specify object and location of object 
+#   officer::ph_with(p1, ph_location(width = 16, height = 10)) %>%
+#   
+#   officer::add_slide() %>%
+#   # specify object and location of object 
+#   officer::ph_with(p2, ph_location(width = 8, height = 4)) %>%
+#   
+#    officer::add_slide() %>%
+#   # specify object and location of object 
+#   officer::ph_with(p3, ph_location(width = 16, height = 8)) %>%
+#   
+#   # export slide 
+#   base::print(
+#     target = "~/Desktop/Dissertation/MS_N2S4/Presentations/profiles.pptx"
+#     )
+
+```
+
+
+```{r}
+# all_data <- read_rds("~/GITHUB/naames_multiday/Output/processed_data.rds") %>% 
+#   select(Cruise, Station, Latitude, Longitude, CampCN, mld,z, bp, sd_bp ) %>% drop_na(bp) %>% 
+#   filter(z >= 100) %>% 
+#   filter(Cruise == "AT38")
+# 
+# summary(all_data)
+# sd(all_data$bp)
+```
+
+
