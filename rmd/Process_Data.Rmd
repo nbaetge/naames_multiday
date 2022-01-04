@@ -100,7 +100,10 @@ ctd <- read_rds("~/GITHUB/naames_multiday/Input/master/deriv_naames_ctd.rds") %>
   fill(Cruise:id, .direction = "updown") %>% 
   arrange(CampCN, Date, z) %>% 
   fill(temp0_c:aou_c, .direction = "up") %>% 
-  ungroup() 
+  ungroup() %>% 
+  mutate(time = as_hms(Date),
+         plot_date = paste(month(Date, label = T), day(Date), format(parse_date_time(time, c('HMS', 'HM')), '%H:%M'))) %>% 
+  select(CampCN:Date, time, plot_date, everything())
  
 mlds <- ctd %>% 
   group_by(CampCN, Date) %>% 
@@ -115,7 +118,7 @@ mlds <- ctd %>%
   
 ctdNmld <- left_join(ctd, mlds) %>% 
   select(CampCN:id, mld, z, everything()) %>% 
-  filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station %in% c(3,6)) 
+  filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station %in% c(3,3.5, 4, 6)) 
 #lol, measured surface par but not par from ctd
 
 
@@ -123,11 +126,11 @@ bge <- read_rds("~/GITHUB/naames_multiday/Input/master/processed_BCD.rds") %>%
   select(Season, Station, station_bge, cruise_bge) %>% 
   filter(Season %in% c("Late Spring", "Early Autumn")) %>% 
   distinct() %>% 
-  filter(Season == "Late Spring" & Station == 4 | Season == "Early Autumn" & Station %in% c(3,6)) %>%
+  filter(Season == "Late Spring" & Station == 4 | Season == "Early Autumn" & Station %in% c(3,3.5, 4, 6)) %>%
   mutate_at(vars(Station), as.numeric)
 
 bf <- read_rds("~/GITHUB/naames_multiday/Input/master/processed_bf.8.2020.rds") %>%  
-  select(Cruise:degree_bin, CampCN, Target_Z, interp_DOC, DOC_sd, interp_TDAA, interp_tdaa_c, TDAA_sd, Asp:Lys, interp_O2_Winkler, O2_Winkler_sd, interp_N_N, N_N_sd,  interp_Chl_a_Fluor, interp_BactProd, BactProd_sd, interp_BactProd_C, BactProd_C_sd, interp_BactAbund, BactAbund_sd) %>% 
+  select(Cruise:degree_bin, CampCN, Target_Z, interp_DOC, DOC_sd, interp_TDAA, interp_tdaa_c, TDAA_sd, Asp:Lys, interp_O2_Winkler, O2_Winkler_sd, interp_N_N, N_N_sd,  interp_Chl_a_Fluor, interp_BactProd, BactProd_sd, interp_BactProd_C, BactProd_C_sd, interp_BactAbund, BactAbund_sd, DNA_ID) %>% 
   group_by(CampCN) %>% 
   mutate(surf_bala = ifelse(Target_Z == 5, Bala, NA),
          surf_gaba = ifelse(Target_Z == 5, GABA, NA),
@@ -183,11 +186,16 @@ bf <- read_rds("~/GITHUB/naames_multiday/Input/master/processed_bf.8.2020.rds") 
          # bc = ifelse(Cruise == "AT34" & Station == 4, bc, NA)
           # bc = ifelse(Cruise == "AT38" & Station == 6, ba * (43/12) / (10^12), bc)) 
          ) %>% 
-    rename(z = Target_Z)
+    rename(z = Target_Z) %>% 
+    mutate_at(vars(contains("tdaa"), Asp:Lys), funs(. / 10^3)) %>% #nM to mmol/m3
+  mutate(tdaa_yield = round((tdaa_c/doc)*100, 2),
+         time = as_hms(datetime),
+         plot_date = paste(month(Date, label = T), day(Date), format(parse_date_time(time, c('HMS', 'HM')), '%H:%M'))) %>% 
+  select(Cruise:datetime, plot_date, time, decimaldate:tdaa_c, tdaa_yield, everything())
 
 phyto <- read_excel("~/GITHUB/naames_multiday/Input/Behrenfeld_Flow_Cytometry_NAAMES2.xlsx", sheet = "data") %>% 
   filter(station == "S4", profile == "T", depth <= 200) %>% 
-  full_join(., read_excel("~/GITHUB/naames_multiday/Input/Behrenfeld_Flow_Cytometry_NAAMES3.xlsx", sheet = "data") %>% filter(station %in% c("S3", "S6"), profile == "T") %>% mutate_at(vars(depth), as.numeric) ) %>% 
+  full_join(., read_excel("~/GITHUB/naames_multiday/Input/Behrenfeld_Flow_Cytometry_NAAMES3.xlsx", sheet = "data") %>% filter(station %in% c("S3", "S3.5", "S4", "S6"), profile == "T") %>% mutate_at(vars(depth), as.numeric) ) %>% 
   select(-profile) %>% 
   mutate(phyto = prochlorococcus_abun + synechococcus_abun + picoeukaryote_abun + nanoeukaryote_abun) %>% 
   mutate(time = as_hms(time), date = ymd(date)) %>% 
@@ -236,7 +244,9 @@ npp <- read_rds("~/GITHUB/naames_multiday/Input/master/Z_resolved_model_NPP.rds"
                ungroup() %>% 
                rename(Date = date, 
                       mld = ave_mld)
-            )
+            ) %>% 
+  mutate(plot_date = paste(month(Date, label = T), day(Date))) %>% 
+  select(Cruise:Date, plot_date, mld, z, npp)
 
 ```
 
@@ -251,59 +261,6 @@ saveRDS(ctdNmld, "~/GITHUB/naames_multiday/Input/ctd_data.rds")
 ```
 
 
-
-
-
-```{r}
-# compare_mld <- bf %>% filter(Cruise == "AT34", Station == 4) %>% select(Cruise, Station, CampCN, Z_MLD) %>% distinct() %>% 
-#   left_join(., sigt_mld) %>% 
-#   left_join(., temp_mld)
-```
-
-
-
-## note on C-OPS PAR
-
-not enough PAR data to estimate the depth corresponding to the 0.1% light level for NAAMES 2 Station 4….for instance, on May 24, surf par was on average 1977.154:
-
--0.1% * 1977.154 = 1.977154
--PAR at the deepest depth of the C-OPS cast was 4.582724 at 93 meters
-
-so in the absence of the necessary amount of data, i’ll call upper mz 100-200 m
-
-```{r}
-# par_s4_24 <- read_csv("~/GITHUB/naames_multiday/Input/master/PAR/NAAMES2_20160524_142911_C-OPS_PAR.csv") %>% 
-#   mutate(bin = round(Depth)) %>% 
-#   group_by(bin) %>% 
-#   mutate(ave_par = mean(PAR)) %>% 
-#   ungroup() %>% 
-#   mutate(surf_par = ifelse(bin == 0, ave_par, NA)) %>% 
-#   fill(surf_par) %>% 
-#   mutate(perc1 = 0.01*surf_par,
-#          perc01 = 0.001*surf_par) %>% 
-#   add_row() %>% 
-#   fill(surf_par:perc01) %>% 
-#   mutate(PAR = ifelse(is.na(PAR), perc1, PAR)) %>% 
-#   add_row() %>% 
-#   fill(surf_par:perc01) %>% 
-#   mutate(PAR = ifelse(is.na(PAR), perc01, PAR)) %>% 
-#   arrange(-PAR) %>% 
-#   mutate(bin = ifelse(is.na(bin), na.approx(bin), bin)) %>% 
-#   filter(PAR == perc1 | PAR == perc01)
-
-```
-
-
-
-```{r}
-# bf %>%
-#   select(Cruise, Station, Date, ez) %>%
-#   distinct() %>%
-#   summary(ez)
-```
-where PAR data were available for all cruises, ez depths < 75 m
-
-
 # Integrations 
 
 Integrations for EZ (0-75 m), MZ (100 - 200 m)
@@ -311,7 +268,7 @@ Integrations for EZ (0-75 m), MZ (100 - 200 m)
 ```{r integrate, message=FALSE, warning=FALSE}
 
 int_bf <- bf %>% 
-  filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station %in% c(3,6)) %>% 
+  filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station %in% c(3, 3.5, 4, 6)) %>% 
   select(Cruise, Station, datetime, CampCN, mld, z, bcd, ba, doc, n, chl, tdaa, tdaa_c) %>% 
   filter(z <= 75) %>% 
   group_by(datetime, CampCN) %>% 
@@ -326,7 +283,7 @@ int_bf <- bf %>%
   distinct() %>% 
   ungroup() %>% 
   left_join(., bf %>% 
-              filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station %in% c(3,6)) %>%
+              filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station %in% c(3, 3.5, 4, 6)) %>%
               select(Cruise, Station, datetime, CampCN, mld, z,  bcd, ba, doc, n, chl, tdaa,
                      tdaa_c) %>% 
               filter(z > 75 & z <= 200) %>% 
@@ -338,7 +295,10 @@ int_bf <- bf %>%
               select(Cruise:mld, contains("_mz")) %>% 
               distinct() %>% 
               ungroup() 
-            )   
+            )  %>% 
+  mutate(time = as_hms(datetime),
+         plot_date = paste(month(datetime, label = T), day(datetime), format(parse_date_time(time, c('HMS', 'HM')), '%H:%M'))) %>% 
+  select(Cruise:datetime, time, plot_date, everything())
 
 int_phyto <- phyto %>% 
   filter(depth <= 75) %>% 
@@ -357,31 +317,8 @@ int_phyto <- phyto %>%
               distinct() %>% 
               ungroup()) 
 
-# int_npp <- npp %>%
-#   filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station %in% c(3,4,6)) %>% 
-#   filter(z <= 75) %>% 
-#   group_by(Cruise, Station, Date) %>% 
-#   mutate(npp_ez = integrateTrapezoid(z, npp, type = "A")) %>% 
-#   mutate_at(vars(contains("_ez")), round) %>% 
-#   # depth normalize 
-#   mutate_at(vars(contains("_ez")), funs(./75)) %>% 
-#   select(Cruise, Station, Date, contains("_ez"))  %>%
-#   distinct() %>% 
-#   ungroup() %>% 
-#   left_join(., npp %>%
-#               filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station %in% c(3,4,6)) %>% 
-#               filter(z <= 200, z >= 100) %>%  
-#               group_by(Cruise, Station, Date) %>% 
-#               mutate(npp.mz = integrateTrapezoid(z, npp, type = "A")) %>%
-#               mutate_at(vars(contains("_mz")), round) %>% 
-#               # depth normalize 
-#               mutate_at(vars(contains("_mz")), funs(./100)) %>% 
-#               select(Cruise, Station, Date, contains("_mz"))  %>%
-#               distinct() %>% 
-#               ungroup()) 
-
 int_aou <- ctdNmld %>% 
-  filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station == 6) %>% 
+  filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station %in% c(3,3.5,4,6)) %>% 
   group_by(Cruise, Station, Date, CampCN) %>% 
   filter(z <= 75) %>% 
   mutate(aou_ez = integrateTrapezoid(z, aou , type = "A")) %>% 
@@ -392,7 +329,7 @@ int_aou <- ctdNmld %>%
   distinct() %>% 
   ungroup() %>% 
   left_join(., ctdNmld %>% 
-              filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station == 6) %>% 
+              filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & c(3,3.5,4,6)) %>% 
               group_by(Cruise, Station, Date, CampCN) %>% 
               filter(z <= 200, z >= 100) %>% 
               mutate(aou_mz = integrateTrapezoid(z, aou , type = "A")) %>% 
@@ -401,7 +338,10 @@ int_aou <- ctdNmld %>%
               mutate_at(vars(contains("_mz")), funs(./100)) %>% 
               select(Cruise, Station, Date, CampCN, contains("_mz"))  %>%
               distinct() %>% 
-              ungroup() ) 
+              ungroup() ) %>% 
+  mutate(time = as_hms(Date),
+         plot_date = paste(month(Date, label = T), day(Date), format(parse_date_time(time, c('HMS', 'HM')), '%H:%M'))) %>% 
+  select(Cruise:Date, time, plot_date, everything())
 ```
 
 
