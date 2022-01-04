@@ -29,16 +29,16 @@ T-S analysis): \!plot\_date %in% c(“May 24 02:30”, “May 27 06:07”)
 
 ``` r
 bf <- read_rds("~/GITHUB/naames_multiday/Input/bottle_data.rds") %>% 
-  filter(Cruise == "AT34", Station == 4, !plot_date %in% c("May 24 02:30", "May 27 06:07"), z <= 200) 
+  filter(Cruise == "AT34", Station == 4, !plot_date %in% c("May 24 02:30", "May 27 06:07"), z > 0, z <= 200) 
   
 ctd <- read_rds("~/GITHUB/naames_multiday/Input/ctd_data.rds") %>% 
-   filter(Cruise == "AT34", Station == 4, !plot_date %in% c("May 24 02:30", "May 27 06:07"), z <= 200) 
+   filter(Cruise == "AT34", Station == 4, !plot_date %in% c("May 24 02:30", "May 27 06:07"), z > 0, z <= 200) 
 
 npp <- read_rds("~/GITHUB/naames_multiday/Input/npp_data.rds") %>% 
-   filter(Cruise == "AT34", Station == 4, !plot_date %in% c("May 24 02:30", "May 27 06:07"), z <= 200) 
+   filter(Cruise == "AT34", Station == 4, !plot_date %in% c("May 24 02:30", "May 27 06:07"), z > 0, z <= 200) 
 
 phyto <- read_rds("~/GITHUB/naames_multiday/Input/phyto_data.rds") %>% 
-   filter(Cruise == "AT34", station == "S4", !plot_date %in% c("May 24 02:30", "May 27 06:07"), depth <= 200) 
+   filter(Cruise == "AT34", station == "S4", !plot_date %in% c("May 24 02:30", "May 27 06:07"), depth > 0, depth <= 200) 
 ```
 
 ## Plot Profiles

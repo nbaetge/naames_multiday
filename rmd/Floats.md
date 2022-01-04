@@ -41,6 +41,25 @@ associated.
 # write_csv(profiles, "~/GITHUB/naames_multiday/Input/n0849_profiles.csv")
 ```
 
+## drifter
+
+``` r
+drifters <- read_csv("~/GITHUB/naames_multiday/Input/drifters/N2S4.csv") %>%
+  mutate(Cruise = "AT34", name = "NAAMES 2", Station = 4, drifter = 1, plot_sep = "Subtropical") %>% 
+  bind_rows(., read_csv("~/GITHUB/naames_multiday/Input/drifters/N3S6_01.csv") %>%
+  mutate(Cruise = "AT38", name = "NAAMES 3", Station = 6, drifter = 1, plot_sep = "Subpolar")) %>% 
+  bind_rows(., read_csv("~/GITHUB/naames_multiday/Input/drifters/N3S6_02.csv") %>%
+  mutate(Cruise = "AT38", name = "NAAMES 3", Station = 6, drifter = 2, plot_sep = "Subpolar")) %>% 
+  mutate(plot_name = paste(name, "Station", Station), 
+         type = "Drifter") %>% 
+  rename(lat = latitude_deg_,
+         lon = longitude_deg_,
+         Date = timestamp_utc_) %>% 
+  select(Cruise, name, Station, plot_name, plot_sep, type, drifter, lat, lon, Date)
+```
+
+## floats
+
 ``` r
 n0647 <- read_csv("~/GITHUB/naames_multiday/Input/n0647_profiles.csv") %>%  
   mutate(float = "n0647", Cruise = "AT34", Station = 4) %>% select(float:Station, profile, datetime:s, par, o2_c, chla_adj, fchl, fdom, cphyto, poc) %>%
@@ -205,7 +224,7 @@ s4.ts3 <- PlotSvalbard::ts_plot(s4_subset_float, temp_col = "potT", sal_col = "s
 s4.ts + s4.ts2 + s4.ts3
 ```
 
-![](Floats_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+![](Floats_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
 ## Station 6
 
@@ -235,15 +254,7 @@ s6.ts <- PlotSvalbard::ts_plot(s6_subset, temp_col = "potT", sal_col = "s", colo
         legend.text = element_text(size = 12),
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
         legend.spacing.y = unit(0, "pt"))
-```
 
-    ## Scale for 'x' is already present. Adding another scale for 'x', which will
-    ## replace the existing scale.
-
-    ## Scale for 'y' is already present. Adding another scale for 'y', which will
-    ## replace the existing scale.
-
-``` r
 s6_subset_ship <- s6_subset %>% filter(type == "Ship")
 
 s6.ts2 <- PlotSvalbard::ts_plot(s6_subset_ship, temp_col = "potT", sal_col = "s", color = "plot_date", symbol_size = 3, symbol_shape = 16, symbol_alpha = 0.7, color_isopyc = "black", WM = NULL) +
@@ -260,14 +271,8 @@ s6.ts2 <- PlotSvalbard::ts_plot(s6_subset_ship, temp_col = "potT", sal_col = "s"
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
         legend.spacing.y = unit(0, "pt")) +
   ggtitle("Ship")
-```
 
-    ## Scale for 'x' is already present. Adding another scale for 'x', which will
-    ## replace the existing scale.
-    ## Scale for 'y' is already present. Adding another scale for 'y', which will
-    ## replace the existing scale.
 
-``` r
 s6_subset_float <- s6_subset %>% filter(type == "Float")
 
 s6.ts3 <- PlotSvalbard::ts_plot(s6_subset_float, temp_col = "potT", sal_col = "s", color = "plot_date", symbol_size = 3, symbol_shape = 16, symbol_alpha = 0.7, color_isopyc = "black", WM = NULL) +
@@ -286,16 +291,11 @@ s6.ts3 <- PlotSvalbard::ts_plot(s6_subset_float, temp_col = "potT", sal_col = "s
   ggtitle("Floats n0846 & n0847")
 ```
 
-    ## Scale for 'x' is already present. Adding another scale for 'x', which will
-    ## replace the existing scale.
-    ## Scale for 'y' is already present. Adding another scale for 'y', which will
-    ## replace the existing scale.
-
 ``` r
 s6.ts + s6.ts2 + s6.ts3
 ```
 
-![](Floats_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+![](Floats_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
 ## N3 Station 3 and 4
 
@@ -323,15 +323,7 @@ s3.ts <- PlotSvalbard::ts_plot(s3_subset, temp_col = "potT", sal_col = "s", colo
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
         legend.spacing.y = unit(0, "pt")) +
   ggtitle("NAAMES 3 Station 3 Float n0850")
-```
 
-    ## Scale for 'x' is already present. Adding another scale for 'x', which will
-    ## replace the existing scale.
-
-    ## Scale for 'y' is already present. Adding another scale for 'y', which will
-    ## replace the existing scale.
-
-``` r
 n3s4_subset <- floatsNmldsNezds %>% filter(Cruise == "AT38" & Station == 4, p <= 250) %>%  mutate(type = "Float") %>% select(-c(o2:poc)) %>% distinct() %>% 
   bind_rows(., ship_ctd %>% filter(Cruise == "AT38", Station == 4, p <= 250) %>% mutate(type = "Ship") %>% filter(!plot_date %in% c("Sep 11 03:07")))
 
@@ -351,14 +343,8 @@ n3s4.ts <- PlotSvalbard::ts_plot(n3s4_subset, temp_col = "potT", sal_col = "s", 
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
         legend.spacing.y = unit(0, "pt")) +
   ggtitle("NAAMES 3 Station 4 Float n0849")
-```
 
-    ## Scale for 'x' is already present. Adding another scale for 'x', which will
-    ## replace the existing scale.
-    ## Scale for 'y' is already present. Adding another scale for 'y', which will
-    ## replace the existing scale.
 
-``` r
 s35_subset <- ship_ctd %>% filter(Cruise == "AT38", Station == 3.5, p <= 250) %>% mutate(type = "Ship")
 
 s35_subset$plot_date <- reorder(s35_subset$plot_date, s35_subset$datetime)
@@ -379,16 +365,11 @@ s35.ts <- PlotSvalbard::ts_plot(s35_subset, temp_col = "potT", sal_col = "s", co
   ggtitle("NAAMES 3 Station 3.5")
 ```
 
-    ## Scale for 'x' is already present. Adding another scale for 'x', which will
-    ## replace the existing scale.
-    ## Scale for 'y' is already present. Adding another scale for 'y', which will
-    ## replace the existing scale.
-
 ``` r
 s3.ts + s35.ts + n3s4.ts
 ```
 
-![](Floats_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+![](Floats_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
 # Map
 
@@ -400,36 +381,21 @@ s3.ts + s35.ts + n3s4.ts
 
 chlaInfo2 <- info("nesdisVHNSQchlaDaily")
 n2_chl <- griddap(chlaInfo2, latitude = c(46.5, 48.), longitude = c(-40, -37), time = c('2016-05-23','2016-05-27'), fields = 'chlor_a')
-```
-
-    ## info() output passed to x; setting base url to: https://upwell.pfeg.noaa.gov/erddap/
-
-``` r
 n3_chl <- griddap(chlaInfo2, latitude = c(53.2, 53.5), longitude = c(-40, -39.4), time = c('2017-09-13', '2017-09-17'), fields = 'chlor_a')
-```
 
-    ## info() output passed to x; setting base url to: https://upwell.pfeg.noaa.gov/erddap/
 
-``` r
 sstInfo <- info("jplMURSST41")
 
 n2_sst <- griddap(sstInfo, latitude = c(46.5, 48.), longitude = c(-40.5, -37), time = c('2016-05-24','2016-05-24'), fields = 'analysed_sst')
-```
-
-    ## info() output passed to x; setting base url to: https://upwell.pfeg.noaa.gov/erddap/
-
-``` r
 n3_sst <- griddap(sstInfo, latitude = c(53.2, 53.5), longitude = c(-40, -39.4), time = c('2017-09-13', '2017-09-13'), fields = 'analysed_sst')
 ```
-
-    ## info() output passed to x; setting base url to: https://upwell.pfeg.noaa.gov/erddap/
 
 ``` r
 library(ggnewscale)
 
 custom.shapes <- c("NAAMES 2 Station 4" = 21, "NAAMES 3 Station 3" = 22, "NAAMES 3 Station 3.5" = 23, "NAAMES 3 Station 4" = 24, "NAAMES 3 Station 6" = 25)
-custom.colors <- c("Ship" = "#feb483", "Float n0847" = "#d31f2a", "Float n0846" = "#ffc000", "Float n0647" = "#27ab19", "Float n0849" = "#0db5e6", "Float n0850" = "#7139fe")
-custom.lines <- c("Ship" = 1, "Float n0847" = 2, "Float n0846" = 2, "Float n0647" = 2, "Float n0849" = 2 , "Float n0850" = 2)
+custom.colors <- c("Ship" = "#feb483", "Float n0847" = "#d31f2a", "Float n0846" = "#ffc000", "Float n0647" = "#27ab19", "Float n0849" = "#0db5e6", "Float n0850" = "#7139fe", "Drifter" = "#d16cfa")
+custom.lines <- c("Ship" = 1, "Float n0847" = 2, "Float n0846" = 2, "Float n0647" = 2, "Float n0849" = 2 , "Float n0850" = 2, "Drifter" = 3)
 mycolor <- colors$viridis
 sst_color <- colors$temperature
 w <- map_data("worldHires", ylim = c(35., 60.), xlim = c(-60, -30))
@@ -448,7 +414,10 @@ map_data <- stations %>% select(Cruise, Station, Date, lon, lat) %>% mutate(type
   bind_rows(., floatsNmlds %>% select(Cruise, Station, float, datetime, lon, lat) %>% distinct() %>% rename(Date = datetime) %>%  mutate(type = paste("Float", float))) %>% 
   mutate(name = ifelse(Cruise == "AT34", "NAAMES 2", "NAAMES 3"), 
          plot_name = paste(name, "Station", Station),
-         plot_sep = ifelse(Station == "6", "Subpolar", "Subtropical"))
+         plot_sep = ifelse(Station == "6", "Subpolar", "Subtropical")) %>% 
+  bind_rows(., drifters %>% mutate_at(vars(drifter), as.character) %>%  rename(float = drifter)) %>% 
+  mutate(type = fct_relevel(type, 
+            "Drifter", "Float n0647", "Float n0850", "Float n0849", "Float n0847", "Float n0846", "Ship"))
 
 map1_data <- map_data %>% 
   filter(Cruise == "AT34")
@@ -460,8 +429,8 @@ map1 <- ggplot(data = map1_data, aes(x = lon, y = lat)) +
   scale_fill_gradientn(colors = mycolor, na.value = NA) +
   labs(fill = expression(paste("Chlorophyll", italic(" a"), ", mg m"^-3))) +
   new_scale_fill() +  
-  geom_line(aes(color = type, group = interaction(type, plot_name), linetype = type), size = 1) +
-  geom_point(aes(fill = type, shape = plot_name),  size = 4, alpha = 0.9) +
+  geom_line(aes(color = type, group = interaction(type, plot_name, float), linetype = type), size = 1) +
+  geom_point(aes(fill = type, shape = plot_name,  group = interaction(type, plot_name, float)),  size = 4, alpha = 0.8) +
   theme_linedraw() + 
   labs(x = "Longitude, ˚W", y = "Latitude, ˚N", color = "", fill = "", linetype = "", shape = "") +
   scale_linetype_manual(values = custom.lines) +
@@ -484,9 +453,9 @@ map2 <- ggplot(data = map2_data, aes(x = lon, y = lat)) +
   scale_fill_gradientn(colors = mycolor, na.value = NA) +
   labs(fill = expression(paste("Chlorophyll", italic(" a"), ", mg m"^-3))) +
   new_scale_fill() +  
-  geom_line(aes(color = type, group = interaction(type, plot_name), linetype = type), size = 1) +
-  geom_point(aes(fill = type, shape = plot_name),  size = 4, alpha = 0.9) +
-  geom_line(data = s4_map2, aes(x = lon, y = lat, color = type, group = interaction(type, plot_name), linetype = type), size = 1) +
+  geom_line(aes(color = type, group = interaction(type, plot_name, float), linetype = type), size = 1) +
+  geom_point(aes(fill = type, shape = plot_name,  group = interaction(type, plot_name, float)),  size = 4, alpha = 0.8) +
+  geom_line(data = s4_map2, aes(x = lon, y = lat, color = type, group = interaction(type, plot_name, float), linetype = type), size = 1) +
   geom_point(data = s4_map2, aes(x = lon, y = lat, fill = type, shape = plot_name), size = 4, alpha = 0.9) +
   theme_linedraw() + 
   labs(x = "Longitude, ˚W", y = "Latitude, ˚N", color = "", fill = "", linetype = "", shape = "") +
@@ -499,10 +468,10 @@ map2 <- ggplot(data = map2_data, aes(x = lon, y = lat)) +
 ```
 
 ``` r
-map1 + map2 + plot_layout(guides = "collect")
+(map1 + guides(fill = "none", color = "none", linetype = "none")) + (map2 + guides(fill = "none", shape = "none")) + plot_layout(guides = "collect")
 ```
 
-![](Floats_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+![](Floats_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
 
 \#Station 4
 
@@ -582,7 +551,7 @@ t.plot / s.plot / fl.plot
     ## Warning: Raster pixels are placed at uneven horizontal intervals and will be
     ## shifted. Consider using geom_tile() instead.
 
-![](Floats_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
+![](Floats_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
 
 # Station 6
 
@@ -662,7 +631,7 @@ t.plot / s.plot / fl.plot
     ## Warning: Raster pixels are placed at uneven horizontal intervals and will be
     ## shifted. Consider using geom_tile() instead.
 
-![](Floats_files/figure-gfm/unnamed-chunk-28-1.png)<!-- -->
+![](Floats_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->
 
 # Save data
 

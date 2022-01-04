@@ -27,16 +27,16 @@ These casts have been excluded from further analysis (see Float and Ship T-S ana
 
 ```{r}
 bf <- read_rds("~/GITHUB/naames_multiday/Input/bottle_data.rds") %>% 
-  filter(Cruise == "AT34", Station == 4, !plot_date %in% c("May 24 02:30", "May 27 06:07"), z <= 200) 
+  filter(Cruise == "AT34", Station == 4, !plot_date %in% c("May 24 02:30", "May 27 06:07"), z > 0, z <= 200) 
   
 ctd <- read_rds("~/GITHUB/naames_multiday/Input/ctd_data.rds") %>% 
-   filter(Cruise == "AT34", Station == 4, !plot_date %in% c("May 24 02:30", "May 27 06:07"), z <= 200) 
+   filter(Cruise == "AT34", Station == 4, !plot_date %in% c("May 24 02:30", "May 27 06:07"), z > 0, z <= 200) 
 
 npp <- read_rds("~/GITHUB/naames_multiday/Input/npp_data.rds") %>% 
-   filter(Cruise == "AT34", Station == 4, !plot_date %in% c("May 24 02:30", "May 27 06:07"), z <= 200) 
+   filter(Cruise == "AT34", Station == 4, !plot_date %in% c("May 24 02:30", "May 27 06:07"), z > 0, z <= 200) 
 
 phyto <- read_rds("~/GITHUB/naames_multiday/Input/phyto_data.rds") %>% 
-   filter(Cruise == "AT34", station == "S4", !plot_date %in% c("May 24 02:30", "May 27 06:07"), depth <= 200) 
+   filter(Cruise == "AT34", station == "S4", !plot_date %in% c("May 24 02:30", "May 27 06:07"), depth > 0, depth <= 200) 
 
 ```
 
@@ -78,10 +78,10 @@ chl.plot <-  bf %>%
 phyto.plot <-  phyto %>% 
   # mutate(phyto = phyto * 10^3) %>% 
   select(plot_date, depth, phyto) %>% 
-  ggplot(aes(x = depth, y = phyto, group = interaction(plot_date))) +
-  # geom_errorbar(aes(x = z, ymin = ave_phyto - sd_phyto, ymax = ave_phyto + sd_phyto, color = plot_date)) +
-  geom_line(aes(colour = plot_date), size = 0.7) +
-  geom_point(aes(fill = plot_date), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  ggplot(aes(x = depth, y = phyto, color = plot_date, fill = plot_date, group = interaction(plot_date))) +
+  # geom_errorbar(aes(x = z, ymin = ave_phyto - sd_phyto, ymax = ave_phyto + sd_phyto)) +
+  geom_line(size = 0.7) +
+  geom_point(shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = "", y = expression(paste("Phytoplankton, cells L"^"-1")), color = "", fill = "Date") +
   expand_limits(x = 200) +
   scale_x_reverse() +
@@ -105,8 +105,8 @@ phyto.plot <-  phyto %>%
 ```{r npp plot, echo = FALSE, warning = FALSE, message = FALSE}
 npp.plot <-  npp %>% 
   # mutate(npp = npp/10^3) %>% 
-  ggplot(aes(x = z, y = npp, group = plot_date)) +
-  geom_line(aes(color = plot_date), size = 2) +
+  ggplot(aes(x = z, y = npp, color = plot_date, fill = plot_date, group = plot_date)) +
+  geom_line(size = 2) +
   labs(x = "", y = expression(paste("Modeled NPP, µmol C L"^-1, " d"^-1)), colour = "Date") +
   expand_limits(x = 200) +
   scale_x_reverse() +
@@ -131,10 +131,10 @@ npp.plot <-  npp %>%
 ```{r n plot, echo = FALSE, warning = FALSE, message = FALSE}
 n.plot <-  bf %>% 
   drop_na(n) %>% 
-  ggplot(aes(x = z, y = n, group = interaction(plot_date, CampCN))) +
+  ggplot(aes(x = z, y = n, color = plot_date, fill = plot_date, group = interaction(plot_date, CampCN))) +
   geom_errorbar(aes(x = z, ymin = n - sd_n, ymax = n + sd_n)) +
-  geom_line(aes(color = plot_date), size = 0.7) +
-  geom_point(aes(fill = plot_date), shape = 21, size = 6,  color = "black", stroke = 1, alpha = 0.7) + 
+  geom_line(size = 0.7) +
+  geom_point(shape = 21, size = 6,  color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = "Depth, m", y = expression(paste("N + N, µmol N L"^"-1")), colour = "", fill = "Date") +
   scale_x_reverse() +
   coord_flip() +
@@ -159,10 +159,10 @@ n.plot <-  bf %>%
 ```{r doc plot, echo = FALSE, warning = FALSE, message = FALSE}
 doc.plot <- bf %>% 
   drop_na(doc) %>% 
-  ggplot(aes(x = z, y = doc, group = interaction(plot_date, CampCN))) +
-  geom_errorbar(aes(x = z, ymin = doc - sd_doc, ymax = doc + sd_doc, color = plot_date)) +
-  geom_line(aes(color = plot_date), size = 0.7) +
-  geom_point(aes(fill = plot_date), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  ggplot(aes(x = z, y = doc, color = plot_date, fill = plot_date, group = interaction(plot_date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = doc - sd_doc, ymax = doc + sd_doc)) +
+  geom_line(size = 0.7) +
+  geom_point(shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = "", y = expression(paste("DOC, µmol C L"^"-1")), colour = "", fill = "Date") +
   scale_x_reverse() +
   coord_flip() +
@@ -187,10 +187,10 @@ doc.plot <- bf %>%
 ```{r tdaa plot, echo = FALSE, warning = FALSE, message = FALSE}
 tdaa.plot <- bf %>% 
   drop_na(tdaa_c) %>%
-  ggplot(aes(x = z, y = tdaa_c, group = interaction(plot_date, CampCN))) +
-  geom_errorbar(aes(x = z, ymin = tdaa_c - sd_tdaa, ymax = tdaa_c + sd_tdaa, color = plot_date)) +
-  geom_line(aes(color = plot_date), size = 0.7) +
-  geom_point(aes(fill = plot_date), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  ggplot(aes(x = z, y = tdaa_c, color = plot_date, fill = plot_date, group = interaction(plot_date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = tdaa_c - sd_tdaa, ymax = tdaa_c + sd_tdaa)) +
+  geom_line(size = 0.7) +
+  geom_point(shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = "", y = expression(paste("TDAA, µmol C L"^-1)), colour = "", fill = "Date") +
   scale_x_reverse() +
   coord_flip() +
@@ -219,9 +219,9 @@ tdaa.plot <- bf %>%
 ```{r aou plot, echo = FALSE, warning = FALSE, message = FALSE}
 aou.plot <-  ctd %>% 
   drop_na(aou) %>% 
-  ggplot(aes(x = z, y = aou, group = plot_date)) +
-  # geom_ribbon(aes(ymin = aou - sd_aou, ymax = aou + sd_aou, fill = plot_date), alpha = 0.5) +
-  geom_line(aes(color = plot_date), size = 0.7) +
+  ggplot(aes(x = z, y = aou, color = plot_date, fill = plot_date, group = plot_date)) +
+  # geom_ribbon(aes(ymin = aou - sd_aou, ymax = aou + sd_aou), alpha = 0.5) +
+  geom_line(size = 0.7) +
   labs(x = "", y = expression(paste("AOU, µmol O"[2]," L"^"-1")), colour = "Date", fill = "") +
   scale_x_reverse() +
   coord_flip() +
@@ -245,10 +245,10 @@ aou.plot <-  ctd %>%
 ```{r bactC plot, echo = FALSE, warning = FALSE, message = FALSE}
 ba.plot <-  bf %>% 
   drop_na(ba) %>% 
-  ggplot(aes(x = z, y = ba, group = interaction(plot_date, CampCN))) +
-  geom_errorbar(aes(x = z, ymin = ba - sd_ba, ymax = ba + sd_ba, color = plot_date)) +
-  geom_line(aes(color = plot_date), size = 0.7) +
-  geom_point(aes(fill = plot_date), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  ggplot(aes(x = z, y = ba, color = plot_date, fill = plot_date, group = interaction(plot_date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = ba - sd_ba, ymax = ba + sd_ba)) +
+  geom_line(size = 0.7) +
+  geom_point(shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = "Depth, m", y = expression(paste("Bacterioplankton, cells L"^"-1")), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Date") +
   scale_x_reverse() +
   coord_flip() +
@@ -272,10 +272,10 @@ ba.plot <-  bf %>%
 ```{r bp plot, echo = FALSE, warning = FALSE, message = FALSE}
 leu.plot <-  bf %>% 
   drop_na(leu_incorp) %>% 
-  ggplot(aes(x = z, y = leu_incorp)) +
-  geom_errorbar(aes(x = z, ymin = leu_incorp - sd_leu_incorp, ymax = leu_incorp + sd_leu_incorp, color = plot_date), width = 5) +
-  geom_line(aes(color = plot_date), size = 0.7) +
-  geom_point(aes(fill = plot_date), shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  ggplot(aes(x = z, y = leu_incorp, color = plot_date, fill = plot_date, group = interaction(plot_date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = leu_incorp - sd_leu_incorp, ymax = leu_incorp + sd_leu_incorp), width = 5) +
+  geom_line(size = 0.7) +
+  geom_point(shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = "", y = expression(paste("BP, pmol", " "^3,"H-Leu L"^"-1","h"^-1)), colour = "", fill = "Date") +
   scale_x_reverse() +
   coord_flip() +

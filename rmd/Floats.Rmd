@@ -57,6 +57,26 @@ library(PlotSvalbard)
 ```
 
 
+## drifter
+
+
+```{r message=FALSE}
+drifters <- read_csv("~/GITHUB/naames_multiday/Input/drifters/N2S4.csv") %>%
+  mutate(Cruise = "AT34", name = "NAAMES 2", Station = 4, drifter = 1, plot_sep = "Subtropical") %>% 
+  bind_rows(., read_csv("~/GITHUB/naames_multiday/Input/drifters/N3S6_01.csv") %>%
+  mutate(Cruise = "AT38", name = "NAAMES 3", Station = 6, drifter = 1, plot_sep = "Subpolar")) %>% 
+  bind_rows(., read_csv("~/GITHUB/naames_multiday/Input/drifters/N3S6_02.csv") %>%
+  mutate(Cruise = "AT38", name = "NAAMES 3", Station = 6, drifter = 2, plot_sep = "Subpolar")) %>% 
+  mutate(plot_name = paste(name, "Station", Station), 
+         type = "Drifter") %>% 
+  rename(lat = latitude_deg_,
+         lon = longitude_deg_,
+         Date = timestamp_utc_) %>% 
+  select(Cruise, name, Station, plot_name, plot_sep, type, drifter, lat, lon, Date)
+```
+
+## floats
+
 ```{r warning = FALSE, message = FALSE}
 
 n0647 <- read_csv("~/GITHUB/naames_multiday/Input/n0647_profiles.csv") %>%  
@@ -226,7 +246,7 @@ s4.ts + s4.ts2 + s4.ts3
 
 These casts have different T-S plots than all the float profiles and 7 of the ship profiles: plot_date %in% c("Sep 14 15:33", "Sep 15 03:04", "Sep 15 15:20", "Sep 16 03:04", "Sep 16 04:50", "Sep 16 07:26". We'll exclude these from further analysis. 
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 s6_subset <- floatsNmldsNezds %>% filter(Cruise == "AT38" & Station == 6, p <= 250,  datetime < ymd_hms("2017-09-18 00:00:00")) %>%  mutate(type = "Float") %>% select(-c(o2:poc)) %>% distinct() %>% 
   bind_rows(., ship_ctd %>% filter(Cruise == "AT38", Station == 6, p <= 250) %>% mutate(type = "Ship")) %>% 
   filter(!plot_date %in% c("Sep 14 15:33", "Sep 15 03:04", "Sep 15 15:20", "Sep 16 03:04", "Sep 16 04:50", "Sep 16 07:26"))
@@ -282,6 +302,7 @@ s6.ts3 <- PlotSvalbard::ts_plot(s6_subset_float, temp_col = "potT", sal_col = "s
         legend.spacing.y = unit(0, "pt")) + 
   ggtitle("Floats n0846 & n0847")
 ```
+
 ```{r fig.height=10, fig.width=18}
 s6.ts + s6.ts2 + s6.ts3
 ```
@@ -290,7 +311,7 @@ s6.ts + s6.ts2 + s6.ts3
 
 This T-S profile is different from the rest: filter(!plot_date %in% c("Sep 8 03:08")))
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 s3_subset <- floatsNmldsNezds %>% filter(Cruise == "AT38" & Station == 3, p <= 250) %>%  mutate(type = "Float") %>% select(-c(o2:poc)) %>% distinct() %>% 
   bind_rows(., ship_ctd %>% filter(Cruise == "AT38", Station == 3, p <= 250) %>% mutate(type = "Ship") %>% filter(!plot_date %in% c("Sep 8 03:08")))
 
@@ -358,7 +379,7 @@ s3.ts + s35.ts + n3s4.ts
 
 # Map
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 # chlaInfo <- info("erdMH1chla1day")
 # n2_chl <- griddap(chlaInfo, latitude = c(46.5, 48.), longitude = c(-40.5, -37), time = c('2016-05-23','2016-05-27'), fields = 'chlorophyll')
 # n3_chl <- griddap(chlaInfo, latitude = c(53.2, 53.5), longitude = c(-40, -39.4), time = c('2017-09-13', '2017-09-17'), fields = 'chlorophyll')
@@ -382,8 +403,8 @@ n3_sst <- griddap(sstInfo, latitude = c(53.2, 53.5), longitude = c(-40, -39.4), 
 library(ggnewscale)
 
 custom.shapes <- c("NAAMES 2 Station 4" = 21, "NAAMES 3 Station 3" = 22, "NAAMES 3 Station 3.5" = 23, "NAAMES 3 Station 4" = 24, "NAAMES 3 Station 6" = 25)
-custom.colors <- c("Ship" = "#feb483", "Float n0847" = "#d31f2a", "Float n0846" = "#ffc000", "Float n0647" = "#27ab19", "Float n0849" = "#0db5e6", "Float n0850" = "#7139fe")
-custom.lines <- c("Ship" = 1, "Float n0847" = 2, "Float n0846" = 2, "Float n0647" = 2, "Float n0849" = 2 , "Float n0850" = 2)
+custom.colors <- c("Ship" = "#feb483", "Float n0847" = "#d31f2a", "Float n0846" = "#ffc000", "Float n0647" = "#27ab19", "Float n0849" = "#0db5e6", "Float n0850" = "#7139fe", "Drifter" = "#d16cfa")
+custom.lines <- c("Ship" = 1, "Float n0847" = 2, "Float n0846" = 2, "Float n0647" = 2, "Float n0849" = 2 , "Float n0850" = 2, "Drifter" = 3)
 mycolor <- colors$viridis
 sst_color <- colors$temperature
 w <- map_data("worldHires", ylim = c(35., 60.), xlim = c(-60, -30))
@@ -402,7 +423,10 @@ map_data <- stations %>% select(Cruise, Station, Date, lon, lat) %>% mutate(type
   bind_rows(., floatsNmlds %>% select(Cruise, Station, float, datetime, lon, lat) %>% distinct() %>% rename(Date = datetime) %>%  mutate(type = paste("Float", float))) %>% 
   mutate(name = ifelse(Cruise == "AT34", "NAAMES 2", "NAAMES 3"), 
          plot_name = paste(name, "Station", Station),
-         plot_sep = ifelse(Station == "6", "Subpolar", "Subtropical"))
+         plot_sep = ifelse(Station == "6", "Subpolar", "Subtropical")) %>% 
+  bind_rows(., drifters %>% mutate_at(vars(drifter), as.character) %>%  rename(float = drifter)) %>% 
+  mutate(type = fct_relevel(type, 
+            "Drifter", "Float n0647", "Float n0850", "Float n0849", "Float n0847", "Float n0846", "Ship"))
 
 map1_data <- map_data %>% 
   filter(Cruise == "AT34")
@@ -414,8 +438,8 @@ map1 <- ggplot(data = map1_data, aes(x = lon, y = lat)) +
   scale_fill_gradientn(colors = mycolor, na.value = NA) +
   labs(fill = expression(paste("Chlorophyll", italic(" a"), ", mg m"^-3))) +
   new_scale_fill() +  
-  geom_line(aes(color = type, group = interaction(type, plot_name), linetype = type), size = 1) +
-  geom_point(aes(fill = type, shape = plot_name),  size = 4, alpha = 0.9) +
+  geom_line(aes(color = type, group = interaction(type, plot_name, float), linetype = type), size = 1) +
+  geom_point(aes(fill = type, shape = plot_name,  group = interaction(type, plot_name, float)),  size = 4, alpha = 0.8) +
   theme_linedraw() + 
   labs(x = "Longitude, ˚W", y = "Latitude, ˚N", color = "", fill = "", linetype = "", shape = "") +
   scale_linetype_manual(values = custom.lines) +
@@ -438,9 +462,9 @@ map2 <- ggplot(data = map2_data, aes(x = lon, y = lat)) +
   scale_fill_gradientn(colors = mycolor, na.value = NA) +
   labs(fill = expression(paste("Chlorophyll", italic(" a"), ", mg m"^-3))) +
   new_scale_fill() +  
-  geom_line(aes(color = type, group = interaction(type, plot_name), linetype = type), size = 1) +
-  geom_point(aes(fill = type, shape = plot_name),  size = 4, alpha = 0.9) +
-  geom_line(data = s4_map2, aes(x = lon, y = lat, color = type, group = interaction(type, plot_name), linetype = type), size = 1) +
+  geom_line(aes(color = type, group = interaction(type, plot_name, float), linetype = type), size = 1) +
+  geom_point(aes(fill = type, shape = plot_name,  group = interaction(type, plot_name, float)),  size = 4, alpha = 0.8) +
+  geom_line(data = s4_map2, aes(x = lon, y = lat, color = type, group = interaction(type, plot_name, float), linetype = type), size = 1) +
   geom_point(data = s4_map2, aes(x = lon, y = lat, fill = type, shape = plot_name), size = 4, alpha = 0.9) +
   theme_linedraw() + 
   labs(x = "Longitude, ˚W", y = "Latitude, ˚N", color = "", fill = "", linetype = "", shape = "") +
@@ -453,7 +477,7 @@ map2 <- ggplot(data = map2_data, aes(x = lon, y = lat)) +
 ```
 
 ```{r fig.height=6, fig.width=14}
-map1 + map2 + plot_layout(guides = "collect")
+(map1 + guides(fill = "none", color = "none", linetype = "none")) + (map2 + guides(fill = "none", shape = "none")) + plot_layout(guides = "collect")
 ```
 
 #Station 4
