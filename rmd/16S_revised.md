@@ -608,7 +608,8 @@ alphadiv <- left_join(richness, sample.tab %>% rownames_to_column(., var = "DNA_
     ## Joining, by = "DNA_ID"
 
 ``` r
-alphadiv.plot / n2s4_alphadiv.plot  +
+alphadiv.plot / chao.plot  +
+  plot_layout(guides = "collect") +
   plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 22),
         plot.title = element_text(size = 18)) 
@@ -617,7 +618,8 @@ alphadiv.plot / n2s4_alphadiv.plot  +
 ![](16S_revised_files/figure-gfm/unnamed-chunk-33-1.png)<!-- -->
 
 ``` r
-chao.plot / n2s4_chao.plot  +
+n2s4_alphadiv.plot / n2s4_chao.plot  +
+  plot_layout(guides = "collect") +
   plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 22),
         plot.title = element_text(size = 18)) 
@@ -676,12 +678,12 @@ data <- ps_min %>%
     ## Joining, by = c("Phylum", "Class", "Order")
 
 ``` r
-data %>% 
+relabund.plot <- data %>% 
   filter(Cruise == "NAAMES 2") %>% 
-  filter(fam_relabund_dh > 0) %>% 
+  filter(fam_relabund_dh >= 0.001) %>% 
   select(dh, plot_date, Family, fam_relabund_dh) %>% 
-
   distinct() %>% 
+  mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
   ggplot(aes(x = plot_date, y = reorder(Family, fam_relabund_dh))) +
   geom_tile(aes(fill = fam_relabund_dh), color = "white") +
   scale_fill_viridis_c(trans = 'log10') +
@@ -696,11 +698,10 @@ data %>%
   ggtitle("")
 ```
 
-![](16S_revised_files/figure-gfm/unnamed-chunk-36-1.png)<!-- -->
-
 ``` r
-data %>% 
+count.plot <- data %>% 
   filter(Cruise == "NAAMES 2") %>% 
+  filter(fam_relabund_dh >= 0.001) %>% 
   filter(fam_normcount_dh > 0) %>% 
   select(dh, plot_date, Family, fam_relabund_dh, fam_normcount_dh) %>% 
   mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
@@ -720,12 +721,69 @@ data %>%
   ggtitle("")
 ```
 
-![](16S_revised_files/figure-gfm/unnamed-chunk-37-1.png)<!-- -->
+``` r
+relabund.plot + count.plot + plot_annotation(tag_levels = "a") 
+```
+
+![](16S_revised_files/figure-gfm/unnamed-chunk-38-1.png)<!-- -->
+
+``` r
+n3_relabund.plot <- data %>% 
+  filter(Cruise == "NAAMES 3") %>% 
+  filter(fam_relabund_dh >= 0.001) %>% 
+  select(dh, Station, plot_date, Family, fam_relabund_dh) %>% 
+  mutate_at(vars(Station), as.character) %>% 
+  distinct() %>% 
+  mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
+  ggplot(aes(x = Station, y = reorder(Family, fam_relabund_dh))) +
+  geom_tile(aes(fill = fam_relabund_dh), color = "white") +
+  scale_fill_viridis_c(trans = 'log10') +
+  # scale_fill_viridis_b(option = "D",  trans = 'log10') +
+  geom_text(aes(label = round(fam_relabund_dh, 3), color = "black"), size = 4) +
+  scale_color_manual(values = c("white" = "white", "black" = "black")) +
+  labs(x = "Station", y = "Family", fill = "Relative Abundance") +
+  facet_grid(~factor(dh, levels = c("Euphotic", "Upper Mesopelagic"))) +
+  theme_linedraw(base_size = 16) +
+  theme(axis.text.y = element_text(size = 12), legend.position = "top") +
+   guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = "none") +
+  ggtitle("")
+```
+
+``` r
+n3_count.plot <- data %>% 
+  filter(Cruise == "NAAMES 3") %>% 
+  filter(fam_relabund_dh >= 0.001) %>% 
+  filter(fam_normcount_dh > 0) %>% 
+  select(dh, plot_date, Station, Family, fam_relabund_dh, fam_normcount_dh) %>% 
+  mutate_at(vars(Station), as.character) %>% 
+  mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
+  filter(!Family == "Unassigned") %>% #don't know what good copy numbers would be
+  distinct() %>% 
+  ggplot(aes(x = Station, y = reorder(Family, fam_relabund_dh))) +
+  geom_tile(aes(fill = fam_normcount_dh), color = "white") +
+  scale_fill_viridis_c(trans = 'log10') +
+  # scale_fill_viridis_b(option = "D",  trans = 'log10') +
+  geom_text(aes(label = formatC(fam_normcount_dh, format = "e", digits = 1), color = "black"), size = 4) +
+  scale_color_manual(values = c("white" = "white", "black" = "black")) +
+  labs(x = "Station", y = "Family", fill = expression(paste("Cells L"^-1))) +
+  facet_grid(~factor(dh, levels = c("Euphotic", "Upper Mesopelagic"))) +
+  theme_linedraw(base_size = 16) +
+  theme(axis.text.y = element_text(size = 12), legend.position = "top") +
+   guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = "none") +
+  ggtitle("")
+```
+
+``` r
+n3_relabund.plot + n3_count.plot + plot_annotation(tag_levels = "a") 
+```
+
+![](16S_revised_files/figure-gfm/unnamed-chunk-41-1.png)<!-- -->
 
 ``` r
 (data %>% 
   filter(Cruise == "NAAMES 2") %>% 
   filter(dh == "Upper Mesopelagic") %>%
+  filter(fam_relabund_dh >= 0.001) %>% 
   filter(fam_normcount_dh > 0) %>% 
   select(dh, plot_date, Family, fam_relabund_dh, fam_normcount_dh) %>% 
   mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
@@ -748,7 +806,7 @@ data %>%
 (data %>% 
   filter(Cruise == "NAAMES 2") %>% 
   filter(dh == "Upper Mesopelagic") %>%
-  filter(fam_relabund_dh > 0) %>%
+  filter(fam_relabund_dh >= 0.001) %>% 
   select(dh, plot_date, datetime, decimaldate, Phylum, Order, Family, fam_relabund_dh, fam_normcount_dh) %>% 
   mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
   filter(!Family == "Unassigned") %>% #don't know what good copy numbers would be
@@ -762,7 +820,7 @@ data %>%
   theme_linedraw(base_size = 16)) 
 ```
 
-![](16S_revised_files/figure-gfm/unnamed-chunk-38-1.png)<!-- -->
+![](16S_revised_files/figure-gfm/unnamed-chunk-42-1.png)<!-- -->
 
 # Identify “typical”surface and mesopelagic microbes
 
@@ -806,8 +864,8 @@ unique_meso_bugs <- setdiff(meso_bugs, surf_bugs)
 s4_meso_subset <- data %>% 
   filter(Cruise == "NAAMES 2") %>% 
   filter(dh == "Upper Mesopelagic") %>%
-  filter(fam_relabund_dh > 0) %>%
-  filter(Family %in% c(unique_meso_bugs)) %>% 
+  filter(fam_relabund_dh >= 0.001) %>% 
+  filter(Family %in% c(unique_meso_bugs) | Family == "SAR11_II") %>% 
   select(dh, datetime, Phylum, Order, Family, Genus, fam_relabund_dh, fam_normcount_dh) %>% 
   mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
   filter(!Family == "Unassigned") %>% #don't know what good copy numbers would be
@@ -815,13 +873,14 @@ s4_meso_subset <- data %>%
 ```
 
 ``` r
-s4_meso_subset %>% 
+mesobugs.plot <- s4_meso_subset %>% 
+  filter(!Family == "SAR202_Clade2") %>% #only appears once
   ggplot(aes(x = datetime, y = fam_relabund_dh)) +
   facet_wrap(~Family, dir = "v", scales = "free_y") +
   geom_line(size = 0.7) +
   geom_point(shape = 21, size = 4, fill = "white", color = "black", stroke = 1) + 
-  geom_line(data = s4_meso_subset, aes(x = datetime, y = fam_normcount_dh/10^9), color = "#377EB8") +
-  geom_point(data = s4_meso_subset, aes(x = datetime, y = fam_normcount_dh/10^9), shape = 21, size = 6, fill = "#377EB8", color = "black", stroke = 1) + 
+  geom_line(data = s4_meso_subset %>% filter(!Family == "SAR202_Clade2"), aes(x = datetime, y = fam_normcount_dh/10^9), color = "#377EB8") +
+  geom_point(data = s4_meso_subset %>% filter(!Family == "SAR202_Clade2"), aes(x = datetime, y = fam_normcount_dh/10^9), shape = 21, size = 6, fill = "#377EB8", color = "black", stroke = 1) + 
   scale_y_continuous(
     # Add a second axis and specify its features
     sec.axis = sec_axis(~.*10^9, name = expression(paste("Cell Abundance, L"^-1)))
@@ -832,13 +891,11 @@ s4_meso_subset %>%
         axis.text.y.right = element_text(color = "#377EB8"))
 ```
 
-![](16S_revised_files/figure-gfm/unnamed-chunk-41-1.png)<!-- -->
-
 ``` r
 s4_meso_subset_ez <- data %>% 
   filter(Cruise == "NAAMES 2") %>% 
   filter(dh == "Upper Mesopelagic") %>%
-  filter(fam_relabund_dh > 0) %>%
+  filter(fam_relabund_dh >= 0.001) %>% 
   filter(Family %in% c(unique_surf_bugs) | Family == "SAR11_Ia") %>% 
   select(dh, datetime, Phylum, Order, Family, Genus, fam_relabund_dh, fam_normcount_dh) %>% 
   mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
@@ -853,30 +910,29 @@ s4_meso_subset %>% select(Family, Genus) %>%
   distinct()
 ```
 
-    ## # A tibble: 18 × 1
+    ## # A tibble: 17 × 1
     ##    name                                    
     ##    <chr>                                   
     ##  1 SAR11_Ib_NA                             
     ##  2 Flammeovirgaceae_Marinoscillum          
     ##  3 OM182_clade_NA                          
-    ##  4 Salinisphaeraceae_ZD0417_marine_group   
-    ##  5 JTB255_marine_benthic_group_NA          
-    ##  6 Nitrospinaceae_Nitrospina               
-    ##  7 Sva0996_marine_group_NA                 
-    ##  8 SAR202_Clade1_NA                        
-    ##  9 SAR11_I_NA                              
-    ## 10 SAR202_Clade2_NA                        
-    ## 11 Flammeovirgaceae_Reichenbachiella       
-    ## 12 SAR202_Clade3_NA                        
-    ## 13 Nitrosomonadaceae_Nitrosomonas          
-    ## 14 Flammeovirgaceae_Candidatus_Amoebophilus
-    ## 15 Flammeovirgaceae_Fulvivirga             
-    ## 16 Flammeovirgaceae_Marivirga              
-    ## 17 Nitrospinaceae_NA                       
-    ## 18 Flammeovirgaceae_NA
+    ##  4 SAR11_II_NA                             
+    ##  5 Salinisphaeraceae_ZD0417_marine_group   
+    ##  6 JTB255_marine_benthic_group_NA          
+    ##  7 Nitrospinaceae_Nitrospina               
+    ##  8 Sva0996_marine_group_NA                 
+    ##  9 SAR202_Clade1_NA                        
+    ## 10 SAR11_I_NA                              
+    ## 11 SAR202_Clade2_NA                        
+    ## 12 Flammeovirgaceae_Reichenbachiella       
+    ## 13 Flammeovirgaceae_Candidatus_Amoebophilus
+    ## 14 Flammeovirgaceae_Fulvivirga             
+    ## 15 Flammeovirgaceae_Marivirga              
+    ## 16 Nitrospinaceae_NA                       
+    ## 17 Flammeovirgaceae_NA
 
 ``` r
-s4_meso_subset_ez %>% 
+surfbugs.plot <- s4_meso_subset_ez %>% 
   ggplot(aes(x = datetime, y = fam_relabund_dh)) +
   facet_wrap(~Family, dir = "v", scales = "free_y") +
   geom_line(size = 0.7) +
@@ -893,8 +949,6 @@ s4_meso_subset_ez %>%
         axis.text.y.right = element_text(color = "#377EB8"))
 ```
 
-![](16S_revised_files/figure-gfm/unnamed-chunk-44-1.png)<!-- -->
-
 ``` r
 s4_meso_subset_ez %>% select(Family, Genus) %>% 
   mutate(name = paste(Family, Genus, sep = "_")) %>% 
@@ -902,7 +956,7 @@ s4_meso_subset_ez %>% select(Family, Genus) %>%
   distinct()
 ```
 
-    ## # A tibble: 19 × 1
+    ## # A tibble: 11 × 1
     ##    name                                    
     ##    <chr>                                   
     ##  1 SAR11_Ia_NA                             
@@ -911,19 +965,17 @@ s4_meso_subset_ez %>% select(Family, Genus) %>%
     ##  4 Porticoccaceae_SAR92_clade              
     ##  5 Halieaceae_OM60(NOR5)_clade             
     ##  6 SAR116_clade_Candidatus_Puniceispirillum
-    ##  7 Family_Incertae_Sedis_Marinicella       
-    ##  8 Halieaceae_Haliea                       
-    ##  9 Verrucomicrobiaceae_Roseibacillus       
-    ## 10 Halieaceae_Luminiphilus                 
-    ## 11 Halieaceae_NA                           
-    ## 12 Porticoccaceae_Porticoccus              
-    ## 13 Halieaceae_Pseudohaliea                 
-    ## 14 Puniceicoccaceae_Lentimonas             
-    ## 15 Puniceicoccaceae_marine_group           
-    ## 16 Puniceicoccaceae_Pelagicoccus           
-    ## 17 Puniceicoccaceae_NA                     
-    ## 18 Puniceicoccaceae_Coraliomargarita       
-    ## 19 Puniceicoccaceae_Cerasicoccus
+    ##  7 Halieaceae_Haliea                       
+    ##  8 Halieaceae_Luminiphilus                 
+    ##  9 Halieaceae_NA                           
+    ## 10 Porticoccaceae_Porticoccus              
+    ## 11 Halieaceae_Pseudohaliea
+
+``` r
+surfbugs.plot / mesobugs.plot + plot_annotation(tag_levels = "a") 
+```
+
+![](16S_revised_files/figure-gfm/unnamed-chunk-50-1.png)<!-- -->
 
 ``` r
 levels <- c("SAR11_Ia", "Flavobacteriaceae", "ZD0405", "SAR86_clade", "SAR11_II", "SAR202_Clade1", "OM1_clade", "Salinisphaeraceae", "OCS116_clade")

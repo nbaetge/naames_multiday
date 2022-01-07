@@ -29,7 +29,7 @@ bf <- read_rds("~/GITHUB/naames_multiday/Output/integrated_bf.rds") %>%
   filter(Cruise == "AT34", !plot_date %in% c("May 24 02:30", "May 27 06:07"))
 
 phyto <- read_rds("~/GITHUB/naames_multiday/Output/integrated_phyto.rds") %>% 
-  filter(station == "S4", !plot_date %in% c("May 24 02:30", "May 27 06:07")) %>% 
+  filter(station == "S4", !plot_date %in% c("May 24 02:30", "May 27 06:07", "Sep 10 07:30")) %>% 
   pivot_longer(c(phyto_ez, phyto_mz), names_to = "dh", values_to = "phyto" ) %>% 
   select(date, time, plot_date, dh, phyto) %>% 
   mutate(dh = ifelse(dh == "phyto_ez", "Euphotic", "Upper Mesopelagic")) %>% 

@@ -28,7 +28,7 @@ bf <- read_rds("~/GITHUB/naames_multiday/Output/integrated_bf.rds") %>%
   filter(Cruise == "AT34", !plot_date %in% c("May 24 02:30", "May 27 06:07"))
 
 phyto <- read_rds("~/GITHUB/naames_multiday/Output/integrated_phyto.rds") %>% 
-  filter(station == "S4", !plot_date %in% c("May 24 02:30", "May 27 06:07")) %>% 
+  filter(station == "S4", !plot_date %in% c("May 24 02:30", "May 27 06:07", "Sep 10 07:30")) %>% 
   pivot_longer(c(phyto_ez, phyto_mz), names_to = "dh", values_to = "phyto" ) %>% 
   select(date, time, plot_date, dh, phyto) %>% 
   mutate(dh = ifelse(dh == "phyto_ez", "Euphotic", "Upper Mesopelagic")) %>% 
@@ -259,7 +259,7 @@ aou.plot <- aou %>%
   labs(x = "", y = expression(paste("AOU, µmol O"[2], " L"^-1)), color = "", fill = "") +
   scale_fill_viridis_d(end = 0.7) +
   scale_color_viridis_d(end = 0.7) +
-  guides(color = F, fill = F, shape = F, linetype = F) +
+  guides(color = F, shape = F, linetype = F) +
   scale_x_datetime( date_labels = c("%b %e", "%H:%M"), date_breaks = "12 hours") +
   theme_linedraw(base_size = 16) 
   
@@ -268,7 +268,7 @@ aou.plot <- aou %>%
 
 
 
-```{r combine plots, echo=FALSE, fig.height=14, fig.width=18, message=FALSE, warning=FALSE}
+```{r combine plots, echo=FALSE, fig.height=14, fig.width=16, message=FALSE, warning=FALSE}
 
 patchwork <-  phyto.plot + chl.plot + ba.plot +  bcd.plot + n.plot + aou.plot + doc.plot + tdaa.plot
 
@@ -276,7 +276,10 @@ patchwork +
   plot_layout(guides = 'collect', ncol = 2) +
   plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 22),
-        plot.title = element_text(size = 36)) 
+        plot.title = element_text(size = 36),
+        legend.position = "bottom",
+        legend.key.size = unit(1, "cm"),
+        legend.text = element_text(size = 18)) 
 
 ```
 

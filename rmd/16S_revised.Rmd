@@ -388,6 +388,7 @@ alphadiv <- left_join(richness, sample.tab %>% rownames_to_column(., var = "DNA_
 
 alphadiv.plot <- alphadiv %>% 
   mutate_at(vars(z), as.factor) %>% 
+  mutate(Cruise = ifelse(Cruise == "NAAMES 2", "NAAMES 2 Station 4", Cruise)) %>% 
   ggplot(aes(x = factor(dh), y = Shannon)) +
   geom_boxplot(width = 0.3, outlier.shape = NA) +
   facet_grid(~Cruise, scales = "free") +
@@ -395,11 +396,13 @@ alphadiv.plot <- alphadiv %>%
   scale_color_viridis_d(option = "viridis", direction = -1) +
   scale_fill_viridis_d(option = "viridis", direction = -1) +
   theme_linedraw(base_size = 16) +
+  guides(fill = "none") +
   labs(x = "", y =  "Shannon", fill = "Depth, m") + 
   stat_compare_means(method = "t.test") 
 
 chao.plot <- alphadiv %>% 
   mutate_at(vars(z), as.factor) %>% 
+  mutate(Cruise = ifelse(Cruise == "NAAMES 2", "NAAMES 2 Station 4", Cruise)) %>% 
   ggplot(aes(x = factor(dh), y = Chao1)) +
   geom_boxplot(width = 0.3, outlier.shape = NA) +
   facet_grid(~Cruise, scales = "free") +
@@ -430,9 +433,9 @@ n2s4_alphadiv.plot <- alphadiv %>%
   scale_color_viridis_d(option = "viridis", direction = -1) +
   scale_fill_viridis_d(option = "viridis", direction = -1) +
   theme_linedraw(base_size = 16) +
+  guides(fill = "none") +
   labs(x = "", y =  "Shannon", fill = "Depth, m") + 
-  stat_compare_means(comparisons = my_comparisons, method = "t.test") +
-  ggtitle("NAAMES 2 Station 4")
+  stat_compare_means(comparisons = my_comparisons, method = "t.test") 
 
 n2s4_chao.plot <- alphadiv %>% 
   filter(Cruise == "NAAMES 2", Station == 4) %>% 
@@ -445,24 +448,23 @@ n2s4_chao.plot <- alphadiv %>%
   scale_fill_viridis_d(option = "viridis", direction = -1) +
   theme_linedraw(base_size = 16) +
   labs(x = "", y =  "Chao1", fill = "Depth, m") + 
-  stat_compare_means(comparisons = my_comparisons, method = "t.test") +
-  ggtitle("NAAMES 2 Station 4")
+  stat_compare_means(comparisons = my_comparisons, method = "t.test") 
 
 
 ```
 
-
 ```{r fig.height=12, fig.width=14}
-alphadiv.plot / n2s4_alphadiv.plot  +
+alphadiv.plot / chao.plot  +
+  plot_layout(guides = "collect") +
   plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 22),
         plot.title = element_text(size = 18)) 
 
 ```
 
-
 ```{r fig.height=12, fig.width=14}
-chao.plot / n2s4_chao.plot  +
+n2s4_alphadiv.plot / n2s4_chao.plot  +
+  plot_layout(guides = "collect") +
   plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 22),
         plot.title = element_text(size = 18)) 
@@ -514,12 +516,12 @@ data <- ps_min %>%
 
 
 ```{r fig.height = 18, fig.width = 12}
-data %>% 
+relabund.plot <- data %>% 
   filter(Cruise == "NAAMES 2") %>% 
-  filter(fam_relabund_dh > 0) %>% 
+  filter(fam_relabund_dh >= 0.001) %>% 
   select(dh, plot_date, Family, fam_relabund_dh) %>% 
-
   distinct() %>% 
+  mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
   ggplot(aes(x = plot_date, y = reorder(Family, fam_relabund_dh))) +
   geom_tile(aes(fill = fam_relabund_dh), color = "white") +
   scale_fill_viridis_c(trans = 'log10') +
@@ -536,8 +538,9 @@ data %>%
 
 
 ```{r fig.height = 18, fig.width = 12}
-data %>% 
+count.plot <- data %>% 
   filter(Cruise == "NAAMES 2") %>% 
+  filter(fam_relabund_dh >= 0.001) %>% 
   filter(fam_normcount_dh > 0) %>% 
   select(dh, plot_date, Family, fam_relabund_dh, fam_normcount_dh) %>% 
   mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
@@ -557,10 +560,70 @@ data %>%
   ggtitle("")
 ```
 
+
+```{r fig.height=16, fig.width=22, message=FALSE, warning=FALSE}
+relabund.plot + count.plot + plot_annotation(tag_levels = "a") 
+```
+
+
+```{r fig.height = 18, fig.width = 12}
+n3_relabund.plot <- data %>% 
+  filter(Cruise == "NAAMES 3") %>% 
+  filter(fam_relabund_dh >= 0.001) %>% 
+  select(dh, Station, plot_date, Family, fam_relabund_dh) %>% 
+  mutate_at(vars(Station), as.character) %>% 
+  distinct() %>% 
+  mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
+  ggplot(aes(x = Station, y = reorder(Family, fam_relabund_dh))) +
+  geom_tile(aes(fill = fam_relabund_dh), color = "white") +
+  scale_fill_viridis_c(trans = 'log10') +
+  # scale_fill_viridis_b(option = "D",  trans = 'log10') +
+  geom_text(aes(label = round(fam_relabund_dh, 3), color = "black"), size = 4) +
+  scale_color_manual(values = c("white" = "white", "black" = "black")) +
+  labs(x = "Station", y = "Family", fill = "Relative Abundance") +
+  facet_grid(~factor(dh, levels = c("Euphotic", "Upper Mesopelagic"))) +
+  theme_linedraw(base_size = 16) +
+  theme(axis.text.y = element_text(size = 12), legend.position = "top") +
+   guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = "none") +
+  ggtitle("")
+```
+
+
+```{r fig.height = 18, fig.width = 12}
+n3_count.plot <- data %>% 
+  filter(Cruise == "NAAMES 3") %>% 
+  filter(fam_relabund_dh >= 0.001) %>% 
+  filter(fam_normcount_dh > 0) %>% 
+  select(dh, plot_date, Station, Family, fam_relabund_dh, fam_normcount_dh) %>% 
+  mutate_at(vars(Station), as.character) %>% 
+  mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
+  filter(!Family == "Unassigned") %>% #don't know what good copy numbers would be
+  distinct() %>% 
+  ggplot(aes(x = Station, y = reorder(Family, fam_relabund_dh))) +
+  geom_tile(aes(fill = fam_normcount_dh), color = "white") +
+  scale_fill_viridis_c(trans = 'log10') +
+  # scale_fill_viridis_b(option = "D",  trans = 'log10') +
+  geom_text(aes(label = formatC(fam_normcount_dh, format = "e", digits = 1), color = "black"), size = 4) +
+  scale_color_manual(values = c("white" = "white", "black" = "black")) +
+  labs(x = "Station", y = "Family", fill = expression(paste("Cells L"^-1))) +
+  facet_grid(~factor(dh, levels = c("Euphotic", "Upper Mesopelagic"))) +
+  theme_linedraw(base_size = 16) +
+  theme(axis.text.y = element_text(size = 12), legend.position = "top") +
+   guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = "none") +
+  ggtitle("")
+```
+
+
+```{r fig.height=16, fig.width=22, message=FALSE, warning=FALSE}
+n3_relabund.plot + n3_count.plot + plot_annotation(tag_levels = "a") 
+```
+
+
 ```{r fig.height=18, fig.width=22, message=FALSE, warning=FALSE}
 (data %>% 
   filter(Cruise == "NAAMES 2") %>% 
   filter(dh == "Upper Mesopelagic") %>%
+  filter(fam_relabund_dh >= 0.001) %>% 
   filter(fam_normcount_dh > 0) %>% 
   select(dh, plot_date, Family, fam_relabund_dh, fam_normcount_dh) %>% 
   mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
@@ -583,7 +646,7 @@ data %>%
 (data %>% 
   filter(Cruise == "NAAMES 2") %>% 
   filter(dh == "Upper Mesopelagic") %>%
-  filter(fam_relabund_dh > 0) %>%
+  filter(fam_relabund_dh >= 0.001) %>% 
   select(dh, plot_date, datetime, decimaldate, Phylum, Order, Family, fam_relabund_dh, fam_normcount_dh) %>% 
   mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
   filter(!Family == "Unassigned") %>% #don't know what good copy numbers would be
@@ -639,8 +702,8 @@ unique_meso_bugs <- setdiff(meso_bugs, surf_bugs)
 s4_meso_subset <- data %>% 
   filter(Cruise == "NAAMES 2") %>% 
   filter(dh == "Upper Mesopelagic") %>%
-  filter(fam_relabund_dh > 0) %>%
-  filter(Family %in% c(unique_meso_bugs)) %>% 
+  filter(fam_relabund_dh >= 0.001) %>% 
+  filter(Family %in% c(unique_meso_bugs) | Family == "SAR11_II") %>% 
   select(dh, datetime, Phylum, Order, Family, Genus, fam_relabund_dh, fam_normcount_dh) %>% 
   mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
   filter(!Family == "Unassigned") %>% #don't know what good copy numbers would be
@@ -650,13 +713,14 @@ s4_meso_subset <- data %>%
 
 
 ```{r fig.height=12, fig.width= 26, message=FALSE, warning=FALSE}
-s4_meso_subset %>% 
+mesobugs.plot <- s4_meso_subset %>% 
+  filter(!Family == "SAR202_Clade2") %>% #only appears once
   ggplot(aes(x = datetime, y = fam_relabund_dh)) +
   facet_wrap(~Family, dir = "v", scales = "free_y") +
   geom_line(size = 0.7) +
   geom_point(shape = 21, size = 4, fill = "white", color = "black", stroke = 1) + 
-  geom_line(data = s4_meso_subset, aes(x = datetime, y = fam_normcount_dh/10^9), color = "#377EB8") +
-  geom_point(data = s4_meso_subset, aes(x = datetime, y = fam_normcount_dh/10^9), shape = 21, size = 6, fill = "#377EB8", color = "black", stroke = 1) + 
+  geom_line(data = s4_meso_subset %>% filter(!Family == "SAR202_Clade2"), aes(x = datetime, y = fam_normcount_dh/10^9), color = "#377EB8") +
+  geom_point(data = s4_meso_subset %>% filter(!Family == "SAR202_Clade2"), aes(x = datetime, y = fam_normcount_dh/10^9), shape = 21, size = 6, fill = "#377EB8", color = "black", stroke = 1) + 
   scale_y_continuous(
     # Add a second axis and specify its features
     sec.axis = sec_axis(~.*10^9, name = expression(paste("Cell Abundance, L"^-1)))
@@ -671,7 +735,7 @@ s4_meso_subset %>%
 s4_meso_subset_ez <- data %>% 
   filter(Cruise == "NAAMES 2") %>% 
   filter(dh == "Upper Mesopelagic") %>%
-  filter(fam_relabund_dh > 0) %>%
+  filter(fam_relabund_dh >= 0.001) %>% 
   filter(Family %in% c(unique_surf_bugs) | Family == "SAR11_Ia") %>% 
   select(dh, datetime, Phylum, Order, Family, Genus, fam_relabund_dh, fam_normcount_dh) %>% 
   mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
@@ -689,7 +753,7 @@ s4_meso_subset %>% select(Family, Genus) %>%
 
 
 ```{r fig.height=12, fig.width= 26, message=FALSE, warning=FALSE}
-s4_meso_subset_ez %>% 
+surfbugs.plot <- s4_meso_subset_ez %>% 
   ggplot(aes(x = datetime, y = fam_relabund_dh)) +
   facet_wrap(~Family, dir = "v", scales = "free_y") +
   geom_line(size = 0.7) +
@@ -713,6 +777,12 @@ s4_meso_subset_ez %>% select(Family, Genus) %>%
   select(name) %>% 
   distinct()
 ```
+
+
+```{r fig.height=17, fig.width=22, message=TRUE, warning=FALSE}
+surfbugs.plot / mesobugs.plot + plot_annotation(tag_levels = "a") 
+```
+
 
 
 ```{r }
