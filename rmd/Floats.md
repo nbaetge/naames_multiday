@@ -183,7 +183,8 @@ s4.ts <- PlotSvalbard::ts_plot(s4_subset, temp_col = "potT", sal_col = "s", colo
         legend.position = c(0.8, 0.25),
         legend.text = element_text(size = 16),
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
-        legend.spacing.y = unit(0, "pt"))
+        legend.spacing.y = unit(0, "pt")) +
+  ggtitle("Ship and Float n0647")
 
 s4_subset_ship <- s4_subset %>% filter(type == "Ship")
 
@@ -221,7 +222,7 @@ s4.ts3 <- PlotSvalbard::ts_plot(s4_subset_float, temp_col = "potT", sal_col = "s
 ```
 
 ``` r
-s4.ts + s4.ts2 + s4.ts3 + plot_annotation(tag_levels = "a") 
+s4.ts + s4.ts2 + s4.ts3 + plot_annotation(tag_levels = "a", title = "NAAMES 2 Station 4", theme = theme(plot.title = element_text(size = 24))) 
 ```
 
 ![](Floats_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
@@ -253,7 +254,8 @@ s6.ts <- PlotSvalbard::ts_plot(s6_subset, temp_col = "potT", sal_col = "s", colo
         legend.position = c(0.8, 0.7),
         legend.text = element_text(size = 12),
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
-        legend.spacing.y = unit(0, "pt"))
+        legend.spacing.y = unit(0, "pt")) +
+  ggtitle("Ship and Float")
 
 s6_subset_ship <- s6_subset %>% filter(type == "Ship")
 
@@ -270,7 +272,7 @@ s6.ts2 <- PlotSvalbard::ts_plot(s6_subset_ship, temp_col = "potT", sal_col = "s"
         legend.text = element_text(size = 12),
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
         legend.spacing.y = unit(0, "pt")) +
-  ggtitle("Ship")
+  ggtitle("Ship & Floats n0846 & n0847")
 
 
 s6_subset_float <- s6_subset %>% filter(type == "Float")
@@ -292,7 +294,7 @@ s6.ts3 <- PlotSvalbard::ts_plot(s6_subset_float, temp_col = "potT", sal_col = "s
 ```
 
 ``` r
-s6.ts + s6.ts2 + s6.ts3 + plot_annotation(tag_levels = "a") 
+s6.ts + s6.ts2 + s6.ts3 + plot_annotation(tag_levels = "a", title = "NAAMES 3 Station 6", theme = theme(plot.title = element_text(size = 24))) 
 ```
 
 ![](Floats_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
@@ -322,7 +324,7 @@ s3.ts <- PlotSvalbard::ts_plot(s3_subset, temp_col = "potT", sal_col = "s", colo
         legend.text = element_text(size = 12),
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
         legend.spacing.y = unit(0, "pt")) +
-  ggtitle("NAAMES 3 Station 3 Float n0850")
+  ggtitle("NAAMES 3 Station 3 Ship & Float n0850")
 
 n3s4_subset <- floatsNmldsNezds %>% filter(Cruise == "AT38" & Station == 4, p <= 250) %>%  mutate(type = "Float") %>% select(-c(o2:poc)) %>% distinct() %>% 
   bind_rows(., ship_ctd %>% filter(Cruise == "AT38", Station == 4, p <= 250) %>% mutate(type = "Ship") %>% filter(!plot_date %in% c("Sep 11 03:07")))
@@ -342,7 +344,7 @@ n3s4.ts <- PlotSvalbard::ts_plot(n3s4_subset, temp_col = "potT", sal_col = "s", 
         legend.text = element_text(size = 12),
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
         legend.spacing.y = unit(0, "pt")) +
-  ggtitle("NAAMES 3 Station 4 Float n0849")
+  ggtitle("NAAMES 3 Station 4 Ship & Float n0849")
 
 
 s35_subset <- ship_ctd %>% filter(Cruise == "AT38", Station == 3.5, p <= 250) %>% mutate(type = "Ship")
@@ -362,7 +364,7 @@ s35.ts <- PlotSvalbard::ts_plot(s35_subset, temp_col = "potT", sal_col = "s", co
         legend.text = element_text(size = 12),
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
         legend.spacing.y = unit(0, "pt")) +
-  ggtitle("NAAMES 3 Station 3.5")
+  ggtitle("NAAMES 3 Station 3.5 Ship")
 ```
 
 ``` r
