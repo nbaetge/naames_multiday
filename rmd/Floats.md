@@ -140,6 +140,16 @@ summary(floatsNmldsNezds$ezd)
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
     ##   11.19   39.08   48.76   49.63   61.11   76.98    6562
 
+``` r
+test <- floatsNmldsNezds %>% 
+  filter(Cruise == "AT38") 
+
+summary(test$ezd)
+```
+
+    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+    ##   11.19   35.66   39.42   36.71   44.60   57.42    4385
+
 # T-S plots
 
 We’ll make T-S plots from the floats and overlay the data from the ship
@@ -148,6 +158,7 @@ collected data.
 ``` r
 ship_ctd <- read_rds("~/GITHUB/naames_multiday/Input/ctd_data.rds") %>% 
   filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station %in% c(3,3.5,4,6)) %>% 
+  mutate(ave_temp_c = ifelse(Station == 3.5, temp0_c, ave_temp_c)) %>% 
   select(CampCN:Station, `Longitude [degrees_east]`, lat, mld, pres_db, ave_temp_c, ave_sal_psu, fl_mg_m3) %>% 
   rename(datetime = Date, lon = `Longitude [degrees_east]`, p = pres_db, s = ave_sal_psu, t = ave_temp_c, MLD = mld, fchl = fl_mg_m3) %>% 
   mutate( potT = swTheta(salinity = s, temperature = t, pressure = p),
@@ -225,7 +236,7 @@ s4.ts3 <- PlotSvalbard::ts_plot(s4_subset_float, temp_col = "potT", sal_col = "s
 s4.ts + s4.ts2 + s4.ts3 + plot_annotation(tag_levels = "a", title = "NAAMES 2 Station 4", theme = theme(plot.title = element_text(size = 24))) 
 ```
 
-![](Floats_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+![](Floats_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
 ## Station 6
 
@@ -255,7 +266,7 @@ s6.ts <- PlotSvalbard::ts_plot(s6_subset, temp_col = "potT", sal_col = "s", colo
         legend.text = element_text(size = 12),
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
         legend.spacing.y = unit(0, "pt")) +
-  ggtitle("Ship and Float")
+  ggtitle("Ship & Floats n0846 & n0847")
 
 s6_subset_ship <- s6_subset %>% filter(type == "Ship")
 
@@ -272,7 +283,7 @@ s6.ts2 <- PlotSvalbard::ts_plot(s6_subset_ship, temp_col = "potT", sal_col = "s"
         legend.text = element_text(size = 12),
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
         legend.spacing.y = unit(0, "pt")) +
-  ggtitle("Ship & Floats n0846 & n0847")
+  ggtitle("Ship")
 
 
 s6_subset_float <- s6_subset %>% filter(type == "Float")
@@ -297,7 +308,7 @@ s6.ts3 <- PlotSvalbard::ts_plot(s6_subset_float, temp_col = "potT", sal_col = "s
 s6.ts + s6.ts2 + s6.ts3 + plot_annotation(tag_levels = "a", title = "NAAMES 3 Station 6", theme = theme(plot.title = element_text(size = 24))) 
 ```
 
-![](Floats_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+![](Floats_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
 
 ## N3 Station 3 and 4
 
@@ -371,7 +382,7 @@ s35.ts <- PlotSvalbard::ts_plot(s35_subset, temp_col = "potT", sal_col = "s", co
 s3.ts + s35.ts + n3s4.ts + plot_annotation(tag_levels = "a") 
 ```
 
-![](Floats_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+![](Floats_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
 
 # Map
 
@@ -474,7 +485,7 @@ map2 <- ggplot(data = map2_data, aes(x = lon, y = lat)) +
 (map1 + guides(fill = "none", color = "none", linetype = "none")) + (map2 + guides(fill = "none", shape = "none")) + plot_layout(guides = "collect") + plot_annotation(tag_levels = "a") 
 ```
 
-![](Floats_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+![](Floats_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
 
 \#Station 4
 
@@ -554,7 +565,7 @@ t.plot / s.plot / fl.plot + plot_annotation(tag_levels = "a")
     ## Warning: Raster pixels are placed at uneven horizontal intervals and will be
     ## shifted. Consider using geom_tile() instead.
 
-![](Floats_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
+![](Floats_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
 
 # Station 6
 
@@ -634,7 +645,7 @@ t.plot / s.plot / fl.plot + plot_annotation(tag_levels = "a")
     ## Warning: Raster pixels are placed at uneven horizontal intervals and will be
     ## shifted. Consider using geom_tile() instead.
 
-![](Floats_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->
+![](Floats_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
 
 # Save data
 

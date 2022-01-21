@@ -180,8 +180,8 @@ NMDS plots attempt to show ordinal distances between samples as accurately as po
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
 
 nmds.plot <- plot_ordination(ps_min, nmds,  title = "NAAMES 2 Station 4 & NAAMES 3") +
-  geom_point(aes(fill = cruise_station, shape = dh), alpha = 0.7, size = 4) +
-  stat_ellipse(aes(group = cruise_station), color = "firebrick", level = 0.95, type = "t", size = 0.7) +
+  geom_point(aes(fill = Cruise, shape = dh), alpha = 0.7, size = 4) +
+  stat_ellipse(aes(group = Cruise), color = "firebrick", level = 0.95, type = "t", size = 0.7) +
   scale_shape_manual(values = c(21, 22)) +
   scale_fill_viridis_d(end = 0.7) +
   theme_linedraw(base_size = 16) +
@@ -223,7 +223,7 @@ nmds_n3.plot$layers <- nmds_n3.plot$layers[-1]
 ```
 
 ```{r fig.height=6, fig.width=23}
-nmds.plot + nmds_s4.plot + nmds_n3.plot +  
+nmds.plot + nmds_n3.plot + nmds_s4.plot +
   plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 22),
         plot.title = element_text(size = 18)) 
@@ -276,6 +276,12 @@ sample.tab2 <- sample.tab %>%
 
 ####
 
+
+dist <- vegdist(t(deseq_count_tab[ , colnames(deseq_count_tab)]), method = "bray")
+
+
+####
+
 subset_sample_IDs_n2s4 <-  row.names(sample.tab2)[sample.tab2$Cruise == "NAAMES 2" & sample.tab2$Station == 4]
 
 dist_n2s4 <- vegdist(t(deseq_count_tab[ , colnames(deseq_count_tab) %in% subset_sample_IDs_n2s4]), method = "bray")
@@ -316,17 +322,27 @@ Betadisper first calculates the average distance of group members to the group c
 In the function below: we are using the distance matrix to calculate the multivariate dispersions (variances; average distance to centroids). We then use group dispersions to perform an ANOVA test.
 
 ```{r}
+anova(betadisper(dist, sample.tab2$Cruise)) 
+```
+
+```{r}
 anova(betadisper(dist_n2s4, sample_info_tab_n2s4$dh)) 
 ```
 
 
 ```{r}
-anova(betadisper(dist_n2s4, sample_info_tab_n2s4$date)) 
+anova(betadisper(dist_n2s4, sample_info_tab_n2s4$datetime)) 
 ```
 
 ```{r}
-anova(betadisper(dist_n2s4_ez, sample_info_tab_n2s4_ez$date)) 
+anova(betadisper(dist_n2s4_ez, sample_info_tab_n2s4_ez$datetime)) 
 ```
+
+
+```{r}
+anova(betadisper(dist_n2s4_mz, sample_info_tab_n2s4_mz$datetime)) 
+```
+
 
 ```{r}
 anova(betadisper(dist_n3, sample_info_tab_n3$Station)) 
@@ -336,9 +352,6 @@ anova(betadisper(dist_n3, sample_info_tab_n3$Station))
 anova(betadisper(dist_n3, sample_info_tab_n3$dh)) 
 ```
 
-```{r}
-anova(betadisper(dist_n2s4_mz, sample_info_tab_n2s4_mz$datetime)) 
-```
 
 The ANOVA’s p-value is not significant meaning that group dispersions are homogenous (“Null hypothesis of no difference in dispersion between groups”)
 
@@ -347,6 +360,23 @@ The ANOVA’s p-value is not significant meaning that group dispersions are homo
 
 
 Adonis analyzes and partitions sums of squares using distance matrices. It can be seen as an ANOVA using distance matrices (analogous to MANOVA – multivariate analysis of variance). Therefore, it is used to test if two or more groups have similar compositions.
+
+```{r}
+adonis(dist~sample.tab2$Cruise)
+```
+
+
+```{r}
+adonis(dist_n2s4~sample_info_tab_n2s4$dh)
+```
+```{r}
+adonis(dist_n2s4~sample_info_tab_n2s4$datetime)
+```
+
+```{r}
+adonis(dist_n2s4_ez~sample_info_tab_n2s4_ez$datetime)
+```
+
 
 ```{r}
 adonis(dist_n2s4_mz~sample_info_tab_n2s4_mz$datetime)
@@ -382,6 +412,25 @@ richness <- estimate_richness(ps_min, measures = c("Chao1", "Shannon")) %>%
 ```{r}
 alphadiv <- left_join(richness, sample.tab %>% rownames_to_column(., var = "DNA_ID")) 
 ```
+
+```{r}
+alphadiv %>% filter(Cruise == "NAAMES 2") %>% select(Chao1, Shannon) %>% summary()
+```
+
+```{r}
+alphadiv %>% filter(Cruise == "NAAMES 2") %>% select(Chao1, Shannon) %>% mutate(sd_Chao = sd(Chao1, na.rm = T), sd_Shannon = sd(Shannon, na.rm = T)) %>%
+  select(contains("sd")) %>% unique()
+```
+
+```{r}
+alphadiv %>% filter(Cruise == "NAAMES 3", z >= 57) %>% select(Chao1, Shannon) %>% summary()
+```
+
+```{r}
+alphadiv %>% filter(Cruise == "NAAMES 3", z >= 57) %>% select(Chao1, Shannon) %>% mutate(sd_Chao = sd(Chao1, na.rm = T), sd_Shannon = sd(Shannon, na.rm = T)) %>%
+  select(contains("sd")) %>% unique()
+```
+
 
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 12, fig.align = "center"}
@@ -503,42 +552,27 @@ data <- ps_min %>%
   group_by(Cruise, Station, datetime, dh) %>% 
   dplyr::rename(copies = Abundance) %>% 
   mutate(total_copies_dh = sum(copies, na.rm = T),
-         mean_ba_dh = mean(ba, na.rm = T)) %>% 
+         mean_ba_dh = mean(ba, na.rm = T),
+         sd_ba_dh = sd(ba, na.rm = T)) %>% 
   ungroup() %>% 
   group_by(Cruise, Station, datetime, dh, Family) %>% 
   mutate(fam_copies_dh = sum(copies, na.rm = T),
          fam_relabund_dh = fam_copies_dh/total_copies_dh, 
-         fam_relacount_dh = fam_relabund_dh * mean_ba_dh, 
-         fam_normcount_dh = fam_relacount_dh/copy_num) %>% 
+         fam_relacount_dh = fam_relabund_dh * mean_ba_dh,
+         sd_fam_relacount_dh = fam_relabund_dh * sd_ba_dh,
+         fam_normcount_dh = fam_relacount_dh/copy_num,
+         sd_fam_normcount_dh = sd_fam_relacount_dh/copy_num) %>% 
   ungroup() %>% 
-  select(Cruise:z, Sample, OTU, Kingdom:Genus, copies, total_copies_dh:fam_normcount_dh, everything())
+  group_by(Cruise, Station, datetime, dh, Family, Genus) %>% 
+  mutate(gen_copies_dh = sum(copies, na.rm = T),
+         gen_relabund_dh = fam_copies_dh/total_copies_dh) %>% 
+  ungroup() %>% 
+  select(Cruise:z, Sample, OTU, Kingdom:Genus, copies, total_copies_dh:gen_relabund_dh,  everything())
 ```
 
 
 ```{r fig.height = 18, fig.width = 12}
-relabund.plot <- data %>% 
-  filter(Cruise == "NAAMES 2") %>% 
-  filter(fam_relabund_dh >= 0.001) %>% 
-  select(dh, plot_date, Family, fam_relabund_dh) %>% 
-  distinct() %>% 
-  mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
-  ggplot(aes(x = plot_date, y = reorder(Family, fam_relabund_dh))) +
-  geom_tile(aes(fill = fam_relabund_dh), color = "white") +
-  scale_fill_viridis_c(trans = 'log10') +
-  # scale_fill_viridis_b(option = "D",  trans = 'log10') +
-  geom_text(aes(label = round(fam_relabund_dh, 3), color = "black"), size = 4) +
-  scale_color_manual(values = c("white" = "white", "black" = "black")) +
-  labs(x = "", y = "Family", fill = "Relative Abundance") +
-  facet_grid(~factor(dh, levels = c("Euphotic", "Upper Mesopelagic"))) +
-  theme_linedraw(base_size = 16) +
-  theme(axis.text.y = element_text(size = 12), legend.position = "top") +
-   guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = "none") +
-  ggtitle("")
-```
-
-
-```{r fig.height = 18, fig.width = 12}
-count.plot <- data %>% 
+data %>% 
   filter(Cruise == "NAAMES 2") %>% 
   filter(fam_relabund_dh >= 0.001) %>% 
   filter(fam_normcount_dh > 0) %>% 
@@ -550,37 +584,34 @@ count.plot <- data %>%
   geom_tile(aes(fill = fam_normcount_dh), color = "white") +
   scale_fill_viridis_c(trans = 'log10') +
   # scale_fill_viridis_b(option = "D",  trans = 'log10') +
-  geom_text(aes(label = formatC(fam_normcount_dh, format = "e", digits = 1), color = "black"), size = 4) +
+  geom_text(aes(label = paste(round(fam_relabund_dh * 100, 1), "%"), color = "black"), size = 4) +
+  # geom_text(aes(label = formatC(fam_normcount_dh, format = "e", digits = 1), color = "black"), size = 4) +
   scale_color_manual(values = c("white" = "white", "black" = "black")) +
   labs(x = "", y = "Family", fill = expression(paste("Cells L"^-1))) +
   facet_grid(~factor(dh, levels = c("Euphotic", "Upper Mesopelagic"))) +
   theme_linedraw(base_size = 16) +
   theme(axis.text.y = element_text(size = 12), legend.position = "top") +
-   guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = "none") +
-  ggtitle("")
+   guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = "none") 
 ```
 
-
-```{r fig.height=16, fig.width=22, message=FALSE, warning=FALSE}
-relabund.plot + count.plot + plot_annotation(tag_levels = "a") 
-```
-
-
-```{r fig.height = 18, fig.width = 12}
-n3_relabund.plot <- data %>% 
+```{r fig.height = 26, fig.width = 12}
+data %>% 
   filter(Cruise == "NAAMES 3") %>% 
-  filter(fam_relabund_dh >= 0.001) %>% 
-  select(dh, Station, plot_date, Family, fam_relabund_dh) %>% 
+   filter(fam_relabund_dh > 0.01) %>%
+  # filter(gen_relabund_dh >= 0.001) %>% 
+  select(dh, Station, plot_date, Family, fam_relabund_dh, Genus, gen_relabund_dh) %>% 
   mutate_at(vars(Station), as.character) %>% 
   distinct() %>% 
-  mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
-  ggplot(aes(x = Station, y = reorder(Family, fam_relabund_dh))) +
-  geom_tile(aes(fill = fam_relabund_dh), color = "white") +
+  mutate(Family = ifelse(Family == "NA", "Unassigned", Family),
+         Genus = ifelse(Genus == "NA", "Unassigned", Genus),
+         plot_tax = paste(Family, Genus, sep = "_")) %>% 
+  ggplot(aes(x = Station, y = reorder(plot_tax, gen_relabund_dh))) +
+  geom_tile(aes(fill = gen_relabund_dh), color = "white") +
   scale_fill_viridis_c(trans = 'log10') +
   # scale_fill_viridis_b(option = "D",  trans = 'log10') +
-  geom_text(aes(label = round(fam_relabund_dh, 3), color = "black"), size = 4) +
+  geom_text(aes(label = round(gen_relabund_dh, 3), color = "black"), size = 4) +
   scale_color_manual(values = c("white" = "white", "black" = "black")) +
-  labs(x = "Station", y = "Family", fill = "Relative Abundance") +
+  labs(x = "Station", y = "Family_Genus", fill = "Relative Abundance") +
   facet_grid(~factor(dh, levels = c("Euphotic", "Upper Mesopelagic"))) +
   theme_linedraw(base_size = 16) +
   theme(axis.text.y = element_text(size = 12), legend.position = "top") +
@@ -588,78 +619,6 @@ n3_relabund.plot <- data %>%
   ggtitle("")
 ```
 
-
-```{r fig.height = 18, fig.width = 12}
-n3_count.plot <- data %>% 
-  filter(Cruise == "NAAMES 3") %>% 
-  filter(fam_relabund_dh >= 0.001) %>% 
-  filter(fam_normcount_dh > 0) %>% 
-  select(dh, plot_date, Station, Family, fam_relabund_dh, fam_normcount_dh) %>% 
-  mutate_at(vars(Station), as.character) %>% 
-  mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
-  filter(!Family == "Unassigned") %>% #don't know what good copy numbers would be
-  distinct() %>% 
-  ggplot(aes(x = Station, y = reorder(Family, fam_relabund_dh))) +
-  geom_tile(aes(fill = fam_normcount_dh), color = "white") +
-  scale_fill_viridis_c(trans = 'log10') +
-  # scale_fill_viridis_b(option = "D",  trans = 'log10') +
-  geom_text(aes(label = formatC(fam_normcount_dh, format = "e", digits = 1), color = "black"), size = 4) +
-  scale_color_manual(values = c("white" = "white", "black" = "black")) +
-  labs(x = "Station", y = "Family", fill = expression(paste("Cells L"^-1))) +
-  facet_grid(~factor(dh, levels = c("Euphotic", "Upper Mesopelagic"))) +
-  theme_linedraw(base_size = 16) +
-  theme(axis.text.y = element_text(size = 12), legend.position = "top") +
-   guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = "none") +
-  ggtitle("")
-```
-
-
-```{r fig.height=16, fig.width=22, message=FALSE, warning=FALSE}
-n3_relabund.plot + n3_count.plot + plot_annotation(tag_levels = "a") 
-```
-
-
-```{r fig.height=18, fig.width=22, message=FALSE, warning=FALSE}
-(data %>% 
-  filter(Cruise == "NAAMES 2") %>% 
-  filter(dh == "Upper Mesopelagic") %>%
-  filter(fam_relabund_dh >= 0.001) %>% 
-  filter(fam_normcount_dh > 0) %>% 
-  select(dh, plot_date, Family, fam_relabund_dh, fam_normcount_dh) %>% 
-  mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
-  filter(!Family == "Unassigned") %>% #don't know what good copy numbers would be
-  distinct() %>% 
-  ggplot(aes(x = plot_date, y = reorder(Family, fam_relabund_dh))) +
-  geom_tile(aes(fill = fam_normcount_dh), color = "white") +
-  scale_fill_viridis_c(trans = 'log10') +
-  # scale_fill_viridis_b(option = "D",  trans = 'log10') +
-  geom_text(aes(label = formatC(fam_normcount_dh, format = "e", digits = 1), color = "black"), size = 4) +
-  scale_color_manual(values = c("white" = "white", "black" = "black")) +
-  labs(x = "", y = "Family", fill = expression(paste("Cells L"^-1))) +
-  facet_grid(~factor(dh, levels = c("Euphotic", "Upper Mesopelagic"))) +
-  theme_linedraw(base_size = 16) +
-  theme(axis.text.y = element_text(size = 12), legend.position = "top") +
-  guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = "none") +
-  ggtitle("") ) +
-
-
-(data %>% 
-  filter(Cruise == "NAAMES 2") %>% 
-  filter(dh == "Upper Mesopelagic") %>%
-  filter(fam_relabund_dh >= 0.001) %>% 
-  select(dh, plot_date, datetime, decimaldate, Phylum, Order, Family, fam_relabund_dh, fam_normcount_dh) %>% 
-  mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
-  filter(!Family == "Unassigned") %>% #don't know what good copy numbers would be
-  distinct() %>% 
-  ggplot(aes(y = reorder(Family, fam_relabund_dh), x = fam_normcount_dh, fill = Phylum)) +
-  ggridges::geom_density_ridges2(scale = 3, alpha = 0.7, rel_min_height = 0.01) +
-  labs(x = expression(paste("Log Cells L"^-1)), y = "Family", fill = expression(paste("Phylum"))) +
-  scale_x_continuous(trans = 'log10') +
-  facet_grid(~factor(dh, levels = c("Euphotic", "Upper Mesopelagic"))) +
-  scale_fill_viridis_d() +
-  theme_linedraw(base_size = 16)) 
-
-```
 
 # Identify "typical"surface and mesopelagic microbes
 
@@ -669,8 +628,8 @@ We'll make our designation based on our well-stratified profiles from NAAMES 3.
 surf_bugs <- data %>% 
   filter(Cruise == "NAAMES 3", !Station == 3) %>% 
   filter(!dh == "Upper Mesopelagic") %>%
-  filter(fam_relabund_dh > 0.01) %>%
-  select(dh, datetime, Phylum, Order, Family, fam_relabund_dh, fam_normcount_dh) %>% 
+  filter(fam_relabund_dh >= 0.01) %>%
+  select(dh, datetime, Phylum, Order, Family, fam_relabund_dh, fam_normcount_dh, sd_fam_normcount_dh) %>% 
   mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
   filter(!Family == "Unassigned") %>% #don't know what good copy numbers would be
   distinct() %>% 
@@ -682,8 +641,8 @@ surf_bugs <- data %>%
 meso_bugs <- data %>% 
               filter(Cruise == "NAAMES 3") %>% 
               filter(dh == "Upper Mesopelagic") %>%
-              filter(fam_relabund_dh > 0.01) %>%
-              select(dh, datetime, Phylum, Order, Family, fam_relabund_dh, fam_normcount_dh) %>% 
+              filter(fam_relabund_dh >= 0.01) %>%
+             select(dh, datetime, Phylum, Order, Family, fam_relabund_dh, fam_normcount_dh, sd_fam_normcount_dh) %>% 
               mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
               filter(!Family == "Unassigned") %>% #don't know what good copy numbers would be
               distinct() %>% 
@@ -704,31 +663,67 @@ s4_meso_subset <- data %>%
   filter(dh == "Upper Mesopelagic") %>%
   filter(fam_relabund_dh >= 0.001) %>% 
   filter(Family %in% c(unique_meso_bugs) | Family == "SAR11_II") %>% 
-  select(dh, datetime, Phylum, Order, Family, Genus, fam_relabund_dh, fam_normcount_dh) %>% 
+  select(dh, datetime, Phylum, Order, Family, Genus, fam_relabund_dh, fam_normcount_dh, sd_fam_normcount_dh) %>% 
   mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
   filter(!Family == "Unassigned") %>% #don't know what good copy numbers would be
   distinct()  
   
 ```
 
+```{r}
+# stats <- s4_meso_subset %>% 
+#   select(datetime, Family, fam_relabund_dh, fam_normcount_dh) %>% 
+#   distinct() %>% 
+#   arrange(Family, datetime) %>% 
+#   dplyr::rename(rb = fam_relabund_dh,
+#          count = fam_normcount_dh) %>% 
+#   mutate(rb = rb * 100) %>% 
+#   group_by(Family) %>% 
+#    mutate(rb_change = dplyr::last(rb) - dplyr::first(rb),
+#          count_change = (dplyr::last(count) - dplyr::first(count))/dplyr::first(count))
+```
+
+```{r}
+# stats <- s4_meso_subset_ez %>% 
+#   select(datetime, Family, fam_relabund_dh, fam_normcount_dh) %>% 
+#   distinct() %>% 
+#   arrange(Family, datetime) %>% 
+#   dplyr::rename(rb = fam_relabund_dh,
+#          count = fam_normcount_dh) %>% 
+#   mutate(rb = rb * 100) %>% 
+#   group_by(Family) %>% 
+#   mutate(rb_change = dplyr::last(rb) - dplyr::first(rb),
+#          count_change = (dplyr::last(count) - dplyr::first(count))/dplyr::first(count))
+```
+
+```{r}
+# stats %>% 
+#   filter(Family != "SAR202_Clade2") %>%
+#   summary()
+```
+
+
 
 ```{r fig.height=12, fig.width= 26, message=FALSE, warning=FALSE}
 mesobugs.plot <- s4_meso_subset %>% 
   filter(!Family == "SAR202_Clade2") %>% #only appears once
-  ggplot(aes(x = datetime, y = fam_relabund_dh)) +
-  facet_wrap(~Family, dir = "v", scales = "free_y") +
+  ggplot(aes(x = datetime, y = fam_relabund_dh * 100)) +
+  facet_wrap(~Family, dir = "v", scales = "free_y", ncol = 2) +
   geom_line(size = 0.7) +
-  geom_point(shape = 21, size = 4, fill = "white", color = "black", stroke = 1) + 
-  geom_line(data = s4_meso_subset %>% filter(!Family == "SAR202_Clade2"), aes(x = datetime, y = fam_normcount_dh/10^9), color = "#377EB8") +
-  geom_point(data = s4_meso_subset %>% filter(!Family == "SAR202_Clade2"), aes(x = datetime, y = fam_normcount_dh/10^9), shape = 21, size = 6, fill = "#377EB8", color = "black", stroke = 1) + 
+  geom_point(shape = 21, size = 2, fill = "white", color = "black", stroke = 1) + 
+  geom_errorbar(data = s4_meso_subset %>% filter(!Family == "SAR202_Clade2"), aes(x = datetime, ymin = (fam_normcount_dh - sd_fam_normcount_dh)/10^7, ymax = (fam_normcount_dh + sd_fam_normcount_dh)/10^7), color = "#377EB8", width = 5000) +
+  geom_line(data = s4_meso_subset %>% filter(!Family == "SAR202_Clade2"), aes(x = datetime, y = fam_normcount_dh/10^7), color = "#377EB8") +
+  geom_point(data = s4_meso_subset %>% filter(!Family == "SAR202_Clade2"), aes(x = datetime, y = fam_normcount_dh/10^7), shape = 21, size = 2, fill = "#377EB8", color = "black", stroke = 1) + 
   scale_y_continuous(
     # Add a second axis and specify its features
-    sec.axis = sec_axis(~.*10^9, name = expression(paste("Cell Abundance, L"^-1)))
+    sec.axis = sec_axis(~.*10^7, name = expression(paste("Cell Abundance, L"^-1)), labels = function(x) format(x, scientific = TRUE))
   ) + 
   labs(x = "", y = expression(paste("Relative Abundance, %")), colour = "", fill = "") +
   theme_linedraw(base_size = 16) +
   theme(axis.title.y.right = element_text(color = "#377EB8"),
-        axis.text.y.right = element_text(color = "#377EB8"))
+        axis.text.y.right = element_text(color = "#377EB8"),
+        strip.text.x = element_text(size = 16)) +
+  ggtitle("Mesopelagic-associated Bacterioplankton in Upper Mesopelagic of N2S4")
 ```
 
 ```{r}
@@ -737,7 +732,7 @@ s4_meso_subset_ez <- data %>%
   filter(dh == "Upper Mesopelagic") %>%
   filter(fam_relabund_dh >= 0.001) %>% 
   filter(Family %in% c(unique_surf_bugs) | Family == "SAR11_Ia") %>% 
-  select(dh, datetime, Phylum, Order, Family, Genus, fam_relabund_dh, fam_normcount_dh) %>% 
+  select(dh, datetime, Phylum, Order, Family, Genus, fam_relabund_dh, fam_normcount_dh, sd_fam_normcount_dh) %>% 
   mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
   filter(!Family == "Unassigned") %>% #don't know what good copy numbers would be
   distinct()  
@@ -754,20 +749,23 @@ s4_meso_subset %>% select(Family, Genus) %>%
 
 ```{r fig.height=12, fig.width= 26, message=FALSE, warning=FALSE}
 surfbugs.plot <- s4_meso_subset_ez %>% 
-  ggplot(aes(x = datetime, y = fam_relabund_dh)) +
+  ggplot(aes(x = datetime, y = fam_relabund_dh * 100)) +
   facet_wrap(~Family, dir = "v", scales = "free_y") +
   geom_line(size = 0.7) +
-  geom_point(shape = 21, size = 4, fill = "white", color = "black", stroke = 1) + 
-  geom_line(data = s4_meso_subset_ez, aes(x = datetime, y = fam_normcount_dh/10^9), color = "#377EB8") +
-  geom_point(data = s4_meso_subset_ez, aes(x = datetime, y = fam_normcount_dh/10^9), shape = 21, size = 6, fill = "#377EB8", color = "black", stroke = 1) +
-  scale_y_continuous(
+  geom_point(shape = 21, size = 2, fill = "white", color = "black", stroke = 1) + 
+   geom_errorbar(data = s4_meso_subset_ez, aes(x = datetime, ymin = (fam_normcount_dh - sd_fam_normcount_dh)/10^7, ymax = (fam_normcount_dh + sd_fam_normcount_dh)/10^7), color = "#377EB8", width = 5000) +
+  geom_line(data = s4_meso_subset_ez, aes(x = datetime, y = fam_normcount_dh/10^7), color = "#377EB8") +
+  geom_point(data = s4_meso_subset_ez, aes(x = datetime, y = fam_normcount_dh/10^7), shape = 21, size = 2, fill = "#377EB8", color = "black", stroke = 1) +
+ scale_y_continuous(
     # Add a second axis and specify its features
-    sec.axis = sec_axis(~.*10^9, name = expression(paste("Cell Abundance, L"^-1)))
+    sec.axis = sec_axis(~.*10^7, name = expression(paste("Cell Abundance, L"^-1)), labels = function(x) format(x, scientific = TRUE))
   ) + 
   labs(x = "", y = expression(paste("Relative Abundance, %")), colour = "", fill = "") +
   theme_linedraw(base_size = 16) +
   theme(axis.title.y.right = element_text(color = "#377EB8"),
-        axis.text.y.right = element_text(color = "#377EB8"))
+        axis.text.y.right = element_text(color = "#377EB8"),
+        strip.text.x = element_text(size = 16)) +
+  ggtitle("Euphotic-associated Bacterioplankton in Upper Mesopelagic of N2S4")
 ```
 
 
@@ -779,21 +777,14 @@ s4_meso_subset_ez %>% select(Family, Genus) %>%
 ```
 
 
-```{r fig.height=17, fig.width=22, message=TRUE, warning=FALSE}
-surfbugs.plot / mesobugs.plot + plot_annotation(tag_levels = "a") 
-```
-
-
-
-```{r }
-levels <- c("SAR11_Ia", "Flavobacteriaceae", "ZD0405", "SAR86_clade", "SAR11_II", "SAR202_Clade1", "OM1_clade", "Salinisphaeraceae", "OCS116_clade")
+```{r fig.height=12, fig.width=29, message=TRUE, warning=FALSE}
+surfbugs.plot + mesobugs.plot + plot_annotation(tag_levels = "a") 
 ```
 
 
 ```{r}
 write_rds(data, "~/GITHUB/naames_multiday/Output/processed_16S.rds")
 ```
-
 
 
 

@@ -353,6 +353,29 @@ int_aou <- ctdNmld %>%
   mutate(time = as_hms(Date),
          plot_date = paste(month(Date, label = T), day(Date), format(parse_date_time(time, c('HMS', 'HM')), '%H:%M'))) %>% 
   select(Cruise:Date, time, plot_date, everything())
+
+int_npp <- npp %>% 
+  filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station %in% c(3,3.5,4,6)) %>% 
+  group_by(Cruise, Station, Date) %>% 
+  filter(z <= 75) %>% 
+  mutate(npp_ez = integrateTrapezoid(z, npp , type = "A")) %>% 
+  mutate_at(vars(contains("_ez")), round) %>% 
+  # depth normalize 
+  mutate_at(vars(contains("_ez")), funs(./75)) %>% 
+  select(Cruise, Station, Date, plot_date, contains("_ez"))  %>%
+  distinct() %>% 
+  ungroup() %>% 
+  left_join(., npp %>% 
+              filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & c(3,3.5,4,6)) %>% 
+              group_by(Cruise, Station, Date) %>% 
+              filter(z <= 200, z >= 100) %>% 
+              mutate(npp_mz = integrateTrapezoid(z, npp , type = "A")) %>% 
+              mutate_at(vars(contains("_mz")), round) %>% 
+              # depth normalize 
+              mutate_at(vars(contains("_mz")), funs(./100)) %>% 
+              select(Cruise, Station, Date, plot_date, contains("_mz"))  %>%
+              distinct() %>% 
+              ungroup() ) 
 ```
 
 # Error for integrations
@@ -2397,10 +2420,138 @@ int_err_aou <- int_aou %>%
     ## Joining, by = "CampCN"
     ## Joining, by = "CampCN"
 
+### npp
+
+#### ez
+
+``` r
+formula <- y ~ poly(x, 5, raw = TRUE)
+
+npp_ez <- npp %>% 
+  filter(z <= 75)
+
+
+for (var in unique(npp$plot_date)) {
+    print( 
+  ggplot(npp_ez[npp_ez$plot_date == var,], aes(x = z, y = npp)) + 
+  # facet_grid(~plot_date, scales = "free") +
+  geom_point() +
+  stat_smooth(method = "lm", formula = formula) +
+  stat_poly_eq(formula = formula, aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
+                     parse = TRUE,label.x.npc = "right", angle = 0, hjust = 1) 
+      )
+}
+```
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-28-1.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-2.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-3.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-4.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-5.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-6.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-7.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-8.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-9.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-10.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-11.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-12.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-13.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-14.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-15.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-16.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-17.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-18.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-19.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-20.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-21.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-22.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-23.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-24.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-25.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-26.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-27.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-28.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-29.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-30.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-31.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-32.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-28-33.png)<!-- -->
+
+#### mz
+
+``` r
+formula <- y ~ poly(x, 5, raw = TRUE)
+
+npp_mz <- npp %>% 
+  filter(z > 75 & z <= 200)
+
+
+for (var in unique(npp_mz$plot_date)) {
+    print( 
+  ggplot(npp_mz[npp_mz$plot_date == var,], aes(x = z, y = npp)) + 
+  # facet_grid(~plot_date, scales = "free") +
+  geom_point() +
+  stat_smooth(method = "lm", formula = formula) +
+  stat_poly_eq(formula = formula, aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
+                     parse = TRUE,label.x.npc = "right", angle = 0, hjust = 1) 
+      )
+}
+```
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-2.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-3.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-4.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-5.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-6.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-7.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-8.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-9.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-10.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-11.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-12.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-13.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-14.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-15.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-16.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-17.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-18.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-19.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-20.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-21.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-22.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-23.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-24.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-25.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-26.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-27.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-28.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-29.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-30.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-31.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-32.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-29-33.png)<!-- -->
+
+#### calculate error
+
+based on 5th polynomial fit for ez and mz
+
+``` r
+lm_npp_ez <- npp %>% 
+  select(plot_date, z, npp) %>% 
+  filter(z < 75)
+
+
+npp_coef_ez <- lm_npp_ez %>%
+  group_by(plot_date) %>%
+  do({
+    fit = lm(npp ~ poly(z, 5, raw = T), .)
+    int = fit$coefficients[[1]]
+    coef1 = fit$coefficients[[2]]
+    coef2 = fit$coefficients[[3]]
+    coef3 = fit$coefficients[[4]]
+    coef4 = fit$coefficients[[5]]
+    coef5 = fit$coefficients[[6]]
+    data.frame(., int, coef1, coef2, coef3, coef4, coef5)
+  }) %>% 
+  mutate(coef1_2D = coef2 * 2,
+         coef2_2D = (coef3 * 3) * 2,
+         coef3_2D = (coef4 * 4) * 3,
+         coef4_2D = (coef5 * 5) * 4) %>% 
+  select(plot_date, z, npp, contains("2D")) %>% 
+  mutate(k = abs(coef1_2D + (coef2_2D * max(z)) + (coef3_2D * max(z)^2) + (coef4_2D * max(z)^3)) ,
+         n = length(z) - 1,
+         err = (k * (max(z) - min(z))^3) / (12 * n^2),
+         depthNerr = err / (max(z) - min(z))) %>% 
+  ungroup() %>% 
+  select(plot_date, err, depthNerr) %>% 
+  rename(err_ez = err, 
+         depthNerr_ez = depthNerr) %>% 
+  distinct() 
+```
+
+``` r
+lm_npp_mz <- npp %>% 
+  filter(z > 75 & z <= 200)
+
+npp_coef_mz <- lm_npp_mz %>%
+  group_by(plot_date) %>%
+  do({
+    fit = lm(npp ~ poly(z, 5, raw = T), .)
+    int = fit$coefficients[[1]]
+    coef1 = fit$coefficients[[2]]
+    coef2 = fit$coefficients[[3]]
+    coef3 = fit$coefficients[[4]]
+    coef4 = fit$coefficients[[5]]
+    coef5 = fit$coefficients[[6]]
+    data.frame(., int, coef1, coef2, coef3, coef4, coef5)
+  }) %>% 
+  mutate(coef1_2D = coef2 * 2,
+         coef2_2D = (coef3 * 3) * 2,
+         coef3_2D = (coef4 * 4) * 3,
+         coef4_2D = (coef5 * 5) * 4) %>% 
+  select(plot_date, z, npp, contains("2D")) %>% 
+  mutate(k = abs(coef1_2D + (coef2_2D * max(z)) + (coef3_2D * max(z)^2) + (coef4_2D * max(z)^3)) ,
+         n = length(z) - 1,
+         err = (k * (max(z) - min(z))^3) / (12 * n^2),
+         depthNerr = err / (max(z) - min(z))) %>% 
+  ungroup() %>% 
+  select(plot_date, err, depthNerr) %>% 
+  rename(err_mz = err, 
+         depthNerr_mz = depthNerr) %>% 
+  distinct() 
+```
+
+``` r
+int_err_npp <- int_npp %>% 
+  left_join(., npp_coef_ez) %>% 
+  left_join(., npp_coef_mz) 
+```
+
+    ## Joining, by = "plot_date"
+    ## Joining, by = "plot_date"
+
 ## Save Data
 
 ``` r
 saveRDS(int_err_bf, "~/GITHUB/naames_multiday/Output/integrated_bf.rds")
 saveRDS(int_err_aou, "~/GITHUB/naames_multiday/Output/integrated_aou.rds")
 saveRDS(int_err_phyto, "~/GITHUB/naames_multiday/Output/integrated_phyto.rds")
+saveRDS(int_err_npp, "~/GITHUB/naames_multiday/Output/integrated_npp.rds")
 ```

@@ -41,7 +41,12 @@ phyto <- read_rds("~/GITHUB/naames_multiday/Output/integrated_phyto.rds") %>%
 
 aou <- read_rds("~/GITHUB/naames_multiday/Output/integrated_aou.rds") %>% 
   filter(Cruise == "AT34", !plot_date %in% c("May 24 02:30", "May 27 06:07"))
+
+npp <- read_rds("~/GITHUB/naames_multiday/Output/integrated_npp.rds") %>% 
+  filter(Cruise == "AT34")
 ```
+
+
 
 # Plot Data
 
@@ -267,10 +272,39 @@ aou.plot <- aou %>%
 ```
 
 
+## NPP
 
-```{r combine plots, echo=FALSE, fig.height=14, fig.width=16, message=FALSE, warning=FALSE}
+```{r npp plot, echo = FALSE, warning = FALSE, message = FALSE}
+npp.plot <- npp %>% 
+  select(Date, npp_ez, npp_mz, depthNerr_ez, depthNerr_mz) %>% 
+  drop_na(npp_ez) %>% 
+  pivot_longer(c(npp_ez, npp_mz), names_to = "dh", values_to = "npp" ) %>% 
+  select(Date, dh, npp) %>% 
+  mutate(dh = ifelse(dh == "npp_ez", "Euphotic", "Upper Mesopelagic")) %>% 
+  left_join(., npp %>% 
+              select(Date, npp_ez, npp_mz, depthNerr_ez, depthNerr_mz) %>% 
+              drop_na(npp_ez) %>% 
+              pivot_longer(c(depthNerr_ez, depthNerr_mz), names_to = "dh", values_to = "err") %>% 
+              select(Date, dh, err) %>% 
+              mutate(dh = ifelse(dh == "depthNerr_ez", "Euphotic", "Upper Mesopelagic"))) %>% 
+  ggplot(aes(x = Date, y = npp, color = dh, fill = dh)) +
+  geom_line(size = 0.5, alpha = 0.7) +
+  geom_errorbar(aes(ymin = npp - err, ymax = npp + err), width = 0.05) +
+  geom_point(color = "black", shape = 21, size = 3, alpha = 0.7) +
+  labs(x = "", y = expression(paste("NPP, µmol C L"^-1, " d"^-1)), color = "", fill = "") +
+  scale_fill_viridis_d(end = 0.7) +
+  scale_color_viridis_d(end = 0.7) +
+  guides(color = F, shape = F, linetype = F) +
+  theme_linedraw(base_size = 16) 
+  
 
-patchwork <-  phyto.plot + chl.plot + ba.plot +  bcd.plot + n.plot + aou.plot + doc.plot + tdaa.plot
+```
+
+
+
+```{r combine plots, echo=FALSE, fig.height=16, fig.width=16, message=FALSE, warning=FALSE}
+
+patchwork <-  chl.plot + phyto.plot + n.plot + aou.plot +  ba.plot + bcd.plot + doc.plot + tdaa.plot
 
 patchwork +  
   plot_layout(guides = 'collect', ncol = 2) +

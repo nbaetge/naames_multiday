@@ -58,6 +58,68 @@ custom.shapes <- c("NAAMES 2 Station 4" = 21, "NAAMES 3 Station 3" = 22, "NAAMES
 ```
 
 
+```{r}
+n2_bf <- read_rds("~/GITHUB/naames_multiday/Input/bottle_data.rds") %>% 
+  filter(Cruise == "AT34", Station == 4, !plot_date %in% c("May 24 02:30", "May 27 06:07"), z > 0, z <= 200) 
+
+n2_phyto <- read_rds("~/GITHUB/naames_multiday/Input/phyto_data.rds") %>% 
+   filter(Cruise == "AT34", station == "S4", !plot_date %in% c("May 24 02:30", "May 27 06:07"), depth > 0, depth <= 200) 
+  
+n2_ctd <- read_rds("~/GITHUB/naames_multiday/Input/ctd_data.rds") %>% 
+   filter(Cruise == "AT34", Station == 4, !plot_date %in% c("May 24 02:30", "May 27 06:07"), z > 0, z <= 200) 
+
+
+n2_npp <- read_rds("~/GITHUB/naames_multiday/Input/npp_data.rds") %>% 
+   filter(Cruise == "AT34", Station == 4, !plot_date %in% c("May 24 02:30", "May 27 06:07"), z > 0, z <= 200) 
+```
+
+
+```{r}
+# bf %>% filter(z <= 57) %>% select(leu_incorp) %>% summary
+```
+
+
+```{r}
+# npp %>% filter(z <= 57) %>% select(npp) %>% mutate(sd = sd(npp, na.rm = T)) %>% 
+#   select(sd) %>% unique()
+```
+
+
+```{r}
+ # n2_npp %>% filter(z <= 77) %>% select(npp) %>% summary
+```
+
+
+
+```{r}
+# n2_npp %>% filter(z <= 77) %>% select(npp) %>% mutate(sd = sd(npp, na.rm = T)) %>% 
+#   select(sd) %>% unique()
+```
+
+```{r}
+# npp %>% filter(z >= 57) %>% select(npp) %>% summary
+```
+
+
+```{r}
+# npp %>% filter(z >= 57) %>% select(npp) %>% mutate(sd = sd(npp, na.rm = T)) %>% 
+#   select(sd) %>% unique()
+```
+
+
+```{r}
+ # n2_bf %>% filter(z >= 77, Date == "2016-05-26") %>% select(leu_incorp) %>% summary
+```
+
+
+
+```{r}
+# n2_bf %>% filter(z >= 77, Date == "2016-05-26") %>% select(leu_incorp) %>%  mutate(sd = sd(leu_incorp, na.rm = T)) %>%
+#   select(sd) %>% unique()
+```
+
+
+
 ## Plot Profiles 
 
 ### Chl

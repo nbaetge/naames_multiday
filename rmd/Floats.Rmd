@@ -156,6 +156,12 @@ floatsNmldsNezds <- floatsNmlds %>%
 
 summary(floatsNmldsNezds$ezd)  
 ```
+```{r}
+test <- floatsNmldsNezds %>% 
+  filter(Cruise == "AT38") 
+
+summary(test$ezd)
+```
 
 
 # T-S plots
@@ -165,6 +171,7 @@ We'll make T-S plots from the floats and overlay the data from the ship collecte
 ```{r}
 ship_ctd <- read_rds("~/GITHUB/naames_multiday/Input/ctd_data.rds") %>% 
   filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station %in% c(3,3.5,4,6)) %>% 
+  mutate(ave_temp_c = ifelse(Station == 3.5, temp0_c, ave_temp_c)) %>% 
   select(CampCN:Station, `Longitude [degrees_east]`, lat, mld, pres_db, ave_temp_c, ave_sal_psu, fl_mg_m3) %>% 
   rename(datetime = Date, lon = `Longitude [degrees_east]`, p = pres_db, s = ave_sal_psu, t = ave_temp_c, MLD = mld, fchl = fl_mg_m3) %>% 
   mutate( potT = swTheta(salinity = s, temperature = t, pressure = p),
@@ -267,7 +274,7 @@ s6.ts <- PlotSvalbard::ts_plot(s6_subset, temp_col = "potT", sal_col = "s", colo
         legend.text = element_text(size = 12),
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
         legend.spacing.y = unit(0, "pt")) +
-  ggtitle("Ship and Float")
+  ggtitle("Ship & Floats n0846 & n0847")
 
 s6_subset_ship <- s6_subset %>% filter(type == "Ship")
 
@@ -284,7 +291,7 @@ s6.ts2 <- PlotSvalbard::ts_plot(s6_subset_ship, temp_col = "potT", sal_col = "s"
         legend.text = element_text(size = 12),
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
         legend.spacing.y = unit(0, "pt")) +
-  ggtitle("Ship & Floats n0846 & n0847")
+  ggtitle("Ship")
 
 
 s6_subset_float <- s6_subset %>% filter(type == "Float")

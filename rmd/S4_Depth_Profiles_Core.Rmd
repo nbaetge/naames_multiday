@@ -40,7 +40,6 @@ phyto <- read_rds("~/GITHUB/naames_multiday/Input/phyto_data.rds") %>%
 
 ```
 
-
 ## Plot Profiles 
 
 ### Chl
@@ -298,7 +297,7 @@ leu.plot <-  bf %>%
 
 ```{r combine plots, echo = FALSE, warning = FALSE, message = FALSE, fig.height = 20, fig.width = 23}
 
-patchwork <-  n.plot + (chl.plot ) + (phyto.plot ) + (npp.plot  ) + (aou.plot)  + (ba.plot + theme(legend.background = element_rect(size = 0.2, linetype = "solid", color = "black", fill = "transparent"), legend.box.background = element_rect(fill = 'transparent'))) + (leu.plot ) + (doc.plot) + (tdaa.plot)
+patchwork <-  n.plot + (chl.plot ) + (phyto.plot ) +  (leu.plot )  + (aou.plot) + (doc.plot) + (npp.plot  ) + (ba.plot + theme(legend.background = element_rect(size = 0.2, linetype = "solid", color = "black", fill = "transparent"), legend.box.background = element_rect(fill = 'transparent')))  + (tdaa.plot)
 
 patchwork +  
   # plot_layout(guides = 'collect') +

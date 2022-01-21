@@ -46,6 +46,9 @@ phyto <- read_rds("~/GITHUB/naames_multiday/Output/integrated_phyto.rds") %>%
 ``` r
 aou <- read_rds("~/GITHUB/naames_multiday/Output/integrated_aou.rds") %>% 
   filter(Cruise == "AT34", !plot_date %in% c("May 24 02:30", "May 27 06:07"))
+
+npp <- read_rds("~/GITHUB/naames_multiday/Output/integrated_npp.rds") %>% 
+  filter(Cruise == "AT34")
 ```
 
 # Plot Data
@@ -112,5 +115,7 @@ chl.plot <- bf %>%
 ## TDAA
 
 ## AOU
+
+## NPP
 
 ![](S4_Integration_Plots_Core_files/figure-gfm/combine%20plots-1.png)<!-- -->
