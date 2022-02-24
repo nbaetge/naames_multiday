@@ -46,6 +46,10 @@ npp <- read_rds("~/GITHUB/naames_multiday/Output/integrated_npp.rds") %>%
   filter(Cruise == "AT34")
 ```
 
+```{r}
+bf2 <- read_rds("~/GITHUB/naames_multiday/Output/integrated_bf.rds") %>% 
+  filter(!Cruise == "AT34")
+```
 
 
 # Plot Data
@@ -125,26 +129,26 @@ ba.plot <- bf %>%
 ```
 
 
-## BCD
+## BP
 
-```{r bcd plot, echo = FALSE, warning = FALSE, message = FALSE}
-bcd.plot <- bf %>% 
-  select(datetime, bcd_ez, bcd_mz, bcd_depthNerr_ez, bcd_depthNerr_mz) %>% 
-  drop_na(bcd_ez) %>% 
-  pivot_longer(c(bcd_ez, bcd_mz), names_to = "dh", values_to = "bcd" ) %>% 
-  select(datetime, dh, bcd) %>% 
-  mutate(dh = ifelse(dh == "bcd_ez", "Euphotic", "Upper Mesopelagic")) %>% 
+```{r bp plot, echo = FALSE, warning = FALSE, message = FALSE}
+bp.plot <- bf %>% 
+  select(datetime, bp_ez, bp_mz, bp_depthNerr_ez, bp_depthNerr_mz) %>% 
+  drop_na(bp_ez) %>% 
+  pivot_longer(c(bp_ez, bp_mz), names_to = "dh", values_to = "bp" ) %>% 
+  select(datetime, dh, bp) %>% 
+  mutate(dh = ifelse(dh == "bp_ez", "Euphotic", "Upper Mesopelagic")) %>% 
   left_join(., bf %>% 
-              select(datetime, bcd_ez, bcd_mz, bcd_depthNerr_ez, bcd_depthNerr_mz) %>% 
-              drop_na(bcd_ez) %>% 
-              pivot_longer(c(bcd_depthNerr_ez, bcd_depthNerr_mz), names_to = "dh", values_to = "err") %>% 
+              select(datetime, bp_ez, bp_mz, bp_depthNerr_ez, bp_depthNerr_mz) %>% 
+              drop_na(bp_ez) %>% 
+              pivot_longer(c(bp_depthNerr_ez, bp_depthNerr_mz), names_to = "dh", values_to = "err") %>% 
               select(datetime, dh, err) %>% 
-              mutate(dh = ifelse(dh == "bcd_depthNerr_ez", "Euphotic", "Upper Mesopelagic"))) %>% 
-  ggplot(aes(x = datetime, y = bcd/10^3, color = dh, fill = dh)) +
+              mutate(dh = ifelse(dh == "bp_depthNerr_ez", "Euphotic", "Upper Mesopelagic"))) %>% 
+  ggplot(aes(x = datetime, y = bp, color = dh, fill = dh)) +
   geom_line(size = 0.5, alpha = 0.7) +
-  geom_errorbar(aes(ymin = bcd/10^3 - err/10^3, ymax = bcd/10^3 + err/10^3), width = 5000) +
+  geom_errorbar(aes(ymin = bp - err, ymax = bp + err), width = 5000) +
   geom_point(color = "black", shape = 21, size = 3, alpha = 0.7) +
-  labs(x = "", y = expression(paste("BCD, µmol C L"^"-1", "d"^-1)), color = "", fill = "") +
+  labs(x = "", y = expression(paste("BP, nmol C L"^"-1", "d"^-1)), color = "", fill = "") +
   scale_fill_viridis_d(end = 0.7) +
   scale_color_viridis_d(end = 0.7) +
   guides(color = F, fill = F, shape = F, linetype = F) +
@@ -239,6 +243,7 @@ tdaa.plot <- bf %>%
   theme_linedraw(base_size = 16) 
 
 
+wilcox.test(c(0.19, 0.23, 0.15), c( 0.19, 0.11, 0.13), var.equal = TRUE)
 ```
 
 
@@ -304,7 +309,7 @@ npp.plot <- npp %>%
 
 ```{r combine plots, echo=FALSE, fig.height=16, fig.width=16, message=FALSE, warning=FALSE}
 
-patchwork <-  chl.plot + phyto.plot + n.plot + aou.plot +  ba.plot + bcd.plot + doc.plot + tdaa.plot
+patchwork <-  chl.plot + phyto.plot + n.plot + aou.plot +  ba.plot + bp.plot + doc.plot + tdaa.plot
 
 patchwork +  
   plot_layout(guides = 'collect', ncol = 2) +

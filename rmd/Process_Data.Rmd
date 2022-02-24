@@ -270,10 +270,10 @@ Integrations for EZ (0-75 m), MZ (100 - 200 m)
 
 int_bf <- bf %>% 
   filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station %in% c(3, 3.5, 4, 6)) %>% 
-  select(Cruise, Station, datetime, CampCN, mld, z, bcd, ba, doc, n, chl, tdaa, tdaa_c) %>% 
+  select(Cruise, Station, datetime, CampCN, mld, z, bp, ba, doc, n, chl, tdaa, tdaa_c) %>% 
   filter(z <= 75) %>% 
   group_by(datetime, CampCN) %>% 
-  mutate_at(vars(bcd, ba, doc, n, chl, tdaa, tdaa_c), list(ez = ~integrateTrapezoid(z, ., type = "A"))) %>% 
+  mutate_at(vars(bp, ba, doc, n, chl, tdaa, tdaa_c), list(ez = ~integrateTrapezoid(z, ., type = "A"))) %>% 
    mutate_at(vars(contains("_ez")), round) %>% 
   # depth normalize 
   mutate_at(vars(contains("_ez")), funs(./75)) %>% 
@@ -285,11 +285,11 @@ int_bf <- bf %>%
   ungroup() %>% 
   left_join(., bf %>% 
               filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station %in% c(3, 3.5, 4, 6)) %>%
-              select(Cruise, Station, datetime, CampCN, mld, z,  bcd, ba, doc, n, chl, tdaa,
+              select(Cruise, Station, datetime, CampCN, mld, z,  bp, ba, doc, n, chl, tdaa,
                      tdaa_c) %>% 
               filter(z > 75 & z <= 200) %>% 
               group_by(datetime, CampCN) %>% 
-              mutate_at(vars(bcd, ba, doc, n, chl, tdaa, tdaa_c), list(mz = ~integrateTrapezoid(z, ., type = "A"))) %>% 
+              mutate_at(vars(bp, ba, doc, n, chl, tdaa, tdaa_c), list(mz = ~integrateTrapezoid(z, ., type = "A"))) %>% 
               mutate_at(vars(contains("_mz")), round) %>% 
               # depth normalize 
               mutate_at(vars(contains("_mz")), funs(./100)) %>% 
@@ -372,7 +372,7 @@ int_npp <- npp %>%
 
 # Error for integrations
 
-assess best fits for profiles of phytoplankton cells, chl a, bacterioplankton, bcd, n, aou, doc, and tdaa
+assess best fits for profiles of phytoplankton cells, chl a, bacterioplankton, bp, n, aou, doc, and tdaa
 
 ## look at fits for all data
 
@@ -505,7 +505,7 @@ int_err_phyto <- int_phyto %>%
 ```
 
 
-###  chl a, ba, bcd, n, doc, and tdaa
+###  chl a, ba, bp, n, doc, and tdaa
 
 #### ez
 
@@ -548,11 +548,11 @@ for (var in unique(ba_ez$datetime)) {
 ```
 
 ```{r}
-bcd_ez <- bf_ez %>% 
-  drop_na(bcd)
-for (var in unique(bcd_ez$datetime)) {
+bp_ez <- bf_ez %>% 
+  drop_na(bp)
+for (var in unique(bp_ez$datetime)) {
     print( 
-  ggplot(bcd_ez[bcd_ez$datetime == var,], aes(x = z, y = bcd)) + 
+  ggplot(bp_ez[bp_ez$datetime == var,], aes(x = z, y = bp)) + 
   # facet_grid(~plot_date, scales = "free") +
   geom_point() +
   stat_smooth(method = "lm", formula = formula) +
@@ -653,11 +653,11 @@ for (var in unique(ba_mz$datetime)) {
 ```
 
 ```{r}
-bcd_mz <- bf_mz %>% 
-  drop_na(bcd)
-for (var in unique(bcd_mz$datetime)) {
+bp_mz <- bf_mz %>% 
+  drop_na(bp)
+for (var in unique(bp_mz$datetime)) {
     print( 
-  ggplot(bcd_mz[bcd_mz$datetime == var,], aes(x = z, y = bcd)) + 
+  ggplot(bp_mz[bp_mz$datetime == var,], aes(x = z, y = bp)) + 
   # facet_grid(~plot_date, scales = "free") +
   geom_point() +
   stat_smooth(method = "lm", formula = formula) +
@@ -725,7 +725,7 @@ based on 3rd polynomial fit for ez and 2nd polynomial fit for mz
 ```{r}
 
 lm_bf_ez <-  bf_ez %>% 
-  select(z, datetime, doc, tdaa, n, chl, ba, bcd) %>% 
+  select(z, datetime, doc, tdaa, n, chl, ba, bp) %>% 
   filter(z < 75)
 
 bf_coef_ez <- 
@@ -826,10 +826,10 @@ left_join(.,   lm_bf_ez %>%
 ) %>% 
   
  left_join(., lm_bf_ez %>%
-  drop_na(bcd) %>% 
+  drop_na(bp) %>% 
   group_by(datetime) %>%
   do({
-    fit = lm(bcd ~ poly(z, 3, raw = T), .)
+    fit = lm(bp ~ poly(z, 3, raw = T), .)
     coef2 = fit$coefficients[[3]]
     coef3 = fit$coefficients[[4]]
     data.frame(., coef2, coef3)
@@ -843,8 +843,8 @@ left_join(.,   lm_bf_ez %>%
          depthNerr = err / (max(z) - min(z))) %>% 
   ungroup() %>% 
   select(datetime, err, depthNerr) %>% 
-  rename(bcd_err_ez = err, 
-         bcd_depthNerr_ez = depthNerr) %>% 
+  rename(bp_err_ez = err, 
+         bp_depthNerr_ez = depthNerr) %>% 
   distinct() 
 ) %>% 
   
@@ -876,7 +876,7 @@ left_join(.,   lm_bf_ez %>%
 
 ```{r}
 lm_bf_mz <-  bf_mz %>% 
-  select(z, datetime, doc, tdaa, n, chl, ba, bcd) %>% 
+  select(z, datetime, doc, tdaa, n, chl, ba, bp) %>% 
   filter(z > 75 & z <= 200)
 
 bf_coef_mz <- 
@@ -969,10 +969,10 @@ left_join(.,   lm_bf_mz %>%
 ) %>% 
   
  left_join(., lm_bf_mz %>%
-  drop_na(bcd) %>% 
+  drop_na(bp) %>% 
   group_by(datetime) %>%
   do({
-    fit = lm(bcd ~ poly(z, 2, raw = T), .)
+    fit = lm(bp ~ poly(z, 2, raw = T), .)
     coef2 = fit$coefficients[[3]]
     data.frame(., coef2)
   }) %>% 
@@ -984,8 +984,8 @@ left_join(.,   lm_bf_mz %>%
          depthNerr = err / (max(z) - min(z))) %>% 
   ungroup() %>% 
   select(datetime, err, depthNerr) %>% 
-  rename(bcd_err_mz = err, 
-         bcd_depthNerr_mz = depthNerr) %>% 
+  rename(bp_err_mz = err, 
+         bp_depthNerr_mz = depthNerr) %>% 
   distinct() 
 ) %>% 
   

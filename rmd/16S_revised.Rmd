@@ -17,6 +17,7 @@ library(oce)
 library(ggpubr)
 library(patchwork)
 library(phyloseq)
+library(rstatix)
 ```
 
 # Import Data 
@@ -40,7 +41,7 @@ tax.tab <- as.matrix(read.table("~/GITHUB/naames_multiday/Input/16s/HetV1TUtax.t
 sample.tab <- read_rds("~/GITHUB/naames_multiday/Input/bottle_data.rds") %>% 
   drop_na(DNA_ID) %>% 
   filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station %in% c(3, 3.5, 4, 6))   %>% 
-  filter(!plot_date %in% c("May 24 02:30", "May 27 06:07", "Sep 14 15:33", "Sep 15 03:04", "Sep 15 15:20", "Sep 16 03:04", "Sep 16 04:50", "Sep 16 07:26", "Sep 8 03:08", "Sep 8 03:08",  "Sep 8 15:30", "Sep 11 03:07"), z <= 200) %>% 
+    filter(!plot_date %in% c("May 24 02:30", "May 27 06:07", "Sep 14 15:33", "Sep 15 03:04", "Sep 15 15:20", "Sep 16 03:04", "Sep 16 04:50", "Sep 16 07:26", "Sep 8 03:08", "Sep 8 03:08",  "Sep 8 15:30", "Sep 11 03:07"), z <= 200) %>% #FILTER OUT CASTS THAT HAVE DIFFERENT T-S PROPERTIES IN UPPER MESO
   mutate(dh = ifelse(Cruise == "AT34" & z < 100, "Euphotic", "Upper Mesopelagic"),
          dh = ifelse(Cruise == "AT38" & z < 75, "Euphotic", dh),
          Cruise = ifelse(Cruise == "AT34", "NAAMES 2", "NAAMES 3"),
@@ -127,24 +128,27 @@ ps_min <-  rarefy_even_depth(sub_ps, sample.size = smin, rngseed = 532898)
 
 We can also subset the N2 and the N2S4 data here
 
+```{r}
+s4n3 <- ps_min %>% 
+  subset_samples(Cruise == "NAAMES 3" & z %in% c(5, 25, 100, 150, 200) | Cruise == "NAAMES 2" )
+```
+
 
 ```{r}
 s4 <- ps_min %>% 
   subset_samples(Cruise == "NAAMES 2" & Station == 4)
 ```
 
-
 ```{r}
-s6 <- ps_min %>% 
-  subset_samples(Cruise == "NAAMES 3" & Station == 6)
+s4_meso <- s4 %>% 
+  subset_samples(dh == "Upper Mesopelagic" )
 ```
+
 
 ```{r}
 n3 <- ps_min %>% 
-  subset_samples(Cruise == "NAAMES 3")
+  subset_samples(Cruise == "NAAMES 3" & z %in% c(5, 25, 100, 150, 200) & !Cruise == "NAAMES 2" )
 ```
-
-
 
 ## Unconstrained Ordination
 
@@ -157,7 +161,7 @@ Let’s try an NMDS. For NMDS plots it’s important to set a seed since the sta
 ```{r}
 set.seed(8)
 # Ordinate
-nmds <- ordinate(ps_min, method = "NMDS",  distance = "bray") # stress = 0.07
+nmds <- ordinate(s4n3, method = "NMDS",  distance = "bray") # stress = 0.05
 ```
 
 
@@ -179,13 +183,13 @@ NMDS plots attempt to show ordinal distances between samples as accurately as po
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
 
-nmds.plot <- plot_ordination(ps_min, nmds,  title = "NAAMES 2 Station 4 & NAAMES 3") +
-  geom_point(aes(fill = Cruise, shape = dh), alpha = 0.7, size = 4) +
-  stat_ellipse(aes(group = Cruise), color = "firebrick", level = 0.95, type = "t", size = 0.7) +
-  scale_shape_manual(values = c(21, 22)) +
+nmds.plot <- plot_ordination(s4n3, nmds,  title = "NAAMES 2 Station 4 & NAAMES 3") +
+  geom_point(aes(fill = as_factor(Station), shape = Cruise), alpha = 0.7, size = 4) +
+  stat_ellipse(aes(group = interaction(Cruise, dh)), color = "firebrick", level = 0.95, type = "t", size = 0.7) +
+  scale_shape_manual(values = c(4, 21)) +
   scale_fill_viridis_d(end = 0.7) +
   theme_linedraw(base_size = 16) +
-  guides( shape = guide_legend(title = "Depth Horizon"), color = F,  linetype = guide_legend(title = "Depth Horizon"), fill = guide_legend(title = "", override.aes = list(shape = 21))) 
+  guides( shape = guide_legend(title = "Cruise"), color = F, fill = guide_legend(title = "Station")) 
 #removing one of the plotting layers (there are points within points)
 nmds.plot$layers <- nmds.plot$layers[-1]
 ```
@@ -195,10 +199,11 @@ nmds.plot$layers <- nmds.plot$layers[-1]
 
 nmds_s4.plot <- plot_ordination(s4, nmds_s4,  title = "NAAMES 2 Station 4") +
   geom_point(aes(fill = plot_date, shape = dh), alpha = 0.7, size = 4) +
-  stat_ellipse(aes(group = plot_date), level = 0.95, color = "firebrick", type = "t") +
+  stat_ellipse(aes(group = plot_date, color = plot_date), level = 0.95,  type = "t") +
   scale_shape_manual(values = c(21, 22)) +
   # scale_color_manual(values = custom.colors) +
   scale_fill_viridis_d(end = 0.7) +
+    scale_color_viridis_d(end = 0.7) +
   theme_linedraw(base_size = 16) +
   guides( shape = guide_legend(title = "Depth Horizon"), color = F,  linetype = guide_legend(title = ""), fill = guide_legend(title = "", override.aes = list(shape = 21))) 
 #removing one of the plotting layers (there are points within points)
@@ -207,23 +212,8 @@ nmds_s4.plot$layers <- nmds_s4.plot$layers[-1]
 ```
 
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
-
-nmds_n3.plot <- plot_ordination(n3, nmds_n3,  title = "NAAMES 3") +
-  geom_point(aes(fill = cruise_station, shape = dh), alpha = 0.7, size = 4) +
-  stat_ellipse(aes(group = dh), level = 0.95, color = "firebrick", type = "t") +
-  scale_shape_manual(values = c(21, 22)) +
-  # scale_color_manual(values = custom.colors) +
-  scale_fill_viridis_d(end = 0.7) +
-  theme_linedraw(base_size = 16) +
-  guides( shape = guide_legend(title = "Depth Horizon"), color = F,  linetype = guide_legend(title = ""), fill = guide_legend(title = "", override.aes = list(shape = 21), order = 2)) 
-#removing one of the plotting layers (there are points within points)
-nmds_n3.plot$layers <- nmds_n3.plot$layers[-1]
-
-```
-
-```{r fig.height=6, fig.width=23}
-nmds.plot + nmds_n3.plot + nmds_s4.plot +
+```{r fig.height=8, fig.width=16}
+nmds.plot + nmds_s4.plot +
   plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 22),
         plot.title = element_text(size = 18)) 
@@ -233,17 +223,13 @@ nmds.plot + nmds_n3.plot + nmds_s4.plot +
 95% confidence interval ellipse for the mean (group centroid) tells us something about the sampling distribution of the mean (centroid) we might see if we repeated your data collection a lot of times. In other words we are looking at the uncertainty in the estimate of the population mean (centroid) given the sample of data we collected.
 
 
-# Betadisper and permutational ANOVA
+# Permutational ANOVA
 
 Above, we performed beta diversity analyses on Bray-Curtis distances on
 rarefied datasets that were then visualized using NMDS.
 We can test if there are statistically significant differences between
-sample groups using the betadisper and adonis functions of the vegan
-package. Betadisper tests whether two or more groups are homogeneously
-dispersed in relation to their species in studied samples. This test can be done to see if one group has more compositional variance than
-another. Moreover, homogeneity of dispersion among groups is very
-advisable to have if you want to test if two or more groups have
-different compositions, which is tested by adonis.
+sample groups using the  adonis function of the vegan
+package.
 
 ## Phyloseq to DESeq, distance matrix
 
@@ -256,12 +242,13 @@ library(vegan)
 ```
 
 ```{r}
-deseq_counts <- phyloseq_to_deseq2(ps_min, design = ~datetime ) #the design argument is required but doesn't matter here
+deseq_counts <- phyloseq_to_deseq2(s4n3, design = ~datetime ) #the design argument is required but doesn't matter here
 ```
 
 ```{r}
 deseq_count_tab <- assay(deseq_counts) #extract the read count matrix
 ```
+``
 
 We’ll calculate bray-curtis distances, which reflect the NMDS ordinations above
 
@@ -271,20 +258,23 @@ We’ll calculate bray-curtis distances, which reflect the NMDS ordinations abov
 
 sample.tab2 <- sample.tab %>%
   rownames_to_column() %>% 
-  column_to_rownames(var = "rowname")
+  column_to_rownames(var = "rowname") %>% 
+  select(Cruise:z)
 
 
 ####
 
+subset_sample_IDs_s4n3 <-  row.names(sample.tab2)[sample.tab2$Cruise == "NAAMES 3" & sample.tab2$z %in% c(5, 25, 100, 150, 200) |  sample.tab2$Cruise == "NAAMES 2" ]
 
-dist <- vegdist(t(deseq_count_tab[ , colnames(deseq_count_tab)]), method = "bray")
+dist <- vegdist(t(deseq_count_tab[ , colnames(deseq_count_tab) %in% subset_sample_IDs_s4n3]), method = "bray", na.rm = T)
 
+sample_info_tab_s4n3 <- sample.tab2[row.names(sample.tab2) %in% subset_sample_IDs_s4n3, ]
 
 ####
 
 subset_sample_IDs_n2s4 <-  row.names(sample.tab2)[sample.tab2$Cruise == "NAAMES 2" & sample.tab2$Station == 4]
 
-dist_n2s4 <- vegdist(t(deseq_count_tab[ , colnames(deseq_count_tab) %in% subset_sample_IDs_n2s4]), method = "bray")
+dist_n2s4 <- vegdist(t(deseq_count_tab[ , colnames(deseq_count_tab) %in% subset_sample_IDs_n2s4]), method = "bray", na.rm = T)
 
 sample_info_tab_n2s4 <- sample.tab2[row.names(sample.tab2) %in% subset_sample_IDs_n2s4, ]
 
@@ -292,7 +282,7 @@ sample_info_tab_n2s4 <- sample.tab2[row.names(sample.tab2) %in% subset_sample_ID
 
 subset_sample_IDs_n2s4_ez <-  row.names(sample.tab2)[sample.tab2$Cruise == "NAAMES 2" & sample.tab2$Station == 4 & sample.tab2$dh == "Euphotic"]
 
-dist_n2s4_ez <- vegdist(t(deseq_count_tab[ , colnames(deseq_count_tab) %in% subset_sample_IDs_n2s4_ez]), method = "bray")
+dist_n2s4_ez <- vegdist(t(deseq_count_tab[ , colnames(deseq_count_tab) %in% subset_sample_IDs_n2s4_ez]), method = "bray", na.rm = T)
 
 sample_info_tab_n2s4_ez <- sample.tab2[row.names(sample.tab2) %in% subset_sample_IDs_n2s4_ez, ]
 
@@ -301,92 +291,53 @@ sample_info_tab_n2s4_ez <- sample.tab2[row.names(sample.tab2) %in% subset_sample
 
 subset_sample_IDs_n2s4_mz <-  row.names(sample.tab2)[sample.tab2$Cruise == "NAAMES 2" & sample.tab2$Station == 4 & sample.tab2$dh == "Upper Mesopelagic"]
 
-dist_n2s4_mz <- vegdist(t(deseq_count_tab[ , colnames(deseq_count_tab) %in% subset_sample_IDs_n2s4_mz]), method = "bray")
+dist_n2s4_mz <- vegdist(t(deseq_count_tab[ , colnames(deseq_count_tab) %in% subset_sample_IDs_n2s4_mz]), method = "bray", na.rm = T)
 
 sample_info_tab_n2s4_mz <- sample.tab2[row.names(sample.tab2) %in% subset_sample_IDs_n2s4_mz, ]
 
 
 ####
 
+# subset_sample_IDs_n3 <-  row.names(sample.tab2)[sample.tab2$Cruise == "NAAMES 3" & sample.tab2$z %in% c(5, 25, 150, 200) & !sample.tab2$Cruise == "NAAMES 2"]
+
 subset_sample_IDs_n3 <-  row.names(sample.tab2)[sample.tab2$Cruise == "NAAMES 3"]
 
-dist_n3 <- vegdist(t(deseq_count_tab[ , colnames(deseq_count_tab) %in% subset_sample_IDs_n3]), method = "bray")
+dist_n3 <- vegdist(t(deseq_count_tab[ , colnames(deseq_count_tab) %in% subset_sample_IDs_n3]), method = "bray", na.rm = T)
 
 sample_info_tab_n3 <- sample.tab2[row.names(sample.tab2) %in% subset_sample_IDs_n3, ]
 
 ```
 
 
-Betadisper first calculates the average distance of group members to the group centroid in multivariate space (generated by a distance matrix).
-
-In the function below: we are using the distance matrix to calculate the multivariate dispersions (variances; average distance to centroids). We then use group dispersions to perform an ANOVA test.
-
-```{r}
-anova(betadisper(dist, sample.tab2$Cruise)) 
-```
-
-```{r}
-anova(betadisper(dist_n2s4, sample_info_tab_n2s4$dh)) 
-```
-
-
-```{r}
-anova(betadisper(dist_n2s4, sample_info_tab_n2s4$datetime)) 
-```
-
-```{r}
-anova(betadisper(dist_n2s4_ez, sample_info_tab_n2s4_ez$datetime)) 
-```
-
-
-```{r}
-anova(betadisper(dist_n2s4_mz, sample_info_tab_n2s4_mz$datetime)) 
-```
-
-
-```{r}
-anova(betadisper(dist_n3, sample_info_tab_n3$Station)) 
-```
-
-```{r}
-anova(betadisper(dist_n3, sample_info_tab_n3$dh)) 
-```
-
-
-The ANOVA’s p-value is not significant meaning that group dispersions are homogenous (“Null hypothesis of no difference in dispersion between groups”)
-
-
-**Homogeneity among group dispersions (compositions vary similarly) for N2S4 with grouping as depth horizon, for N2S4 with grouping as date, for N2S4 euphotic zone with grouping as date, for N3 with grouping as Cruise and Station, for N3 with grouping as depth horizon. Compositions fo not vary similarly for N2S4 mesopelagic zone with grouping as date.** 
-
 
 Adonis analyzes and partitions sums of squares using distance matrices. It can be seen as an ANOVA using distance matrices (analogous to MANOVA – multivariate analysis of variance). Therefore, it is used to test if two or more groups have similar compositions.
 
-```{r}
-adonis(dist~sample.tab2$Cruise)
-```
+A one-way permutational multivariate ANOVA (PERMANOVA) test was used to assess whether there were statistically significant differences between groups (e.g., stations, depth horizons, or time) using the function adonis in the R package vegan (v 2.5-6) (Anderson, 2001). To be a reliable statistical test, the PERMANOVA test requires that there be a sufficient level of homogeneity of dispersion within the groups, that is, that the distances between samples to their group centroid should be similar. Thus, the homogeneity of dispersion within the groups was assessed using the vegan function betadisper prior to performing PERMANOVAs (Anderson, 2006). 
 
-
-```{r}
-adonis(dist_n2s4~sample_info_tab_n2s4$dh)
-```
-```{r}
-adonis(dist_n2s4~sample_info_tab_n2s4$datetime)
-```
-
-```{r}
-adonis(dist_n2s4_ez~sample_info_tab_n2s4_ez$datetime)
-```
 
 
 ```{r}
-adonis(dist_n2s4_mz~sample_info_tab_n2s4_mz$datetime)
+adonis(dist~dh:Cruise , data = sample_info_tab_s4n3)
+
 ```
 
 ```{r}
-adonis(dist_n3~sample_info_tab_n3$dh)
+adonis(dist~dh*Cruise , data = sample_info_tab_s4n3)
+
 ```
 
-**N2S4 mesopelagic zone, group = date: no homogeneity among group dispersions (compositions vary similarly) and are significantly different  **
+```{r}
+adonis(dist_n2s4~plot_date:dh, data = sample_info_tab_n2s4)
+
+```
+
+
+
+```{r}
+adonis(dist_n2s4~plot_date*dh, data = sample_info_tab_n2s4)
+
+```
+
 
 # Alpha Diversity
 
@@ -397,7 +348,7 @@ We are going to calculate the the Chao1 diversity index.
 [Chao1: nonparametric estimation of minimum community richness](https://www.jstor.org/stable/4615964?seq=1#metadata_info_tab_contents) 
 
 ```{r message=FALSE, warning=FALSE}
-richness <- estimate_richness(ps_min, measures = c("Chao1", "Shannon")) %>% 
+richness <- estimate_richness(s4n3, measures = c("Chao1", "Shannon", "Observed")) %>% 
   rownames_to_column(., var = "DNA_ID") %>% 
    separate(DNA_ID, into = c("a", "b"), sep = "_") %>% 
   separate(a, into = c("x", "y", "z")) %>% 
@@ -406,7 +357,8 @@ richness <- estimate_richness(ps_min, measures = c("Chao1", "Shannon")) %>%
          x = ifelse(is.na(y), paste(x, "-5", sep = ""), x)) %>% 
   mutate(DNA_ID = paste(x, "-", z, "_", b, sep = "")) %>% 
   select(-c(x,y,z,b)) %>% 
-  mutate(DNA_ID = ifelse(DNA_ID == "N3S3-5_S56", "N3S3-5-5_S56", DNA_ID))
+  mutate(DNA_ID = ifelse(DNA_ID == "N3S3-5_S56", "N3S3-5-5_S56", DNA_ID)) %>% 
+  mutate(shan_eveness = Shannon/(log(Observed)) )
 ```
 
 ```{r}
@@ -414,20 +366,20 @@ alphadiv <- left_join(richness, sample.tab %>% rownames_to_column(., var = "DNA_
 ```
 
 ```{r}
-alphadiv %>% filter(Cruise == "NAAMES 2") %>% select(Chao1, Shannon) %>% summary()
+alphadiv %>% filter(Cruise == "NAAMES 2") %>% select(Chao1, Shannon, shan_eveness) %>% summary()
 ```
 
 ```{r}
-alphadiv %>% filter(Cruise == "NAAMES 2") %>% select(Chao1, Shannon) %>% mutate(sd_Chao = sd(Chao1, na.rm = T), sd_Shannon = sd(Shannon, na.rm = T)) %>%
+alphadiv %>% filter(Cruise == "NAAMES 2") %>% select(Chao1, Shannon, shan_eveness) %>% mutate(sd_Chao = sd(Chao1, na.rm = T), sd_Shannon = sd(Shannon, na.rm = T), sd_shan_eveness = sd(shan_eveness, na.rm = T)) %>%
   select(contains("sd")) %>% unique()
 ```
 
 ```{r}
-alphadiv %>% filter(Cruise == "NAAMES 3", z >= 57) %>% select(Chao1, Shannon) %>% summary()
+alphadiv %>% filter(Cruise == "NAAMES 3", z >= 100) %>% select(Chao1, Shannon, shan_eveness) %>% summary()
 ```
 
 ```{r}
-alphadiv %>% filter(Cruise == "NAAMES 3", z >= 57) %>% select(Chao1, Shannon) %>% mutate(sd_Chao = sd(Chao1, na.rm = T), sd_Shannon = sd(Shannon, na.rm = T)) %>%
+alphadiv %>% filter(Cruise == "NAAMES 3", z >= 100) %>% select(Chao1, Shannon, shan_eveness) %>% mutate(sd_Chao = sd(Chao1, na.rm = T), sd_Shannon = sd(Shannon, na.rm = T), sd_shan_eveness = sd(shan_eveness, na.rm = T)) %>%
   select(contains("sd")) %>% unique()
 ```
 
@@ -436,25 +388,27 @@ alphadiv %>% filter(Cruise == "NAAMES 3", z >= 57) %>% select(Chao1, Shannon) %>
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 12, fig.align = "center"}
 
 alphadiv.plot <- alphadiv %>% 
+  filter(Cruise == "NAAMES 2" | z %in% c(5, 25, 100, 150, 200)) %>% 
   mutate_at(vars(z), as.factor) %>% 
   mutate(Cruise = ifelse(Cruise == "NAAMES 2", "NAAMES 2 Station 4", Cruise)) %>% 
-  ggplot(aes(x = factor(dh), y = Shannon)) +
+  ggplot(aes(x = Cruise, y = shan_eveness)) +
   geom_boxplot(width = 0.3, outlier.shape = NA) +
-  facet_grid(~Cruise, scales = "free") +
+  facet_grid(~factor(dh), scales = "free") +
   geom_point(aes(fill = z), shape = 21, size = 3, alpha = 0.7) +
   scale_color_viridis_d(option = "viridis", direction = -1) +
   scale_fill_viridis_d(option = "viridis", direction = -1) +
   theme_linedraw(base_size = 16) +
   guides(fill = "none") +
-  labs(x = "", y =  "Shannon", fill = "Depth, m") + 
+  labs(x = "", y =  "Shannon Evenness", fill = "Depth, m") + 
   stat_compare_means(method = "t.test") 
 
 chao.plot <- alphadiv %>% 
+   filter(Cruise == "NAAMES 2" | z %in% c(5, 25, 100, 150, 200)) %>% 
   mutate_at(vars(z), as.factor) %>% 
   mutate(Cruise = ifelse(Cruise == "NAAMES 2", "NAAMES 2 Station 4", Cruise)) %>% 
-  ggplot(aes(x = factor(dh), y = Chao1)) +
+  ggplot(aes(x = Cruise, y = Chao1)) +
   geom_boxplot(width = 0.3, outlier.shape = NA) +
-  facet_grid(~Cruise, scales = "free") +
+  facet_grid(~factor(dh), scales = "free") +
   geom_point(aes(fill = z), shape = 21, size = 3, alpha = 0.7) +
   scale_color_viridis_d(option = "viridis", direction = -1) +
   scale_fill_viridis_d(option = "viridis", direction = -1) +
@@ -475,7 +429,7 @@ my_comparisons <- list(c("May 24 06:10","May 25 06:05"),c("May 24 06:10","May 26
 n2s4_alphadiv.plot <- alphadiv %>% 
   filter(Cruise == "NAAMES 2", Station == 4) %>% 
   mutate_at(vars(z), as.factor) %>% 
-  ggplot(aes(x = factor(plot_date), y = Shannon)) +
+  ggplot(aes(x = factor(plot_date), y = shan_eveness)) +
   geom_boxplot(width = 0.3, outlier.shape = NA) +
   facet_grid(~dh, scales = "free") +
   geom_point(aes(fill = z), shape = 21, size = 3, alpha = 0.7) +
@@ -483,8 +437,8 @@ n2s4_alphadiv.plot <- alphadiv %>%
   scale_fill_viridis_d(option = "viridis", direction = -1) +
   theme_linedraw(base_size = 16) +
   guides(fill = "none") +
-  labs(x = "", y =  "Shannon", fill = "Depth, m") + 
-  stat_compare_means(comparisons = my_comparisons, method = "t.test") 
+  labs(x = "", y =  "Shannon Evenness", fill = "Depth, m") + 
+  stat_compare_means(comparisons = my_comparisons, method = "t.test")
 
 n2s4_chao.plot <- alphadiv %>% 
   filter(Cruise == "NAAMES 2", Station == 4) %>% 
@@ -534,14 +488,14 @@ That said, we can generate a heat map of our samples showing us how the relative
 First, we're going to generate a custom table that will be easier to work with than a phyloseq object.
 
 
-
 ## Generate relative abundances
 
 Our data currently shows number gene copies recovered, so we'll convert to percentages (relative abundances)
 
 
 ```{r}
-data <- ps_min %>% 
+data <- s4n3 %>% 
+  # subset_samples(Cruise == "NAAMES 3" & z %in% c(5, 25,  200) | Cruise == "NAAMES 2" ) %>% 
   psmelt() %>% 
   select(-c(doc:sd_bp, sd_ba:bcd)) %>% 
   left_join(., gene_copies %>% 
@@ -567,7 +521,8 @@ data <- ps_min %>%
   mutate(gen_copies_dh = sum(copies, na.rm = T),
          gen_relabund_dh = fam_copies_dh/total_copies_dh) %>% 
   ungroup() %>% 
-  select(Cruise:z, Sample, OTU, Kingdom:Genus, copies, total_copies_dh:gen_relabund_dh,  everything())
+  mutate(plot_tax = paste(Order, Family, sep = ": ")) %>% 
+  select(Cruise:z, Sample, OTU, Kingdom:Genus, plot_tax, copies, total_copies_dh:gen_relabund_dh,  everything())
 ```
 
 
@@ -576,18 +531,18 @@ data %>%
   filter(Cruise == "NAAMES 2") %>% 
   filter(fam_relabund_dh >= 0.001) %>% 
   filter(fam_normcount_dh > 0) %>% 
-  select(dh, plot_date, Family, fam_relabund_dh, fam_normcount_dh) %>% 
+  select(dh, plot_date, Family, plot_tax, fam_relabund_dh, fam_normcount_dh) %>% 
   mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
   filter(!Family == "Unassigned") %>% #don't know what good copy numbers would be
   distinct() %>% 
-  ggplot(aes(x = plot_date, y = reorder(Family, fam_relabund_dh))) +
+  ggplot(aes(x = plot_date, y = reorder(plot_tax, fam_relabund_dh))) +
   geom_tile(aes(fill = fam_normcount_dh), color = "white") +
   scale_fill_viridis_c(trans = 'log10') +
   # scale_fill_viridis_b(option = "D",  trans = 'log10') +
   geom_text(aes(label = paste(round(fam_relabund_dh * 100, 1), "%"), color = "black"), size = 4) +
   # geom_text(aes(label = formatC(fam_normcount_dh, format = "e", digits = 1), color = "black"), size = 4) +
   scale_color_manual(values = c("white" = "white", "black" = "black")) +
-  labs(x = "", y = "Family", fill = expression(paste("Cells L"^-1))) +
+  labs(x = "", y = "Order: Family", fill = expression(paste("Cells L"^-1))) +
   facet_grid(~factor(dh, levels = c("Euphotic", "Upper Mesopelagic"))) +
   theme_linedraw(base_size = 16) +
   theme(axis.text.y = element_text(size = 12), legend.position = "top") +
@@ -604,14 +559,14 @@ data %>%
   distinct() %>% 
   mutate(Family = ifelse(Family == "NA", "Unassigned", Family),
          Genus = ifelse(Genus == "NA", "Unassigned", Genus),
-         plot_tax = paste(Family, Genus, sep = "_")) %>% 
+         plot_tax = paste(Family, Genus, sep = ": ")) %>% 
   ggplot(aes(x = Station, y = reorder(plot_tax, gen_relabund_dh))) +
   geom_tile(aes(fill = gen_relabund_dh), color = "white") +
   scale_fill_viridis_c(trans = 'log10') +
   # scale_fill_viridis_b(option = "D",  trans = 'log10') +
   geom_text(aes(label = round(gen_relabund_dh, 3), color = "black"), size = 4) +
   scale_color_manual(values = c("white" = "white", "black" = "black")) +
-  labs(x = "Station", y = "Family_Genus", fill = "Relative Abundance") +
+  labs(x = "Station", y = "Family: Genus", fill = "Relative Abundance") +
   facet_grid(~factor(dh, levels = c("Euphotic", "Upper Mesopelagic"))) +
   theme_linedraw(base_size = 16) +
   theme(axis.text.y = element_text(size = 12), legend.position = "top") +
@@ -620,100 +575,76 @@ data %>%
 ```
 
 
-# Identify "typical"surface and mesopelagic microbes
+```{r}
+## Simper analysis, extract abundance matrix from a phyloseq object
+s4_meso_OTUs = as(otu_table(s4_meso), "matrix")
 
-We'll make our designation based on our well-stratified profiles from NAAMES 3. 
+# transpose so we have the OTUs as columns
+if(taxa_are_rows(s4_meso)){s4_meso_OTUs <- t(s4_meso_OTUs)}
+
+# Coerce the object to a data.frame
+OTUs_scaled = as.data.frame(s4_meso_OTUs)
+
+# running the simper analysis on the dataframe and the variable of interest "time"
+simper <- vegan::simper(OTUs_scaled, sample_info_tab_n2s4_mz$plot_date, permutations = 100)
+
+summary(simper)
+
+```
 
 ```{r}
-surf_bugs <- data %>% 
-  filter(Cruise == "NAAMES 3", !Station == 3) %>% 
-  filter(!dh == "Upper Mesopelagic") %>%
-  filter(fam_relabund_dh >= 0.01) %>%
-  select(dh, datetime, Phylum, Order, Family, fam_relabund_dh, fam_normcount_dh, sd_fam_normcount_dh) %>% 
-  mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
-  filter(!Family == "Unassigned") %>% #don't know what good copy numbers would be
-  distinct() %>% 
-  select(Family) %>% 
-  dplyr::rename(surf = Family) %>% 
-  as_vector()
+simper_res <- summary(simper)
 
-
-meso_bugs <- data %>% 
-              filter(Cruise == "NAAMES 3") %>% 
-              filter(dh == "Upper Mesopelagic") %>%
-              filter(fam_relabund_dh >= 0.01) %>%
-             select(dh, datetime, Phylum, Order, Family, fam_relabund_dh, fam_normcount_dh, sd_fam_normcount_dh) %>% 
-              mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
-              filter(!Family == "Unassigned") %>% #don't know what good copy numbers would be
-              distinct() %>% 
-              select(Family) %>% 
-              dplyr::rename(meso = Family) %>% 
-  as_vector()
-
-unique_surf_bugs <- setdiff(surf_bugs, meso_bugs)
-
-unique_meso_bugs <- setdiff(meso_bugs, surf_bugs)
+simper_tax <- simper_res[[2]] %>% filter(p < 0.05) %>% 
+  # rownames_to_column(var = "tax") %>% 
+  # select(tax, p) %>% 
+  cbind(., as(tax_table(tax.tab)[row.names(.), ], "matrix"))
 ```
+
 
 # Taxa changes over time
 
 ```{r}
-s4_meso_subset <- data %>% 
-  filter(Cruise == "NAAMES 2") %>% 
-  filter(dh == "Upper Mesopelagic") %>%
-  filter(fam_relabund_dh >= 0.001) %>% 
-  filter(Family %in% c(unique_meso_bugs) | Family == "SAR11_II") %>% 
-  select(dh, datetime, Phylum, Order, Family, Genus, fam_relabund_dh, fam_normcount_dh, sd_fam_normcount_dh) %>% 
-  mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
-  filter(!Family == "Unassigned") %>% #don't know what good copy numbers would be
-  distinct()  
+bugs <- simper_tax %>% 
+  select(Kingdom, Phylum, Class, Order, Family, Genus) %>% 
+  mutate(bug = paste(Phylum, Class, Order, Family, Genus, sep = ": ")) %>% 
+  select(bug)
   
+
+s4_meso_bugs <- data %>% 
+  filter(Cruise == "NAAMES 2") %>% 
+  filter(dh == "Upper Mesopelagic") %>% 
+  mutate(bug = paste(Phylum, Class, Order, Family, Genus, sep = ": ")) %>% 
+  filter(bug %in% c(bugs$bug))
 ```
+
+taxa that showd >= 1 fold change in cell abundance
+
 
 ```{r}
-# stats <- s4_meso_subset %>% 
-#   select(datetime, Family, fam_relabund_dh, fam_normcount_dh) %>% 
-#   distinct() %>% 
-#   arrange(Family, datetime) %>% 
-#   dplyr::rename(rb = fam_relabund_dh,
-#          count = fam_normcount_dh) %>% 
-#   mutate(rb = rb * 100) %>% 
-#   group_by(Family) %>% 
-#    mutate(rb_change = dplyr::last(rb) - dplyr::first(rb),
-#          count_change = (dplyr::last(count) - dplyr::first(count))/dplyr::first(count))
+pruned <- s4_meso_bugs %>% 
+  filter(!Date == "2016-05-25") %>% 
+  select(Date, Kingdom:plot_tax, fam_relabund_dh, fam_normcount_dh, -Genus) %>% 
+  distinct() %>% 
+  group_by(Kingdom, Phylum, Class, Order, Family,  plot_tax) %>% 
+  arrange(Kingdom, Phylum, Class, Order, Family, plot_tax, Date) %>% 
+  mutate(relabund_change = (dplyr::last(fam_relabund_dh) - dplyr::first(fam_relabund_dh)) * 100,
+           fold_change = (dplyr::last(fam_normcount_dh) - dplyr::first(fam_normcount_dh))/dplyr::first(fam_normcount_dh)) %>% 
+  filter(fold_change >= 1)
 ```
 
-```{r}
-# stats <- s4_meso_subset_ez %>% 
-#   select(datetime, Family, fam_relabund_dh, fam_normcount_dh) %>% 
-#   distinct() %>% 
-#   arrange(Family, datetime) %>% 
-#   dplyr::rename(rb = fam_relabund_dh,
-#          count = fam_normcount_dh) %>% 
-#   mutate(rb = rb * 100) %>% 
-#   group_by(Family) %>% 
-#   mutate(rb_change = dplyr::last(rb) - dplyr::first(rb),
-#          count_change = (dplyr::last(count) - dplyr::first(count))/dplyr::first(count))
-```
+```{r fig.height=12, fig.width= 26 , message=FALSE, warning=FALSE}
+mesobug.data <- s4_meso_bugs %>% 
+  filter(plot_tax %in% c(pruned$plot_tax) )
 
-```{r}
-# stats %>% 
-#   filter(Family != "SAR202_Clade2") %>%
-#   summary()
-```
-
-
-
-```{r fig.height=12, fig.width= 26, message=FALSE, warning=FALSE}
-mesobugs.plot <- s4_meso_subset %>% 
-  filter(!Family == "SAR202_Clade2") %>% #only appears once
+mesobugs.plot <- mesobug.data %>% 
   ggplot(aes(x = datetime, y = fam_relabund_dh * 100)) +
-  facet_wrap(~Family, dir = "v", scales = "free_y", ncol = 2) +
+  facet_wrap(~plot_tax, dir = "v", scales = "free_y", ncol = 3) +
   geom_line(size = 0.7) +
   geom_point(shape = 21, size = 2, fill = "white", color = "black", stroke = 1) + 
-  geom_errorbar(data = s4_meso_subset %>% filter(!Family == "SAR202_Clade2"), aes(x = datetime, ymin = (fam_normcount_dh - sd_fam_normcount_dh)/10^7, ymax = (fam_normcount_dh + sd_fam_normcount_dh)/10^7), color = "#377EB8", width = 5000) +
-  geom_line(data = s4_meso_subset %>% filter(!Family == "SAR202_Clade2"), aes(x = datetime, y = fam_normcount_dh/10^7), color = "#377EB8") +
-  geom_point(data = s4_meso_subset %>% filter(!Family == "SAR202_Clade2"), aes(x = datetime, y = fam_normcount_dh/10^7), shape = 21, size = 2, fill = "#377EB8", color = "black", stroke = 1) + 
+  geom_errorbar(data = mesobug.data, aes(x = datetime, ymin = (fam_normcount_dh - sd_fam_normcount_dh)/10^7, ymax = (fam_normcount_dh + sd_fam_normcount_dh)/10^7), color = "#377EB8", width = 5000) +
+  geom_line(data = mesobug.data, aes(x = datetime, y = fam_normcount_dh/10^7), color = "#377EB8") +
+  geom_point(data = mesobug.data, aes(x = datetime, y = fam_normcount_dh/10^7), shape = 21, size = 2, fill = "#377EB8", color = "black", stroke = 1) + 
   scale_y_continuous(
     # Add a second axis and specify its features
     sec.axis = sec_axis(~.*10^7, name = expression(paste("Cell Abundance, L"^-1)), labels = function(x) format(x, scientific = TRUE))
@@ -722,68 +653,15 @@ mesobugs.plot <- s4_meso_subset %>%
   theme_linedraw(base_size = 16) +
   theme(axis.title.y.right = element_text(color = "#377EB8"),
         axis.text.y.right = element_text(color = "#377EB8"),
-        strip.text.x = element_text(size = 16)) +
-  ggtitle("Mesopelagic-associated Bacterioplankton in Upper Mesopelagic of N2S4")
-```
-
-```{r}
-s4_meso_subset_ez <- data %>% 
-  filter(Cruise == "NAAMES 2") %>% 
-  filter(dh == "Upper Mesopelagic") %>%
-  filter(fam_relabund_dh >= 0.001) %>% 
-  filter(Family %in% c(unique_surf_bugs) | Family == "SAR11_Ia") %>% 
-  select(dh, datetime, Phylum, Order, Family, Genus, fam_relabund_dh, fam_normcount_dh, sd_fam_normcount_dh) %>% 
-  mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
-  filter(!Family == "Unassigned") %>% #don't know what good copy numbers would be
-  distinct()  
-  
-```
-
-```{r}
-s4_meso_subset %>% select(Family, Genus) %>% 
-  mutate(name = paste(Family, Genus, sep = "_")) %>% 
-  select(name) %>% 
-  distinct()
+        strip.text.x = element_text(size = 16)) ; mesobugs.plot
 ```
 
 
-```{r fig.height=12, fig.width= 26, message=FALSE, warning=FALSE}
-surfbugs.plot <- s4_meso_subset_ez %>% 
-  ggplot(aes(x = datetime, y = fam_relabund_dh * 100)) +
-  facet_wrap(~Family, dir = "v", scales = "free_y") +
-  geom_line(size = 0.7) +
-  geom_point(shape = 21, size = 2, fill = "white", color = "black", stroke = 1) + 
-   geom_errorbar(data = s4_meso_subset_ez, aes(x = datetime, ymin = (fam_normcount_dh - sd_fam_normcount_dh)/10^7, ymax = (fam_normcount_dh + sd_fam_normcount_dh)/10^7), color = "#377EB8", width = 5000) +
-  geom_line(data = s4_meso_subset_ez, aes(x = datetime, y = fam_normcount_dh/10^7), color = "#377EB8") +
-  geom_point(data = s4_meso_subset_ez, aes(x = datetime, y = fam_normcount_dh/10^7), shape = 21, size = 2, fill = "#377EB8", color = "black", stroke = 1) +
- scale_y_continuous(
-    # Add a second axis and specify its features
-    sec.axis = sec_axis(~.*10^7, name = expression(paste("Cell Abundance, L"^-1)), labels = function(x) format(x, scientific = TRUE))
-  ) + 
-  labs(x = "", y = expression(paste("Relative Abundance, %")), colour = "", fill = "") +
-  theme_linedraw(base_size = 16) +
-  theme(axis.title.y.right = element_text(color = "#377EB8"),
-        axis.text.y.right = element_text(color = "#377EB8"),
-        strip.text.x = element_text(size = 16)) +
-  ggtitle("Euphotic-associated Bacterioplankton in Upper Mesopelagic of N2S4")
-```
-
-
-```{r}
-s4_meso_subset_ez %>% select(Family, Genus) %>% 
-  mutate(name = paste(Family, Genus, sep = "_")) %>% 
-  select(name) %>% 
-  distinct()
-```
-
-
-```{r fig.height=12, fig.width=29, message=TRUE, warning=FALSE}
-surfbugs.plot + mesobugs.plot + plot_annotation(tag_levels = "a") 
-```
 
 
 ```{r}
 write_rds(data, "~/GITHUB/naames_multiday/Output/processed_16S.rds")
+write_csv(simper_tax, "~/GITHUB/naames_multiday/Output/simper_results.csv")
 ```
 
 

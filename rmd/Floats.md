@@ -176,8 +176,8 @@ has different salinity at
 depth.
 
 ``` r
-s4_subset <- floatsNmldsNezds %>% filter(Cruise == "AT34", p <= 250,  datetime < ymd_hms("2016-05-31 00:00:00")) %>% mutate(type = "Float") %>% select(-c(o2:poc)) %>% distinct() %>% 
-  bind_rows(., ship_ctd %>% filter(Cruise == "AT34", p <= 250) %>% mutate(type = "Ship")) %>% 
+s4_subset <- floatsNmldsNezds %>% filter(Cruise == "AT34", p >= 50, p <= 250,  datetime < ymd_hms("2016-05-31 00:00:00")) %>% mutate(type = "Float") %>% select(-c(o2:poc)) %>% distinct() %>% 
+  bind_rows(., ship_ctd %>% filter(Cruise == "AT34", p >= 50, p <= 250) %>% mutate(type = "Ship")) %>% 
   filter(!plot_date %in% c("May 24 02:30", "May 27 06:07", "May 29 05:41", "May 29 20:41", "May 29 13:27"))
 
 s4_subset$plot_date <- reorder(s4_subset$plot_date, s4_subset$datetime)

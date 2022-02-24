@@ -39,6 +39,9 @@ npp <- read_rds("~/GITHUB/naames_multiday/Input/npp_data.rds") %>%
 
 phyto <- read_rds("~/GITHUB/naames_multiday/Input/phyto_data.rds") %>% 
    filter(Cruise == "AT34", station == "S4", !plot_date %in% c("May 24 02:30", "May 27 06:07"), depth > 0, depth <= 200) 
+
+int_bf <- read_rds("~/GITHUB/naames_multiday/Output/integrated_bf.rds") %>% 
+  filter(Cruise == "AT34", Station == 4, !plot_date %in% c("May 24 02:30", "May 27 06:07")) 
 ```
 
 ## Plot Profiles

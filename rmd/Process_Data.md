@@ -280,10 +280,10 @@ Integrations for EZ (0-75 m), MZ (100 - 200 m)
 ``` r
 int_bf <- bf %>% 
   filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station %in% c(3, 3.5, 4, 6)) %>% 
-  select(Cruise, Station, datetime, CampCN, mld, z, bcd, ba, doc, n, chl, tdaa, tdaa_c) %>% 
+  select(Cruise, Station, datetime, CampCN, mld, z, bp, ba, doc, n, chl, tdaa, tdaa_c) %>% 
   filter(z <= 75) %>% 
   group_by(datetime, CampCN) %>% 
-  mutate_at(vars(bcd, ba, doc, n, chl, tdaa, tdaa_c), list(ez = ~integrateTrapezoid(z, ., type = "A"))) %>% 
+  mutate_at(vars(bp, ba, doc, n, chl, tdaa, tdaa_c), list(ez = ~integrateTrapezoid(z, ., type = "A"))) %>% 
    mutate_at(vars(contains("_ez")), round) %>% 
   # depth normalize 
   mutate_at(vars(contains("_ez")), funs(./75)) %>% 
@@ -295,11 +295,11 @@ int_bf <- bf %>%
   ungroup() %>% 
   left_join(., bf %>% 
               filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station %in% c(3, 3.5, 4, 6)) %>%
-              select(Cruise, Station, datetime, CampCN, mld, z,  bcd, ba, doc, n, chl, tdaa,
+              select(Cruise, Station, datetime, CampCN, mld, z,  bp, ba, doc, n, chl, tdaa,
                      tdaa_c) %>% 
               filter(z > 75 & z <= 200) %>% 
               group_by(datetime, CampCN) %>% 
-              mutate_at(vars(bcd, ba, doc, n, chl, tdaa, tdaa_c), list(mz = ~integrateTrapezoid(z, ., type = "A"))) %>% 
+              mutate_at(vars(bp, ba, doc, n, chl, tdaa, tdaa_c), list(mz = ~integrateTrapezoid(z, ., type = "A"))) %>% 
               mutate_at(vars(contains("_mz")), round) %>% 
               # depth normalize 
               mutate_at(vars(contains("_mz")), funs(./100)) %>% 
@@ -381,7 +381,7 @@ int_npp <- npp %>%
 # Error for integrations
 
 assess best fits for profiles of phytoplankton cells, chl a,
-bacterioplankton, bcd, n, aou, doc, and tdaa
+bacterioplankton, bp, n, aou, doc, and tdaa
 
 ## look at fits for all data
 
@@ -602,7 +602,7 @@ int_err_phyto <- int_phyto %>%
     ## Joining, by = "plot_date"
     ## Joining, by = "plot_date"
 
-### chl a, ba, bcd, n, doc, and tdaa
+### chl a, ba, bp, n, doc, and tdaa
 
 #### ez
 
@@ -646,11 +646,11 @@ for (var in unique(ba_ez$datetime)) {
 ![](Process_Data_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-2.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-3.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-4.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-5.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-6.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-7.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-8.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-9.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-10.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-11.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-12.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-13.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-14.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-15.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-16.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-17.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-18.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-19.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-20.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-21.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-22.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-23.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-24.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-25.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-26.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-27.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-28.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-29.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-30.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-31.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-32.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-33.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-34.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-35.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-36.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-37.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-38.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-39.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-40.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-9-41.png)<!-- -->
 
 ``` r
-bcd_ez <- bf_ez %>% 
-  drop_na(bcd)
-for (var in unique(bcd_ez$datetime)) {
+bp_ez <- bf_ez %>% 
+  drop_na(bp)
+for (var in unique(bp_ez$datetime)) {
     print( 
-  ggplot(bcd_ez[bcd_ez$datetime == var,], aes(x = z, y = bcd)) + 
+  ggplot(bp_ez[bp_ez$datetime == var,], aes(x = z, y = bp)) + 
   # facet_grid(~plot_date, scales = "free") +
   geom_point() +
   stat_smooth(method = "lm", formula = formula) +
@@ -660,7 +660,7 @@ for (var in unique(bcd_ez$datetime)) {
 }
 ```
 
-![](Process_Data_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-2.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-3.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-4.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-5.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-6.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-7.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-8.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-9.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-10.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-11.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-12.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-13.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-14.png)<!-- -->
+![](Process_Data_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-2.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-3.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-4.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-5.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-6.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-7.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-8.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-9.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-10.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-11.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-12.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-13.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-14.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-15.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-16.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-17.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-18.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-19.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-20.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-21.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-22.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-23.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-24.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-25.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-26.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-27.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-28.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-29.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-30.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-31.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-32.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-33.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-34.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-35.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-36.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-37.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-38.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-10-39.png)<!-- -->
 
 ``` r
 doc_ez <- bf_ez %>% 
@@ -1269,11 +1269,11 @@ for (var in unique(ba_mz$datetime)) {
 ![](Process_Data_files/figure-gfm/unnamed-chunk-15-38.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-15-39.png)<!-- -->
 
 ``` r
-bcd_mz <- bf_mz %>% 
-  drop_na(bcd)
-for (var in unique(bcd_mz$datetime)) {
+bp_mz <- bf_mz %>% 
+  drop_na(bp)
+for (var in unique(bp_mz$datetime)) {
     print( 
-  ggplot(bcd_mz[bcd_mz$datetime == var,], aes(x = z, y = bcd)) + 
+  ggplot(bp_mz[bp_mz$datetime == var,], aes(x = z, y = bp)) + 
   # facet_grid(~plot_date, scales = "free") +
   geom_point() +
   stat_smooth(method = "lm", formula = formula) +
@@ -1283,40 +1283,14 @@ for (var in unique(bcd_mz$datetime)) {
 }
 ```
 
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-16-2.png)<!-- -->
+
     ## Warning in qt((1 - level)/2, df): NaNs produced
 
     ## Warning in max(ids, na.rm = TRUE): no non-missing arguments to max; returning -
     ## Inf
 
-![](Process_Data_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
-
-    ## Warning in qt((1 - level)/2, df): NaNs produced
-    
-    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
-    ## Inf
-
-![](Process_Data_files/figure-gfm/unnamed-chunk-16-2.png)<!-- -->
-
-    ## Warning in qt((1 - level)/2, df): NaNs produced
-    
-    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
-    ## Inf
-
-![](Process_Data_files/figure-gfm/unnamed-chunk-16-3.png)<!-- -->
-
-    ## Warning in qt((1 - level)/2, df): NaNs produced
-    
-    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
-    ## Inf
-
-![](Process_Data_files/figure-gfm/unnamed-chunk-16-4.png)<!-- -->
-
-    ## Warning in qt((1 - level)/2, df): NaNs produced
-    
-    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
-    ## Inf
-
-![](Process_Data_files/figure-gfm/unnamed-chunk-16-5.png)<!-- -->
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-3.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-16-4.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-16-5.png)<!-- -->
 
     ## Warning in qt((1 - level)/2, df): NaNs produced
     
@@ -1337,14 +1311,7 @@ for (var in unique(bcd_mz$datetime)) {
     ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
     ## Inf
 
-![](Process_Data_files/figure-gfm/unnamed-chunk-16-8.png)<!-- -->
-
-    ## Warning in qt((1 - level)/2, df): NaNs produced
-    
-    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
-    ## Inf
-
-![](Process_Data_files/figure-gfm/unnamed-chunk-16-9.png)<!-- -->
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-8.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-16-9.png)<!-- -->
 
     ## Warning in qt((1 - level)/2, df): NaNs produced
     
@@ -1380,6 +1347,167 @@ for (var in unique(bcd_mz$datetime)) {
     ## Inf
 
 ![](Process_Data_files/figure-gfm/unnamed-chunk-16-14.png)<!-- -->
+
+    ## Warning in qt((1 - level)/2, df): NaNs produced
+    
+    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
+    ## Inf
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-15.png)<!-- -->
+
+    ## Warning in qt((1 - level)/2, df): NaNs produced
+    
+    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
+    ## Inf
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-16.png)<!-- -->
+
+    ## Warning in qt((1 - level)/2, df): NaNs produced
+    
+    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
+    ## Inf
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-17.png)<!-- -->
+
+    ## Warning in qt((1 - level)/2, df): NaNs produced
+    
+    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
+    ## Inf
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-18.png)<!-- -->
+
+    ## Warning in qt((1 - level)/2, df): NaNs produced
+    
+    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
+    ## Inf
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-19.png)<!-- -->
+
+    ## Warning in qt((1 - level)/2, df): NaNs produced
+    
+    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
+    ## Inf
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-20.png)<!-- -->
+
+    ## Warning in qt((1 - level)/2, df): NaNs produced
+    
+    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
+    ## Inf
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-21.png)<!-- -->
+
+    ## Warning in qt((1 - level)/2, df): NaNs produced
+    
+    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
+    ## Inf
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-22.png)<!-- -->
+
+    ## Warning in qt((1 - level)/2, df): NaNs produced
+    
+    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
+    ## Inf
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-23.png)<!-- -->
+
+    ## Warning in qt((1 - level)/2, df): NaNs produced
+    
+    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
+    ## Inf
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-24.png)<!-- -->
+
+    ## Warning in qt((1 - level)/2, df): NaNs produced
+    
+    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
+    ## Inf
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-25.png)<!-- -->
+
+    ## Warning in qt((1 - level)/2, df): NaNs produced
+    
+    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
+    ## Inf
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-26.png)<!-- -->
+
+    ## Warning in qt((1 - level)/2, df): NaNs produced
+    
+    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
+    ## Inf
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-27.png)<!-- -->
+
+    ## Warning in qt((1 - level)/2, df): NaNs produced
+    
+    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
+    ## Inf
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-28.png)<!-- -->
+
+    ## Warning in qt((1 - level)/2, df): NaNs produced
+    
+    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
+    ## Inf
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-29.png)<!-- -->
+
+    ## Warning in qt((1 - level)/2, df): NaNs produced
+    
+    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
+    ## Inf
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-30.png)<!-- -->
+
+    ## Warning in qt((1 - level)/2, df): NaNs produced
+    
+    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
+    ## Inf
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-31.png)<!-- -->
+
+    ## Warning in qt((1 - level)/2, df): NaNs produced
+    
+    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
+    ## Inf
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-32.png)<!-- -->
+
+    ## Warning in qt((1 - level)/2, df): NaNs produced
+    
+    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
+    ## Inf
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-33.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-16-34.png)<!-- -->
+
+    ## Warning in qt((1 - level)/2, df): NaNs produced
+    
+    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
+    ## Inf
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-35.png)<!-- -->
+
+    ## Warning in qt((1 - level)/2, df): NaNs produced
+    
+    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
+    ## Inf
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-36.png)<!-- -->
+
+    ## Warning in qt((1 - level)/2, df): NaNs produced
+    
+    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
+    ## Inf
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-37.png)<!-- -->
+
+    ## Warning in qt((1 - level)/2, df): NaNs produced
+    
+    ## Warning in qt((1 - level)/2, df): no non-missing arguments to max; returning -
+    ## Inf
+
+![](Process_Data_files/figure-gfm/unnamed-chunk-16-38.png)<!-- -->![](Process_Data_files/figure-gfm/unnamed-chunk-16-39.png)<!-- -->
 
 ``` r
 doc_mz <- bf_mz %>% 
@@ -1988,7 +2116,7 @@ based on 3rd polynomial fit for ez and 2nd polynomial fit for mz
 
 ``` r
 lm_bf_ez <-  bf_ez %>% 
-  select(z, datetime, doc, tdaa, n, chl, ba, bcd) %>% 
+  select(z, datetime, doc, tdaa, n, chl, ba, bp) %>% 
   filter(z < 75)
 
 bf_coef_ez <- 
@@ -2089,10 +2217,10 @@ left_join(.,   lm_bf_ez %>%
 ) %>% 
   
  left_join(., lm_bf_ez %>%
-  drop_na(bcd) %>% 
+  drop_na(bp) %>% 
   group_by(datetime) %>%
   do({
-    fit = lm(bcd ~ poly(z, 3, raw = T), .)
+    fit = lm(bp ~ poly(z, 3, raw = T), .)
     coef2 = fit$coefficients[[3]]
     coef3 = fit$coefficients[[4]]
     data.frame(., coef2, coef3)
@@ -2106,8 +2234,8 @@ left_join(.,   lm_bf_ez %>%
          depthNerr = err / (max(z) - min(z))) %>% 
   ungroup() %>% 
   select(datetime, err, depthNerr) %>% 
-  rename(bcd_err_ez = err, 
-         bcd_depthNerr_ez = depthNerr) %>% 
+  rename(bp_err_ez = err, 
+         bp_depthNerr_ez = depthNerr) %>% 
   distinct() 
 ) %>% 
   
@@ -2143,7 +2271,7 @@ left_join(.,   lm_bf_ez %>%
 
 ``` r
 lm_bf_mz <-  bf_mz %>% 
-  select(z, datetime, doc, tdaa, n, chl, ba, bcd) %>% 
+  select(z, datetime, doc, tdaa, n, chl, ba, bp) %>% 
   filter(z > 75 & z <= 200)
 
 bf_coef_mz <- 
@@ -2236,10 +2364,10 @@ left_join(.,   lm_bf_mz %>%
 ) %>% 
   
  left_join(., lm_bf_mz %>%
-  drop_na(bcd) %>% 
+  drop_na(bp) %>% 
   group_by(datetime) %>%
   do({
-    fit = lm(bcd ~ poly(z, 2, raw = T), .)
+    fit = lm(bp ~ poly(z, 2, raw = T), .)
     coef2 = fit$coefficients[[3]]
     data.frame(., coef2)
   }) %>% 
@@ -2251,8 +2379,8 @@ left_join(.,   lm_bf_mz %>%
          depthNerr = err / (max(z) - min(z))) %>% 
   ungroup() %>% 
   select(datetime, err, depthNerr) %>% 
-  rename(bcd_err_mz = err, 
-         bcd_depthNerr_mz = depthNerr) %>% 
+  rename(bp_err_mz = err, 
+         bp_depthNerr_mz = depthNerr) %>% 
   distinct() 
 ) %>% 
   

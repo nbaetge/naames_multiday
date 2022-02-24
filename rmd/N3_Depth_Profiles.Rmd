@@ -130,6 +130,7 @@ chl.plot <-  bf %>%
   drop_na(chl) %>% 
   # µg / L = mg / m3
   ggplot(aes(x = z, y = chl, color = plot_name, fill = plot_name,  group = interaction(datetime, CampCN))) +
+   geom_vline(xintercept = 57, color = "red") +
   geom_line(size = 0.7) +
   geom_point(shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = "Depth, m", y = expression(paste("Chl ", italic("a"), ", ug L"^"-1")), colour = "", fill = "Station") +
@@ -159,6 +160,7 @@ phyto.plot <-  phyto %>%
   select(plot_date, plot_name, depth, phyto) %>% 
   ggplot(aes(x = depth, y = phyto, color = plot_name, fill = plot_name, group = interaction(plot_date))) +
   # geom_errorbar(aes(x = z, ymin = ave_phyto - sd_phyto, ymax = ave_phyto + sd_phyto, color = plot_date)) +
+   geom_vline(xintercept = 57, color = "red") +
   geom_line(size = 0.7) +
   geom_point(shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = "", y = expression(paste("Phytoplankton, cells L"^"-1")), color = "", fill = "Date") +
@@ -185,6 +187,7 @@ phyto.plot <-  phyto %>%
 npp.plot <-  npp %>% 
   # mutate(npp = npp/10^3) %>% 
   ggplot(aes(x = z, y = npp, color = plot_name, group = plot_date)) +
+   geom_vline(xintercept = 57, color = "red") +
   geom_line(size = 1) +
   labs(x = "", y = expression(paste("Modeled NPP, µmol C L"^-1, " d"^-1)), colour = "Date") +
   expand_limits(x = 200) +
@@ -212,6 +215,7 @@ n.plot <-  bf %>%
   drop_na(n) %>% 
   ggplot(aes(x = z, y = n, color = plot_name, fill = plot_name, group = interaction(plot_date, CampCN))) +
   geom_errorbar(aes(x = z, ymin = n - sd_n, ymax = n + sd_n), width = 5) +
+   geom_vline(xintercept = 57, color = "red") +
   geom_line(size = 0.7) +
   geom_point(shape = 21, size = 6,  color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = "Depth, m", y = expression(paste("N + N, µmol N L"^"-1"))) +
@@ -240,6 +244,7 @@ doc.plot <- bf %>%
   drop_na(doc) %>% 
   ggplot(aes(x = z, y = doc, color = plot_name, fill = plot_name, group = interaction(plot_date, CampCN))) +
   geom_errorbar(aes(x = z, ymin = doc - sd_doc, ymax = doc + sd_doc), width = 5) +
+   geom_vline(xintercept = 57, color = "red") +
   geom_line(size = 0.7) +
   geom_point( shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = "", y = expression(paste("DOC, µmol C L"^"-1")), colour = "", fill = "Date") +
@@ -267,6 +272,7 @@ aou.plot <-  ctd %>%
   drop_na(aou) %>% 
   ggplot(aes(x = z, y = aou, color = plot_name, group = plot_date)) +
   # geom_ribbon(aes(ymin = aou - sd_aou, ymax = aou + sd_aou, fill = plot_date), alpha = 0.5) +
+   geom_vline(xintercept = 57, color = "red") +
   geom_line(size = 0.7) +
   labs(x = "", y = expression(paste("AOU, µmol O"[2]," L"^"-1")), colour = "Date", fill = "") +
   scale_x_reverse() +
@@ -294,6 +300,7 @@ ba.plot <-  bf %>%
   filter(!plot_date %in% c("Sep 10 15:30"))  %>%
   ggplot(aes(x = z, y = ba, color = plot_name, fill = plot_name, group = interaction(plot_date, CampCN))) +
   geom_errorbar(aes(x = z, ymin = ba - sd_ba, ymax = ba + sd_ba), width = 5) +
+   geom_vline(xintercept = 57, color = "red") +
   geom_line(size = 0.7) +
   geom_point(shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = "Depth, m", y = expression(paste("Bacterioplankton, cells L"^"-1")), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Date") +
@@ -318,12 +325,13 @@ ba.plot <-  bf %>%
 
 ```{r bp plot, echo = FALSE, warning = FALSE, message = FALSE}
 leu.plot <-  bf %>% 
-  drop_na(leu_incorp) %>% 
-  ggplot(aes(x = z, y = leu_incorp, color = plot_name, fill = plot_name, group = interaction(plot_date, CampCN))) +
-  geom_errorbar(aes(x = z, ymin = leu_incorp - sd_leu_incorp, ymax = leu_incorp + sd_leu_incorp), width = 5) +
+  drop_na(bp_incorp) %>% 
+  ggplot(aes(x = z, y = bp, color = plot_name, fill = plot_name, group = interaction(plot_date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = bp - sd_bp, ymax = bp + sd_bp), width = 5) +
+   geom_vline(xintercept = 57, color = "red") +
   geom_line(size = 0.7) +
   geom_point(shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = "", y = expression(paste("BP, pmol", " "^3,"H-Leu L"^"-1","h"^-1)), colour = "", fill = "Date") +
+  labs(x = "", y = expression(paste("BP, nmol C L"^"-1","h"^-1)), colour = "", fill = "Date") +
   scale_x_reverse() +
   coord_flip() +
   scale_fill_viridis_d() +
