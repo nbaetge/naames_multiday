@@ -414,6 +414,8 @@ mycolor <- colors$viridis
 sst_color <- colors$temperature
 w <- map_data("worldHires", ylim = c(35., 60.), xlim = c(-60, -30))
 
+sla <- readxl::read_excel("~/GITHUB/naames_multiday/Input/sla/combined_sla.xlsx")
+
 
 stations <- read_rds("~/GITHUB/naames_multiday/Input/ctd_data.rds") %>% 
   select(CampCN:lat) %>% 
@@ -443,6 +445,7 @@ map1 <- ggplot(data = map1_data, aes(x = lon, y = lat)) +
   scale_fill_gradientn(colors = mycolor, na.value = NA) +
   labs(fill = expression(paste("Chlorophyll", italic(" a"), ", mg m"^-3))) +
   new_scale_fill() +  
+   geom_line(data = . %>% filter(!type == "Drifter"), aes(color = type, group = interaction(type, plot_name, float)), color = "black", size = 2, alpha = 0.7) +
   geom_line(aes(color = type, group = interaction(type, plot_name, float)), size = 1, alpha = 0.7) +
   geom_point(data = . %>% filter(!type == "Drifter"), aes(fill = type, shape = plot_name,  group = interaction(type, plot_name, float)),  size = 2, alpha = 0.7) +
   theme_linedraw() + 
@@ -452,7 +455,9 @@ map1 <- ggplot(data = map1_data, aes(x = lon, y = lat)) +
   scale_color_manual(values = custom.colors) +
   scale_shape_manual(values = custom.shapes) +
   guides(fill = guide_legend(override.aes = list(shape = 21))) +
-  ggtitle("NAAMES 2 Station 4") 
+  ggtitle("N2S4")  +
+  geom_contour(data = sla, aes(x = lon, y = lat, z = sla), linetype = 2, size = 1.5, color = "black") +
+  theme(plot.tag = element_text(size = 22)) 
 
 map2_data <- map_data %>% 
   filter(Cruise == "AT38")
@@ -467,9 +472,12 @@ map2 <- ggplot(data = map2_data, aes(x = lon, y = lat)) +
   # scale_fill_gradientn(colors = mycolor, na.value = NA) +
   # labs(fill = expression(paste("Chlorophyll", italic(" a"), ", mg m"^-3))) +
   # new_scale_fill() +  
+  geom_line(data = . %>% filter(!type == "Drifter"), aes(color = type, group = interaction(type, plot_name, float)), color = "black", size = 2, alpha = 0.7) +
   geom_line(aes(color = type, group = interaction(type, plot_name, float)), size = 1, alpha = 0.7) +
   geom_point(data = . %>% filter(!type == "Drifter"), aes(fill = type, shape = plot_name,  group = interaction(type, plot_name, float)),  size = 2, alpha = 0.7) +
+  geom_line(data = s4_map2 %>% filter(!type == "Drifter"), aes(x = lon, y = lat, color = type, group = interaction(type, plot_name, float)), color = "black", size = 2, alpha = 0.7) +
   geom_line(data = s4_map2, aes(x = lon, y = lat, color = type, group = interaction(type, plot_name, float)), size = 1, alpha = 0.7) +
+  
   geom_point(data = s4_map2, aes(x = lon, y = lat, fill = type, shape = plot_name), size = 2, alpha = 0.7) +
   theme_linedraw() + 
   labs(x = "Longitude, ˚W", y = "Latitude, ˚N", color = "", fill = "", linetype = "", shape = "") +
@@ -478,7 +486,8 @@ map2 <- ggplot(data = map2_data, aes(x = lon, y = lat)) +
   scale_color_manual(values = custom.colors) + 
   scale_shape_manual(values = custom.shapes) +
   guides(fill = guide_legend(override.aes = list(shape = 21))) +
-  ggtitle("NAAMES 2 & 3")
+  ggtitle("N2S4 & NAAMES 3") +
+  theme(plot.tag = element_text(size = 22)) 
 ```
 
 ``` r
@@ -556,14 +565,9 @@ mba <- reshape2::melt(mba$xyz.est$z, varnames = c('decimal_date', 'p'), value.na
 t.plot / s.plot / fl.plot + plot_annotation(tag_levels = "a") 
 ```
 
-    ## Warning: Raster pixels are placed at uneven horizontal intervals and will be
-    ## shifted. Consider using geom_tile() instead.
-    
-    ## Warning: Raster pixels are placed at uneven horizontal intervals and will be
-    ## shifted. Consider using geom_tile() instead.
-    
-    ## Warning: Raster pixels are placed at uneven horizontal intervals and will be
-    ## shifted. Consider using geom_tile() instead.
+    ## Warning: Raster pixels are placed at uneven horizontal intervals and will be shifted. Consider using geom_tile() instead.
+    ## Raster pixels are placed at uneven horizontal intervals and will be shifted. Consider using geom_tile() instead.
+    ## Raster pixels are placed at uneven horizontal intervals and will be shifted. Consider using geom_tile() instead.
 
 ![](Floats_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
 
@@ -636,14 +640,9 @@ mba <- reshape2::melt(mba$xyz.est$z, varnames = c('decimal_date', 'p'), value.na
 t.plot / s.plot / fl.plot + plot_annotation(tag_levels = "a") 
 ```
 
-    ## Warning: Raster pixels are placed at uneven horizontal intervals and will be
-    ## shifted. Consider using geom_tile() instead.
-    
-    ## Warning: Raster pixels are placed at uneven horizontal intervals and will be
-    ## shifted. Consider using geom_tile() instead.
-    
-    ## Warning: Raster pixels are placed at uneven horizontal intervals and will be
-    ## shifted. Consider using geom_tile() instead.
+    ## Warning: Raster pixels are placed at uneven horizontal intervals and will be shifted. Consider using geom_tile() instead.
+    ## Raster pixels are placed at uneven horizontal intervals and will be shifted. Consider using geom_tile() instead.
+    ## Raster pixels are placed at uneven horizontal intervals and will be shifted. Consider using geom_tile() instead.
 
 ![](Floats_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
 

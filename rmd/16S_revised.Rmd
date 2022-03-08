@@ -189,11 +189,22 @@ nmds.plot <- plot_ordination(s4n3, nmds,  title = "NAAMES 2 Station 4 & NAAMES 3
   scale_shape_manual(values = c(4, 21)) +
   scale_fill_viridis_d(end = 0.7) +
   theme_linedraw(base_size = 16) +
-  guides( shape = guide_legend(title = "Cruise"), color = F, fill = guide_legend(title = "Station")) 
+  guides( shape = guide_legend(title = "Cruise"), color = F, fill = guide_legend(title = "Station", override.aes = list(shape = 21))) 
 #removing one of the plotting layers (there are points within points)
 nmds.plot$layers <- nmds.plot$layers[-1]
 ```
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
 
+nmds.plot2 <- plot_ordination(s4n3, nmds,  title = "NAAMES 2 Station 4 & NAAMES 3") +
+  geom_point(aes(fill = as_factor(dh), shape = Cruise), alpha = 0.7, size = 4) +
+  stat_ellipse(aes(group = interaction(Cruise, dh)), color = "firebrick", level = 0.95, type = "t", size = 0.7) +
+  scale_shape_manual(values = c(4, 21)) +
+  scale_fill_viridis_d(end = 0.7) +
+  theme_linedraw(base_size = 16) +
+  guides( shape = guide_legend(title = "Cruise"), color = F, fill = guide_legend(title = "Depth Horizon", override.aes = list(shape = 21))) 
+#removing one of the plotting layers (there are points within points)
+nmds.plot2$layers <- nmds.plot2$layers[-1]
+```
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
 
@@ -212,8 +223,8 @@ nmds_s4.plot$layers <- nmds_s4.plot$layers[-1]
 ```
 
 
-```{r fig.height=8, fig.width=16}
-nmds.plot + nmds_s4.plot +
+```{r fig.height=8, fig.width=20}
+nmds.plot2 + nmds.plot +  nmds_s4.plot +
   plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 22),
         plot.title = element_text(size = 18)) 
@@ -525,6 +536,53 @@ data <- s4n3 %>%
   select(Cruise:z, Sample, OTU, Kingdom:Genus, plot_tax, copies, total_copies_dh:gen_relabund_dh,  everything())
 ```
 
+```{r}
+data2 <- s4n3 %>% 
+  # subset_samples(Cruise == "NAAMES 3" & z %in% c(5, 25,  200) | Cruise == "NAAMES 2" ) %>% 
+  psmelt() %>% 
+  select(-c(doc:sd_bp, sd_ba:bcd)) %>% 
+  left_join(., gene_copies %>% 
+              select(Phylum, Class, Order, copy_num)) %>% 
+  arrange(Cruise, Station, datetime, dh) %>% 
+  # mutate(interval = ifelse(Cruise == "NAAMES2" & dh == "Euphotic", 75, 100),
+  #        interval = ifelse(Cruise == "NAAMES 3" & dh == "Euphotic", 50, interval)) %>% 
+  group_by(Cruise, Station, datetime, dh) %>% 
+  dplyr::rename(copies = Abundance) %>% 
+  mutate(total_copies_dh = sum(copies, na.rm = T),
+         mean_ba_dh = mean(ba, na.rm = T),
+         sd_ba_dh = sd(ba, na.rm = T)) %>% 
+  ungroup() %>% 
+  group_by(Cruise, Station, datetime, dh, Order) %>% 
+  mutate(ord_copies_dh = sum(copies, na.rm = T),
+         ord_relabund_dh = ord_copies_dh/total_copies_dh, 
+         ord_relacount_dh = ord_relabund_dh * mean_ba_dh,
+         sd_ord_relacount_dh = ord_relabund_dh * sd_ba_dh,
+         ord_normcount_dh = ord_relacount_dh/copy_num,
+         sd_ord_normcount_dh = sd_ord_relacount_dh/copy_num) %>% 
+  ungroup() 
+```
+
+```{r fig.height = 18, fig.width = 12}
+data2 %>% 
+  filter(Cruise == "NAAMES 2") %>% 
+  filter(ord_relabund_dh >= 0.001) %>% 
+  filter(ord_normcount_dh > 0) %>% 
+  select(dh, plot_date, Order,  ord_relabund_dh, ord_normcount_dh) %>% 
+  distinct() %>% 
+  ggplot(aes(x = plot_date, y = reorder(Order, ord_relabund_dh))) +
+  geom_tile(aes(fill = ord_normcount_dh), color = "white") +
+  scale_fill_viridis_c(trans = 'log10') +
+  # scale_fill_viridis_b(option = "D",  trans = 'log10') +
+  geom_label(aes(label = paste(round(ord_relabund_dh * 100, 1), "%")),  color = "black", fill = "white", size = 4, fontface = "bold", alpha = 0.4, label.size = NA ) +
+  # geom_text(aes(label = paste(round(fam_relabund_dh * 100, 1), "%"), color = "white"), size = 4) +
+  # geom_text(aes(label = formatC(fam_normcount_dh, format = "e", digits = 1), color = "black"), size = 4) +
+  scale_color_manual(values = c("white" = "white", "black" = "black")) +
+  labs(x = "", y = "Order: Family", fill = expression(paste("Cells L"^-1))) +
+  facet_grid(~factor(dh, levels = c("Euphotic", "Upper Mesopelagic"))) +
+  theme_linedraw(base_size = 16) +
+  theme(axis.text.y = element_text(size = 12), legend.position = "top") +
+   guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = "none") 
+```
 
 ```{r fig.height = 18, fig.width = 12}
 data %>% 
@@ -539,7 +597,8 @@ data %>%
   geom_tile(aes(fill = fam_normcount_dh), color = "white") +
   scale_fill_viridis_c(trans = 'log10') +
   # scale_fill_viridis_b(option = "D",  trans = 'log10') +
-  geom_text(aes(label = paste(round(fam_relabund_dh * 100, 1), "%"), color = "black"), size = 4) +
+  geom_label(aes(label = paste(round(fam_relabund_dh * 100, 1), "%")),  color = "black", fill = "white", size = 4, fontface = "bold", alpha = 0.4, label.size = NA ) +
+  # geom_text(aes(label = paste(round(fam_relabund_dh * 100, 1), "%"), color = "white"), size = 4) +
   # geom_text(aes(label = formatC(fam_normcount_dh, format = "e", digits = 1), color = "black"), size = 4) +
   scale_color_manual(values = c("white" = "white", "black" = "black")) +
   labs(x = "", y = "Order: Family", fill = expression(paste("Cells L"^-1))) +
@@ -564,7 +623,7 @@ data %>%
   geom_tile(aes(fill = gen_relabund_dh), color = "white") +
   scale_fill_viridis_c(trans = 'log10') +
   # scale_fill_viridis_b(option = "D",  trans = 'log10') +
-  geom_text(aes(label = round(gen_relabund_dh, 3), color = "black"), size = 4) +
+   geom_label(aes(label = paste(round(fam_relabund_dh * 100, 1), "%")),  color = "black", fill = "white", size = 4, fontface = "bold", alpha = 0.4, label.size = NA ) +
   scale_color_manual(values = c("white" = "white", "black" = "black")) +
   labs(x = "Station", y = "Family: Genus", fill = "Relative Abundance") +
   facet_grid(~factor(dh, levels = c("Euphotic", "Upper Mesopelagic"))) +
@@ -588,7 +647,7 @@ OTUs_scaled = as.data.frame(s4_meso_OTUs)
 # running the simper analysis on the dataframe and the variable of interest "time"
 simper <- vegan::simper(OTUs_scaled, sample_info_tab_n2s4_mz$plot_date, permutations = 100)
 
-summary(simper)
+# summary(simper)
 
 ```
 
@@ -628,7 +687,7 @@ pruned <- s4_meso_bugs %>%
   distinct() %>% 
   group_by(Kingdom, Phylum, Class, Order, Family,  plot_tax) %>% 
   arrange(Kingdom, Phylum, Class, Order, Family, plot_tax, Date) %>% 
-  mutate(relabund_change = (dplyr::last(fam_relabund_dh) - dplyr::first(fam_relabund_dh)) * 100,
+  mutate(relabund_change = ((dplyr::last(fam_relabund_dh) - dplyr::first(fam_relabund_dh))/dplyr::first(fam_relabund_dh) ) * 100,
            fold_change = (dplyr::last(fam_normcount_dh) - dplyr::first(fam_normcount_dh))/dplyr::first(fam_normcount_dh)) %>% 
   filter(fold_change >= 1)
 ```
@@ -641,10 +700,10 @@ mesobugs.plot <- mesobug.data %>%
   ggplot(aes(x = datetime, y = fam_relabund_dh * 100)) +
   facet_wrap(~plot_tax, dir = "v", scales = "free_y", ncol = 3) +
   geom_line(size = 0.7) +
-  geom_point(shape = 21, size = 2, fill = "white", color = "black", stroke = 1) + 
+  geom_point(shape = 21, size = 4, fill = "white", color = "black", stroke = 1) + 
   geom_errorbar(data = mesobug.data, aes(x = datetime, ymin = (fam_normcount_dh - sd_fam_normcount_dh)/10^7, ymax = (fam_normcount_dh + sd_fam_normcount_dh)/10^7), color = "#377EB8", width = 5000) +
   geom_line(data = mesobug.data, aes(x = datetime, y = fam_normcount_dh/10^7), color = "#377EB8") +
-  geom_point(data = mesobug.data, aes(x = datetime, y = fam_normcount_dh/10^7), shape = 21, size = 2, fill = "#377EB8", color = "black", stroke = 1) + 
+  geom_point(data = mesobug.data, aes(x = datetime, y = fam_normcount_dh/10^7), shape = 21, size = 4, fill = "#377EB8", color = "black", stroke = 1) + 
   scale_y_continuous(
     # Add a second axis and specify its features
     sec.axis = sec_axis(~.*10^7, name = expression(paste("Cell Abundance, L"^-1)), labels = function(x) format(x, scientific = TRUE))

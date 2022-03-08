@@ -173,7 +173,7 @@ doc.plot <- bf %>%
   labs(x = "", y = expression(paste("DOC, µmol C L"^"-1")), colour = "", fill = "Date") +
   scale_x_reverse() +
   coord_flip() +
-  scale_y_continuous(limits = c(50, 60)) +
+  scale_y_continuous(limits = c(50.2, 55)) +
   scale_fill_viridis_d() +
   scale_color_viridis_d() +
   guides( color = F, linetype = F, shape = F) +
@@ -182,7 +182,7 @@ doc.plot <- bf %>%
         axis.text.x = element_text(angle = 0),
         legend.title = element_blank(),
         legend.key.size = unit(0.4, "cm"),
-        legend.position = c(0.8, 0.2),
+        legend.position = c(0.15, 0.2),
         legend.text = element_text(size = 12),
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
         legend.spacing.y = unit(0, "pt"))
@@ -319,4 +319,14 @@ patchwork +
 ```
 
 
+```{r combine plots2, echo = FALSE, warning = FALSE, message = FALSE, fig.height = 12, fig.width = 20}
+
+patchwork <-  n.plot + (chl.plot ) + (phyto.plot ) +  (leu.plot )  +   (ba.plot + theme(legend.background = element_rect(size = 0.2, linetype = "solid", color = "black", fill = "transparent"), legend.box.background = element_rect(fill = 'transparent'))) + (doc.plot) 
+
+patchwork +  
+  # plot_layout(guides = 'collect') +
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 22)) 
+
+```
 

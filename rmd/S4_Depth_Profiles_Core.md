@@ -13,11 +13,6 @@ library(lubridate)
 library(hms)
 library(zoo) 
 library(oce)  
-```
-
-    ## Error in get(genname, envir = envir) : object 'testthat_print' not found
-
-``` r
 library(ggpubr)
 library(patchwork)
 ```
@@ -67,3 +62,5 @@ int_bf <- read_rds("~/GITHUB/naames_multiday/Output/integrated_bf.rds") %>%
 ## Combine Plots
 
 ![](S4_Depth_Profiles_Core_files/figure-gfm/combine%20plots-1.png)<!-- -->
+
+![](S4_Depth_Profiles_Core_files/figure-gfm/combine%20plots2-1.png)<!-- -->
