@@ -13,11 +13,6 @@ library(lubridate)
 library(hms)
 library(zoo) 
 library(oce)  
-```
-
-    ## Error in get(genname, envir = envir) : object 'testthat_print' not found
-
-``` r
 library(ggpubr)
 library(patchwork)
 ```
@@ -49,6 +44,11 @@ aou <- read_rds("~/GITHUB/naames_multiday/Output/integrated_aou.rds") %>%
 
 npp <- read_rds("~/GITHUB/naames_multiday/Output/integrated_npp.rds") %>% 
   filter(Cruise == "AT34")
+```
+
+``` r
+bf2 <- read_rds("~/GITHUB/naames_multiday/Output/integrated_bf.rds") %>% 
+  filter(!Cruise == "AT34")
 ```
 
 # Plot Data
@@ -113,6 +113,13 @@ chl.plot <- bf %>%
 ## N+N
 
 ## TDAA
+
+    ## 
+    ##  Wilcoxon rank sum test with continuity correction
+    ## 
+    ## data:  c(0.19, 0.23, 0.15) and c(0.19, 0.11, 0.13)
+    ## W = 7.5, p-value = 0.2683
+    ## alternative hypothesis: true location shift is not equal to 0
 
 ## AOU
 

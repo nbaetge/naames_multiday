@@ -30,7 +30,7 @@ bf <- read_rds("~/GITHUB/naames_multiday/Input/bottle_data.rds") %>%
   filter(Cruise == "AT38", Station %in% c(3, 3.5, 4, 6), z > 0, z <= 200, !plot_date %in% c("Sep 8 03:08",  "Sep 8 15:30", "Sep 11 03:07", "Sep 14 15:33", "Sep 15 03:04", "Sep 15 15:20", "Sep 16 03:04", "Sep 16 04:50", "Sep 16 07:26")) %>% 
   mutate(name = ifelse(Cruise == "AT34", "NAAMES 2", "NAAMES 3"), 
          plot_name = paste(name, "Station", Station),
-         plot_sep = ifelse(Station == "6", "Subpolar", "Subtropical"))
+         plot_sep = ifelse(Station == "6", "Subpolar", "Subtropical")) 
   
 ctd <- read_rds("~/GITHUB/naames_multiday/Input/ctd_data.rds") %>% 
    filter(Cruise == "AT38", Station %in% c(3, 3.5, 4, 6), z > 0, z <= 200, !plot_date %in% c("Sep 8 03:08", "Sep 8 15:30", "Sep 11 03:07", "Sep 14 15:33", "Sep 15 03:04", "Sep 15 15:20", "Sep 16 03:04", "Sep 16 04:50", "Sep 16 07:26"))  %>% 
@@ -129,8 +129,15 @@ n2_npp <- read_rds("~/GITHUB/naames_multiday/Input/npp_data.rds") %>%
 chl.plot <-  bf %>% 
   drop_na(chl) %>% 
   # µg / L = mg / m3
-  ggplot(aes(x = z, y = chl, color = plot_name, fill = plot_name,  group = interaction(datetime, CampCN))) +
-   geom_vline(xintercept = 57, color = "red") +
+  group_by(Station, z) %>% 
+  mutate(ave = ifelse(Station == 6, mean(chl, na.rm = T), chl),
+         sd = ifelse(Station == 6, sd(chl, na.rm = T), NA)) %>% 
+  ungroup() %>% 
+  select(plot_name, z, ave, sd) %>% 
+  distinct() %>% 
+  ggplot(aes(x = z, y = ave, color = plot_name, fill = plot_name)) +
+  geom_vline(xintercept = 57, color = "red") +
+  geom_errorbar(aes(ymin = ave - sd, ymax = ave + sd), color = "black", width = 5) +
   geom_line(size = 0.7) +
   geom_point(shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = "Depth, m", y = expression(paste("Chl ", italic("a"), ", ug L"^"-1")), colour = "", fill = "Station") +
@@ -157,10 +164,16 @@ chl.plot <-  bf %>%
 ```{r phyto plot, echo = FALSE, warning = FALSE, message = FALSE}
 phyto.plot <-  phyto %>% 
   # mutate(phyto = phyto * 10^3) %>% 
-  select(plot_date, plot_name, depth, phyto) %>% 
-  ggplot(aes(x = depth, y = phyto, color = plot_name, fill = plot_name, group = interaction(plot_date))) +
-  # geom_errorbar(aes(x = z, ymin = ave_phyto - sd_phyto, ymax = ave_phyto + sd_phyto, color = plot_date)) +
-   geom_vline(xintercept = 57, color = "red") +
+  select(station, plot_date, plot_name, depth, phyto) %>% 
+  group_by(station, depth) %>% 
+  mutate(ave = ifelse(station == 6, mean(phyto, na.rm = T), phyto),
+         sd = ifelse(station == 6, sd(phyto, na.rm = T), NA)) %>% 
+  ungroup() %>% 
+  select(plot_name, depth, ave, sd) %>% 
+  distinct() %>% 
+  ggplot(aes(x = depth, y = ave, color = plot_name, fill = plot_name)) +
+  geom_vline(xintercept = 57, color = "red") +
+  geom_errorbar(aes(ymin = ave - sd, ymax = ave + sd), color = "black", width = 5) +
   geom_line(size = 0.7) +
   geom_point(shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = "", y = expression(paste("Phytoplankton, cells L"^"-1")), color = "", fill = "Date") +
@@ -186,8 +199,15 @@ phyto.plot <-  phyto %>%
 ```{r npp plot, echo = FALSE, warning = FALSE, message = FALSE}
 npp.plot <-  npp %>% 
   # mutate(npp = npp/10^3) %>% 
-  ggplot(aes(x = z, y = npp, color = plot_name, group = plot_date)) +
-   geom_vline(xintercept = 57, color = "red") +
+   group_by(Station, z) %>% 
+  mutate(ave = ifelse(Station == 6, mean(npp, na.rm = T), npp),
+         sd = ifelse(Station == 6, sd(npp, na.rm = T), NA)) %>% 
+  ungroup() %>% 
+  select(plot_name, z, ave, sd) %>% 
+  distinct() %>% 
+  ggplot(aes(x = z, y = ave, color = plot_name, fill = plot_name)) +
+  geom_vline(xintercept = 57, color = "red") +
+  geom_ribbon(aes(ymin = ave - sd, ymax = ave + sd), alpha = 0.3, color = "black", linetype = 2, width = 5) +
   geom_line(size = 1) +
   labs(x = "", y = expression(paste("Modeled NPP, µmol C L"^-1, " d"^-1)), colour = "Date") +
   expand_limits(x = 200) +
@@ -213,9 +233,16 @@ npp.plot <-  npp %>%
 ```{r n plot, echo = FALSE, warning = FALSE, message = FALSE}
 n.plot <-  bf %>% 
   drop_na(n) %>% 
-  ggplot(aes(x = z, y = n, color = plot_name, fill = plot_name, group = interaction(plot_date, CampCN))) +
-  geom_errorbar(aes(x = z, ymin = n - sd_n, ymax = n + sd_n), width = 5) +
-   geom_vline(xintercept = 57, color = "red") +
+  
+  group_by(Station, z) %>% 
+  mutate(ave = ifelse(Station == 6, mean(n, na.rm = T), n),
+         sd = ifelse(Station == 6, sd(n, na.rm = T), NA)) %>% 
+  ungroup() %>% 
+  select(plot_name, z, ave, sd) %>% 
+  distinct() %>% 
+  ggplot(aes(x = z, y = ave, color = plot_name, fill = plot_name)) +
+  geom_vline(xintercept = 57, color = "red") +
+  geom_errorbar(aes(ymin = ave - sd, ymax = ave + sd), color = "black", width = 5) +
   geom_line(size = 0.7) +
   geom_point(shape = 21, size = 6,  color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = "Depth, m", y = expression(paste("N + N, µmol N L"^"-1"))) +
@@ -242,9 +269,17 @@ n.plot <-  bf %>%
 ```{r doc plot, echo = FALSE, warning = FALSE, message = FALSE}
 doc.plot <- bf %>% 
   drop_na(doc) %>% 
-  ggplot(aes(x = z, y = doc, color = plot_name, fill = plot_name, group = interaction(plot_date, CampCN))) +
-  geom_errorbar(aes(x = z, ymin = doc - sd_doc, ymax = doc + sd_doc), width = 5) +
-   geom_vline(xintercept = 57, color = "red") +
+  
+   group_by(Station, z) %>% 
+  mutate(ave = ifelse(Station == 6, mean(doc, na.rm = T), doc),
+         sd = ifelse(Station == 6, sd(doc, na.rm = T), NA)) %>% 
+  ungroup() %>% 
+  select(plot_name, z, ave, sd) %>% 
+  distinct() %>% 
+  ggplot(aes(x = z, y = ave, color = plot_name, fill = plot_name)) +
+  geom_vline(xintercept = 57, color = "red") +
+  geom_errorbar(aes(ymin = ave - sd, ymax = ave + sd), color = "black", width = 5) +
+  
   geom_line(size = 0.7) +
   geom_point( shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = "", y = expression(paste("DOC, µmol C L"^"-1")), colour = "", fill = "Date") +
@@ -270,10 +305,18 @@ doc.plot <- bf %>%
 ```{r aou plot, echo = FALSE, warning = FALSE, message = FALSE}
 aou.plot <-  ctd %>% 
   drop_na(aou) %>% 
-  ggplot(aes(x = z, y = aou, color = plot_name, group = plot_date)) +
-  # geom_ribbon(aes(ymin = aou - sd_aou, ymax = aou + sd_aou, fill = plot_date), alpha = 0.5) +
-   geom_vline(xintercept = 57, color = "red") +
+  
+   group_by(Station, z) %>% 
+  mutate(ave = mean(aou, na.rm = T),
+         sd = sd(aou, na.rm = T), NA) %>% 
+  ungroup() %>% 
+  select(plot_name, z, ave, sd) %>% 
+  distinct() %>% 
+  ggplot(aes(x = z, y = ave, color = plot_name, fill = plot_name)) +
+  geom_vline(xintercept = 57, color = "red") +
+   geom_ribbon(aes(ymin = ave - sd, ymax = ave + sd), alpha = 0.3, color = "black", linetype = 2, width = 5) +
   geom_line(size = 0.7) +
+  
   labs(x = "", y = expression(paste("AOU, µmol O"[2]," L"^"-1")), colour = "Date", fill = "") +
   scale_x_reverse() +
   coord_flip() +
@@ -298,9 +341,18 @@ aou.plot <-  ctd %>%
 ba.plot <-  bf %>% 
   drop_na(ba) %>% 
   filter(!plot_date %in% c("Sep 10 15:30"))  %>%
-  ggplot(aes(x = z, y = ba, color = plot_name, fill = plot_name, group = interaction(plot_date, CampCN))) +
-  geom_errorbar(aes(x = z, ymin = ba - sd_ba, ymax = ba + sd_ba), width = 5) +
-   geom_vline(xintercept = 57, color = "red") +
+
+  
+   group_by(Station, z) %>% 
+  mutate(ave = ifelse(Station == 6, mean(ba, na.rm = T), ba),
+         sd = ifelse(Station == 6, sd(ba, na.rm = T), NA)) %>% 
+  ungroup() %>% 
+  select(plot_name, z, ave, sd) %>% 
+  distinct() %>% 
+  ggplot(aes(x = z, y = ave, color = plot_name, fill = plot_name)) +
+  geom_vline(xintercept = 57, color = "red") +
+  geom_errorbar(aes(ymin = ave - sd, ymax = ave + sd), color = "black", width = 5) +
+  
   geom_line(size = 0.7) +
   geom_point(shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
   labs(x = "Depth, m", y = expression(paste("Bacterioplankton, cells L"^"-1")), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Date") +
@@ -325,13 +377,19 @@ ba.plot <-  bf %>%
 
 ```{r bp plot, echo = FALSE, warning = FALSE, message = FALSE}
 leu.plot <-  bf %>% 
-  drop_na(bp_incorp) %>% 
-  ggplot(aes(x = z, y = bp, color = plot_name, fill = plot_name, group = interaction(plot_date, CampCN))) +
-  geom_errorbar(aes(x = z, ymin = bp - sd_bp, ymax = bp + sd_bp), width = 5) +
-   geom_vline(xintercept = 57, color = "red") +
+  drop_na(bp) %>% 
+  group_by(Station, z) %>% 
+  mutate(ave = ifelse(Station == 6, mean(bp, na.rm = T), bp),
+         sd = ifelse(Station == 6, sd(bp, na.rm = T), NA)) %>% 
+  ungroup() %>% 
+  select(plot_name, z, ave, sd) %>% 
+  distinct() %>% 
+  ggplot(aes(x = z, y = ave, color = plot_name, fill = plot_name)) +
+  geom_vline(xintercept = 57, color = "red") +
+  geom_errorbar(aes(ymin = ave - sd, ymax = ave + sd), color = "black", width = 5) +
   geom_line(size = 0.7) +
   geom_point(shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = "", y = expression(paste("BP, nmol C L"^"-1","h"^-1)), colour = "", fill = "Date") +
+  labs(x = "", y = expression(paste("BP, nmol C L"^"-1","d"^-1)), colour = "", fill = "Date") +
   scale_x_reverse() +
   coord_flip() +
   scale_fill_viridis_d() +

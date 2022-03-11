@@ -14,11 +14,6 @@ library(lubridate)
 library(hms)
 library(zoo) 
 library(oce)  
-```
-
-    ## Error in get(genname, envir = envir) : object 'testthat_print' not found
-
-``` r
 library(ggpubr)
 library(patchwork)
 ```
@@ -33,7 +28,7 @@ bf <- read_rds("~/GITHUB/naames_multiday/Input/bottle_data.rds") %>%
   filter(Cruise == "AT38", Station %in% c(3, 3.5, 4, 6), z > 0, z <= 200, !plot_date %in% c("Sep 8 03:08",  "Sep 8 15:30", "Sep 11 03:07", "Sep 14 15:33", "Sep 15 03:04", "Sep 15 15:20", "Sep 16 03:04", "Sep 16 04:50", "Sep 16 07:26")) %>% 
   mutate(name = ifelse(Cruise == "AT34", "NAAMES 2", "NAAMES 3"), 
          plot_name = paste(name, "Station", Station),
-         plot_sep = ifelse(Station == "6", "Subpolar", "Subtropical"))
+         plot_sep = ifelse(Station == "6", "Subpolar", "Subtropical")) 
   
 ctd <- read_rds("~/GITHUB/naames_multiday/Input/ctd_data.rds") %>% 
    filter(Cruise == "AT38", Station %in% c(3, 3.5, 4, 6), z > 0, z <= 200, !plot_date %in% c("Sep 8 03:08", "Sep 8 15:30", "Sep 11 03:07", "Sep 14 15:33", "Sep 15 03:04", "Sep 15 15:20", "Sep 16 03:04", "Sep 16 04:50", "Sep 16 07:26"))  %>% 
