@@ -27,12 +27,12 @@ phyto <- read_rds("~/GITHUB/naames_multiday/Output/integrated_phyto.rds") %>%
   filter(station == "S4", !plot_date %in% c("May 24 02:30", "May 27 06:07", "Sep 10 07:30")) %>% 
   pivot_longer(c(phyto_ez, phyto_mz), names_to = "dh", values_to = "phyto" ) %>% 
   select(date, time, plot_date, dh, phyto) %>% 
-  mutate(dh = ifelse(dh == "phyto_ez", "Euphotic", "Upper Mesopelagic")) %>% 
+  mutate(dh = ifelse(dh == "phyto_ez", "Euphotic", "Upper mesopelagic")) %>% 
   left_join(., read_rds("~/GITHUB/naames_multiday/Output/integrated_phyto.rds") %>% 
               filter(station == "S4", !plot_date %in% c("May 24 02:30", "May 27 06:07")) %>%
               pivot_longer(c(depthNerr_ez, depthNerr_mz), names_to = "dh", values_to = "err" ) %>% 
               select(date, time, plot_date, dh, err) %>% 
-              mutate(dh = ifelse(dh == "depthNerr_ez", "Euphotic", "Upper Mesopelagic"))) %>% 
+              mutate(dh = ifelse(dh == "depthNerr_ez", "Euphotic", "Upper mesopelagic"))) %>% 
   mutate(datetime = ymd_hms(paste(date, time)))
 ```
 
@@ -61,12 +61,13 @@ phyto.plot <- phyto %>%
   geom_line(size = 0.5, alpha = 0.7) +
   geom_errorbar(aes(ymin = phyto - err, ymax = phyto + err),  width = 5000) +
   geom_point(color = "black", shape = 21, size = 3, alpha = 0.7) +
-  labs(x = "", y = expression(paste("Phytoplankton, cells L"^"-1")), color = "", fill = "") +
+  labs(x = "", y = expression(paste("Phytoplankton (cells L"^-1, ")")), color = "", fill = "") +
   scale_fill_viridis_d(end = 0.7) +
   scale_color_viridis_d(end = 0.7) +
   guides(color = F, fill = F, shape = F, linetype = F) +
   scale_x_datetime( date_labels = c("%b %e", "%H:%M"), date_breaks = "12 hours") +
-  theme_linedraw(base_size = 16) 
+  theme_linedraw(base_size = 16) +
+  ylim(5E6, 5E7)
 ```
 
     ## Warning: `guides(<scale> = FALSE)` is deprecated. Please use `guides(<scale> =
@@ -80,23 +81,24 @@ chl.plot <- bf %>%
   drop_na(chl_ez) %>% 
   pivot_longer(c(chl_ez, chl_mz), names_to = "dh", values_to = "chl" ) %>% 
   select(datetime, dh, chl) %>% 
-  mutate(dh = ifelse(dh == "chl_ez", "Euphotic", "Upper Mesopelagic")) %>% 
+  mutate(dh = ifelse(dh == "chl_ez", "Euphotic", "Upper mesopelagic")) %>% 
   left_join(., bf %>% 
               select(datetime, chl_ez, chl_mz, chl_depthNerr_ez, chl_depthNerr_mz) %>% 
               drop_na(chl_ez) %>% 
               pivot_longer(c(chl_depthNerr_ez, chl_depthNerr_mz), names_to = "dh", values_to = "err" ) %>% 
               select(datetime, dh, err) %>% 
-              mutate(dh = ifelse(dh == "chl_depthNerr_ez", "Euphotic", "Upper Mesopelagic"))) %>% 
+              mutate(dh = ifelse(dh == "chl_depthNerr_ez", "Euphotic", "Upper mesopelagic"))) %>% 
   ggplot(aes(x = datetime, y = chl, color = dh, fill = dh)) +
   geom_line(size = 0.5, alpha = 0.7) +
   geom_errorbar(aes(ymin = chl - err, ymax = chl + err),  width = 5000) +
   geom_point(color = "black", shape = 21, size = 3, alpha = 0.7) +
-  labs(x = "", y = expression(paste("Chl ",italic("a"), ", µg L"^"-1")), color = "", fill = "") +
+  labs(x = "", y = expression(paste("Chl ",italic("a"), " (µg L"^-1, ")")), color = "", fill = "") +
   scale_fill_viridis_d(end = 0.7) +
   scale_color_viridis_d(end = 0.7) +
   guides(color = F, fill = F, shape = F, linetype = F) +
   scale_x_datetime( date_labels = c("%b %e", "%H:%M"), date_breaks = "12 hours") +
-  theme_linedraw(base_size = 16) 
+  theme_linedraw(base_size = 16) +
+  ylim(0.05, 1.0)
 ```
 
     ## Joining, by = c("datetime", "dh")

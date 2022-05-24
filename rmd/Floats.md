@@ -185,8 +185,8 @@ s4_subset$plot_date <- reorder(s4_subset$plot_date, s4_subset$datetime)
 s4.ts <- PlotSvalbard::ts_plot(s4_subset, temp_col = "potT", sal_col = "s", color = "type", symbol_size = 3, symbol_shape = 16, symbol_alpha = 0.5, color_isopyc = "black", WM = NULL) +
   scale_color_viridis_d(begin = 0.1, end = 0.8) +
   theme_classic2(18) +
-  scale_x_continuous(name = "Practical Salinity", sec.axis = sec_axis(~.,name = expression(paste("Potential Density, kg m"^-3)))) +
-  scale_y_continuous(name = "Potential Temperature, ˚C") +
+  scale_x_continuous(name = "Practical salinity", sec.axis = sec_axis(~.,name = expression(paste("Potential density (kg m"^-3, ")")))) +
+  scale_y_continuous(name = "Potential temperature (˚C)") +
    theme(panel.spacing.x = unit(1, "cm"),
         axis.text.x = element_text(angle = 0),
         legend.title = element_blank(),
@@ -194,16 +194,15 @@ s4.ts <- PlotSvalbard::ts_plot(s4_subset, temp_col = "potT", sal_col = "s", colo
         legend.position = c(0.8, 0.25),
         legend.text = element_text(size = 16),
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
-        legend.spacing.y = unit(0, "pt")) +
-  ggtitle("Ship and Float n0647")
+        legend.spacing.y = unit(0, "pt")) 
 
 s4_subset_ship <- s4_subset %>% filter(type == "Ship")
 
 s4.ts2 <- PlotSvalbard::ts_plot(s4_subset_ship, temp_col = "potT", sal_col = "s", color = "plot_date", symbol_size = 3, symbol_shape = 16, symbol_alpha = 0.5, color_isopyc = "black", WM = NULL) +
   scale_color_viridis_d(begin = 0.1, end = 0.8) +
   theme_classic2(18) +
-  scale_x_continuous(name = "Practical Salinity", sec.axis = sec_axis(~.,name = expression(paste("Potential Density, kg m"^-3)))) +
-  scale_y_continuous(name = "Potential Temperature, ˚C") +
+   scale_x_continuous(name = "Practical salinity", sec.axis = sec_axis(~.,name = expression(paste("Potential density (kg m"^-3, ")")))) +
+  scale_y_continuous(name = "Potential temperature (˚C)") +
    theme(panel.spacing.x = unit(1, "cm"),
         axis.text.x = element_text(angle = 0),
         legend.title = element_blank(),
@@ -211,16 +210,15 @@ s4.ts2 <- PlotSvalbard::ts_plot(s4_subset_ship, temp_col = "potT", sal_col = "s"
         legend.position = c(0.8, 0.25),
         legend.text = element_text(size = 12),
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
-        legend.spacing.y = unit(0, "pt")) + 
-  ggtitle("Ship")
+        legend.spacing.y = unit(0, "pt")) 
 
 s4_subset_float <- s4_subset %>% filter(type == "Float")
 
 s4.ts3 <- PlotSvalbard::ts_plot(s4_subset_float, temp_col = "potT", sal_col = "s", color = "plot_date", symbol_size = 3, symbol_shape = 16, symbol_alpha = 0.5, color_isopyc = "black", WM = NULL) +
   scale_color_viridis_d(begin = 0.1, end = 0.8) +
   theme_classic2(18) +
-  scale_x_continuous(name = "Practical Salinity", sec.axis = sec_axis(~.,name = expression(paste("Potential Density, kg m"^-3)))) +
-  scale_y_continuous(name = "Potential Temperature, ˚C") +
+    scale_x_continuous(name = "Practical salinity", sec.axis = sec_axis(~.,name = expression(paste("Potential density (kg m"^-3, ")")))) +
+  scale_y_continuous(name = "Potential temperature (˚C)") +
    theme(panel.spacing.x = unit(1, "cm"),
         axis.text.x = element_text(angle = 0),
         legend.title = element_blank(),
@@ -228,12 +226,11 @@ s4.ts3 <- PlotSvalbard::ts_plot(s4_subset_float, temp_col = "potT", sal_col = "s
         legend.position = c(0.8, 0.25),
         legend.text = element_text(size = 12),
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
-        legend.spacing.y = unit(0, "pt")) +
-  ggtitle("Float n0647")
+        legend.spacing.y = unit(0, "pt")) 
 ```
 
 ``` r
-s4.ts + s4.ts2 + s4.ts3 + plot_annotation(tag_levels = "a", title = "NAAMES 2 Station 4", theme = theme(plot.title = element_text(size = 24))) 
+s4.ts + s4.ts2 + s4.ts3 + plot_annotation(tag_levels = "a") 
 ```
 
 ![](Floats_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
@@ -256,8 +253,8 @@ s6_subset$plot_date <- reorder(s6_subset$plot_date, s6_subset$datetime)
 s6.ts <- PlotSvalbard::ts_plot(s6_subset, temp_col = "potT", sal_col = "s", color = "type", symbol_size = 3, symbol_shape = 16, symbol_alpha = 0.7, color_isopyc = "black", WM = NULL) +
   scale_color_viridis_d(begin = 0.1, end = 0.8) +
   theme_classic2(18) +
-  scale_x_continuous(name = "Practical Salinity", sec.axis = sec_axis(~.,name = expression(paste("Potential Density, kg m"^-3)))) +
-  scale_y_continuous(name = "Potential Temperature, ˚C") +
+    scale_x_continuous(name = "Practical salinity", sec.axis = sec_axis(~.,name = expression(paste("Potential density (kg m"^-3, ")")))) +
+  scale_y_continuous(name = "Potential temperature (˚C)") +
    theme(panel.spacing.x = unit(1, "cm"),
         axis.text.x = element_text(angle = 0),
         legend.title = element_blank(),
@@ -265,16 +262,15 @@ s6.ts <- PlotSvalbard::ts_plot(s6_subset, temp_col = "potT", sal_col = "s", colo
         legend.position = c(0.8, 0.7),
         legend.text = element_text(size = 12),
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
-        legend.spacing.y = unit(0, "pt")) +
-  ggtitle("Ship & Floats n0846 & n0847")
+        legend.spacing.y = unit(0, "pt")) 
 
 s6_subset_ship <- s6_subset %>% filter(type == "Ship")
 
 s6.ts2 <- PlotSvalbard::ts_plot(s6_subset_ship, temp_col = "potT", sal_col = "s", color = "plot_date", symbol_size = 3, symbol_shape = 16, symbol_alpha = 0.7, color_isopyc = "black", WM = NULL) +
   scale_color_viridis_d(begin = 0.1, end = 0.8) +
   theme_classic2(18) +
-  scale_x_continuous(name = "Practical Salinity", sec.axis = sec_axis(~.,name = expression(paste("Potential Density, kg m"^-3)))) +
-  scale_y_continuous(name = "Potential Temperature, ˚C") +
+ scale_x_continuous(name = "Practical salinity", sec.axis = sec_axis(~.,name = expression(paste("Potential density (kg m"^-3, ")")))) +
+  scale_y_continuous(name = "Potential temperature (˚C)") +
    theme(panel.spacing.x = unit(1, "cm"),
         axis.text.x = element_text(angle = 0),
         legend.title = element_blank(),
@@ -282,8 +278,7 @@ s6.ts2 <- PlotSvalbard::ts_plot(s6_subset_ship, temp_col = "potT", sal_col = "s"
         legend.position = c(0.8, 0.7),
         legend.text = element_text(size = 12),
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
-        legend.spacing.y = unit(0, "pt")) +
-  ggtitle("Ship")
+        legend.spacing.y = unit(0, "pt"))
 
 
 s6_subset_float <- s6_subset %>% filter(type == "Float")
@@ -291,8 +286,8 @@ s6_subset_float <- s6_subset %>% filter(type == "Float")
 s6.ts3 <- PlotSvalbard::ts_plot(s6_subset_float, temp_col = "potT", sal_col = "s", color = "plot_date", symbol_size = 3, symbol_shape = 16, symbol_alpha = 0.7, color_isopyc = "black", WM = NULL) +
   scale_color_viridis_d(begin = 0.1, end = 0.8) +
   theme_classic2(18) +
-  scale_x_continuous(name = "Practical Salinity", sec.axis = sec_axis(~.,name = expression(paste("Potential Density, kg m"^-3)))) +
-  scale_y_continuous(name = "Potential Temperature, ˚C") +
+ scale_x_continuous(name = "Practical salinity", sec.axis = sec_axis(~.,name = expression(paste("Potential density (kg m"^-3, ")")))) +
+  scale_y_continuous(name = "Potential temperature (˚C)") +
    theme(panel.spacing.x = unit(1, "cm"),
         axis.text.x = element_text(angle = 0),
         legend.title = element_blank(),
@@ -300,12 +295,11 @@ s6.ts3 <- PlotSvalbard::ts_plot(s6_subset_float, temp_col = "potT", sal_col = "s
         legend.position = c(0.8, 0.7),
         legend.text = element_text(size = 12),
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
-        legend.spacing.y = unit(0, "pt")) + 
-  ggtitle("Floats n0846 & n0847")
+        legend.spacing.y = unit(0, "pt")) 
 ```
 
 ``` r
-s6.ts + s6.ts2 + s6.ts3 + plot_annotation(tag_levels = "a", title = "NAAMES 3 Station 6", theme = theme(plot.title = element_text(size = 24))) 
+s6.ts + s6.ts2 + s6.ts3 + plot_annotation(tag_levels = "a") 
 ```
 
 ![](Floats_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
@@ -325,8 +319,8 @@ s3_subset$plot_date <- reorder(s3_subset$plot_date, s3_subset$datetime)
 s3.ts <- PlotSvalbard::ts_plot(s3_subset, temp_col = "potT", sal_col = "s", color = "type", symbol_size = 3, symbol_shape = 16, symbol_alpha = 0.7, color_isopyc = "black", WM = NULL) +
   scale_color_viridis_d(begin = 0.1, end = 0.8) +
   theme_classic2(18) +
-  scale_x_continuous(name = "Practical Salinity", sec.axis = sec_axis(~.,name = expression(paste("Potential Density, kg m"^-3)))) +
-  scale_y_continuous(name = "Potential Temperature, ˚C") +
+  scale_x_continuous(name = "Practical salinity", sec.axis = sec_axis(~.,name = expression(paste("Potential density (kg m"^-3, ")")))) +
+  scale_y_continuous(name = "Potential temperature (˚C)") +
    theme(panel.spacing.x = unit(1, "cm"),
         axis.text.x = element_text(angle = 0),
         legend.title = element_blank(),
@@ -334,8 +328,7 @@ s3.ts <- PlotSvalbard::ts_plot(s3_subset, temp_col = "potT", sal_col = "s", colo
         legend.position = c(0.8, 0.7),
         legend.text = element_text(size = 12),
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
-        legend.spacing.y = unit(0, "pt")) +
-  ggtitle("NAAMES 3 Station 3 Ship & Float n0850")
+        legend.spacing.y = unit(0, "pt")) 
 
 n3s4_subset <- floatsNmldsNezds %>% filter(Cruise == "AT38" & Station == 4, p <= 250) %>%  mutate(type = "Float") %>% select(-c(o2:poc)) %>% distinct() %>% 
   bind_rows(., ship_ctd %>% filter(Cruise == "AT38", Station == 4, p <= 250) %>% mutate(type = "Ship") %>% filter(!plot_date %in% c("Sep 11 03:07")))
@@ -345,8 +338,8 @@ n3s4_subset$plot_date <- reorder(n3s4_subset$plot_date, n3s4_subset$datetime)
 n3s4.ts <- PlotSvalbard::ts_plot(n3s4_subset, temp_col = "potT", sal_col = "s", color = "type", symbol_size = 3, symbol_shape = 16, symbol_alpha = 0.7, color_isopyc = "black", WM = NULL) +
   scale_color_viridis_d(begin = 0.1, end = 0.8) +
   theme_classic2(18) +
-  scale_x_continuous(name = "Practical Salinity", sec.axis = sec_axis(~.,name = expression(paste("Potential Density, kg m"^-3)))) +
-  scale_y_continuous(name = "Potential Temperature, ˚C") +
+   scale_x_continuous(name = "Practical salinity", sec.axis = sec_axis(~.,name = expression(paste("Potential density (kg m"^-3, ")")))) +
+  scale_y_continuous(name = "Potential temperature (˚C)") +
    theme(panel.spacing.x = unit(1, "cm"),
         axis.text.x = element_text(angle = 0),
         legend.title = element_blank(),
@@ -354,8 +347,7 @@ n3s4.ts <- PlotSvalbard::ts_plot(n3s4_subset, temp_col = "potT", sal_col = "s", 
         legend.position = c(0.8, 0.7),
         legend.text = element_text(size = 12),
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
-        legend.spacing.y = unit(0, "pt")) +
-  ggtitle("NAAMES 3 Station 4 Ship & Float n0849")
+        legend.spacing.y = unit(0, "pt")) 
 
 
 s35_subset <- ship_ctd %>% filter(Cruise == "AT38", Station == 3.5, p <= 250) %>% mutate(type = "Ship")
@@ -365,8 +357,8 @@ s35_subset$plot_date <- reorder(s35_subset$plot_date, s35_subset$datetime)
 s35.ts <- PlotSvalbard::ts_plot(s35_subset, temp_col = "potT", sal_col = "s", color = "plot_date", symbol_size = 3, symbol_shape = 16, symbol_alpha = 0.7, color_isopyc = "black", WM = NULL) +
   scale_color_viridis_d(begin = 0.1, end = 0.8) +
   theme_classic2(18) +
-  scale_x_continuous(name = "Practical Salinity", sec.axis = sec_axis(~.,name = expression(paste("Potential Density, kg m"^-3)))) +
-  scale_y_continuous(name = "Potential Temperature, ˚C") +
+   scale_x_continuous(name = "Practical salinity", sec.axis = sec_axis(~.,name = expression(paste("Potential density (kg m"^-3, ")")))) +
+  scale_y_continuous(name = "Potential temperature (˚C)") +
    theme(panel.spacing.x = unit(1, "cm"),
         axis.text.x = element_text(angle = 0),
         legend.title = element_blank(),
@@ -374,8 +366,7 @@ s35.ts <- PlotSvalbard::ts_plot(s35_subset, temp_col = "potT", sal_col = "s", co
         legend.position = c(0.8, 0.7),
         legend.text = element_text(size = 12),
         legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
-        legend.spacing.y = unit(0, "pt")) +
-  ggtitle("NAAMES 3 Station 3.5 Ship")
+        legend.spacing.y = unit(0, "pt"))
 ```
 
 ``` r
@@ -411,7 +402,6 @@ custom.colors <- c("Ship" = "#d16cfa", "Float n0850" = "#d31f2a", "Float n0849" 
 
 custom.lines <- c("Ship" = 1, "Float n0847" = 2, "Float n0846" = 2, "Float n0647" = 2, "Float n0849" = 2 , "Float n0850" = 2, "Drifter" = 3)
 mycolor <- colors$viridis
-sst_color <- colors$temperature
 w <- map_data("worldHires", ylim = c(35., 60.), xlim = c(-60, -30))
 
 sla <- readxl::read_excel("~/GITHUB/naames_multiday/Input/sla/combined_sla.xlsx")
@@ -436,58 +426,53 @@ map_data <- stations %>% select(Cruise, Station, Date, lon, lat) %>% mutate(type
             "Drifter", "Float n0647", "Float n0850", "Float n0849", "Float n0847", "Float n0846", "Ship"))
 
 map1_data <- map_data %>% 
-  filter(Cruise == "AT34")
+  filter(Cruise == "AT34") %>% 
+  mutate(plot_sep = "N2S4 - Subtropical")
 
 map1 <- ggplot(data = map1_data, aes(x = lon, y = lat)) + 
   facet_wrap(~plot_sep, dir = "v", scales = "free") +
   # geom_tile(data = n2_sst$data, aes(x = lon, y = lat, fill = analysed_sst)) +
   geom_tile(data = n2_chl$data, aes(x = lon, y = lat, fill = chlor_a), alpha = 0.7) +
   scale_fill_gradientn(colors = mycolor, na.value = NA) +
-  labs(fill = expression(paste("Chlorophyll", italic(" a"), ", mg m"^-3))) +
+  labs(fill = expression(paste("Chlorophyll", italic(" a"), " (mg m"^-3, ")"))) +
   new_scale_fill() +  
    geom_line(data = . %>% filter(!type == "Drifter"), aes(color = type, group = interaction(type, plot_name, float)), color = "black", size = 2, alpha = 0.7) +
   geom_line(aes(color = type, group = interaction(type, plot_name, float)), size = 1, alpha = 0.7) +
   geom_point(data = . %>% filter(!type == "Drifter"), aes(fill = type, shape = plot_name,  group = interaction(type, plot_name, float)),  size = 2, alpha = 0.7) +
   theme_linedraw() + 
-  labs(x = "Longitude, ˚W", y = "Latitude, ˚N", color = "", fill = "", linetype = "", shape = "") +
+  labs(x = "Longitude (˚W)", y = "Latitude, (˚N)", color = "", fill = "", linetype = "", shape = "") +
   # scale_linetype_manual(values = custom.lines) +
   scale_fill_manual(values = custom.colors) +
   scale_color_manual(values = custom.colors) +
   scale_shape_manual(values = custom.shapes) +
   guides(fill = guide_legend(override.aes = list(shape = 21))) +
-  ggtitle("N2S4")  +
   geom_contour(data = sla, aes(x = lon, y = lat, z = sla), linetype = 2, size = 1.5, color = "black") +
-  theme(plot.tag = element_text(size = 22)) 
+  theme(plot.tag = element_text(size = 26)) 
 
 map2_data <- map_data %>% 
-  filter(Cruise == "AT38")
+  filter(Cruise == "AT38") %>% 
+  mutate(plot_sep = ifelse(plot_sep == "Subpolar", "NAAMES 3 - Subpolar", "NAAMES 3 - Subtropical")) 
+  
 
-s4_map2 <- map1_data %>% 
-  filter(type == "Ship")
+s4_map2 <- tibble(lon = c(-38.72, -38.8), lat = c(47.46, 47.5), plot_sep = "NAAMES 3 - Subtropical", name = "N2S4", type = c("star", "label"))
+
+library(ggstar)
 
 map2 <- ggplot(data = map2_data, aes(x = lon, y = lat)) + 
   facet_wrap(~plot_sep, dir = "v", scales = "free") +
-  # geom_tile(data = n3_sst$data, aes(x = lon, y = lat, fill = analysed_sst)) +
-  # geom_tile(data = n3_chl$data, aes(x = lon, y = lat, fill = chlor_a), alpha = 0.7) +
-  # scale_fill_gradientn(colors = mycolor, na.value = NA) +
-  # labs(fill = expression(paste("Chlorophyll", italic(" a"), ", mg m"^-3))) +
-  # new_scale_fill() +  
-  geom_line(data = . %>% filter(!type == "Drifter"), aes(color = type, group = interaction(type, plot_name, float)), color = "black", size = 2, alpha = 0.7) +
+  geom_line(data = . %>% filter(!type == "Drifter", !name == "N2S4"), aes(color = type, group = interaction(type, plot_name, float)), color = "black", size = 2, alpha = 0.7) +
   geom_line(aes(color = type, group = interaction(type, plot_name, float)), size = 1, alpha = 0.7) +
-  geom_point(data = . %>% filter(!type == "Drifter"), aes(fill = type, shape = plot_name,  group = interaction(type, plot_name, float)),  size = 2, alpha = 0.7) +
-  geom_line(data = s4_map2 %>% filter(!type == "Drifter"), aes(x = lon, y = lat, color = type, group = interaction(type, plot_name, float)), color = "black", size = 2, alpha = 0.7) +
-  geom_line(data = s4_map2, aes(x = lon, y = lat, color = type, group = interaction(type, plot_name, float)), size = 1, alpha = 0.7) +
-  
-  geom_point(data = s4_map2, aes(x = lon, y = lat, fill = type, shape = plot_name), size = 2, alpha = 0.7) +
+  geom_point(data = . %>% filter(!type == "Drifter", !name == "N2S4"), aes(fill = type, shape = plot_name,  group = interaction(type, plot_name, float)),  size = 2, alpha = 0.7) +
+  geom_star(data = s4_map2 %>% filter(type == "star"), aes(x = lon, y = lat), size = 5) +
+  geom_label(data = s4_map2 %>% filter(type == "label"), aes(x = lon, y = lat, label = name), size = 3) +
   theme_linedraw() + 
-  labs(x = "Longitude, ˚W", y = "Latitude, ˚N", color = "", fill = "", linetype = "", shape = "") +
+  labs(x = "Longitude (˚W)", y = "Latitude (˚N)", color = "", fill = "", linetype = "", shape = "") +
    # scale_linetype_manual(values = custom.lines) +
   scale_fill_manual(values = custom.colors) +
   scale_color_manual(values = custom.colors) + 
   scale_shape_manual(values = custom.shapes) +
   guides(fill = guide_legend(override.aes = list(shape = 21))) +
-  ggtitle("N2S4 & NAAMES 3") +
-  theme(plot.tag = element_text(size = 22)) 
+  theme(plot.tag = element_text(size = 26)) 
 ```
 
 ``` r
@@ -499,6 +484,10 @@ map2 <- ggplot(data = map2_data, aes(x = lon, y = lat)) +
 \#Station 4
 
 ## Temp profiles
+
+``` r
+new_colors <- colors$freesurface
+```
 
 ``` r
 temp <- floatsNmldsNezds %>% 
@@ -518,6 +507,8 @@ mba <- reshape2::melt(mba$xyz.est$z, varnames = c('decimal_date', 'p'), value.na
 ```
 
 ### Plot
+
+<img src="Floats_files/figure-gfm/unnamed-chunk-19-1.png" style="display: block; margin: auto;" />
 
 ## Sal profiles
 
@@ -569,7 +560,7 @@ t.plot / s.plot / fl.plot + plot_annotation(tag_levels = "a")
     ## Raster pixels are placed at uneven horizontal intervals and will be shifted. Consider using geom_tile() instead.
     ## Raster pixels are placed at uneven horizontal intervals and will be shifted. Consider using geom_tile() instead.
 
-![](Floats_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
+![](Floats_files/figure-gfm/unnamed-chunk-24-1.png)<!-- -->
 
 # Station 6
 
@@ -644,7 +635,7 @@ t.plot / s.plot / fl.plot + plot_annotation(tag_levels = "a")
     ## Raster pixels are placed at uneven horizontal intervals and will be shifted. Consider using geom_tile() instead.
     ## Raster pixels are placed at uneven horizontal intervals and will be shifted. Consider using geom_tile() instead.
 
-![](Floats_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
+![](Floats_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
 
 # Save data
 

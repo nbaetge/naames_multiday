@@ -26,6 +26,9 @@ These casts have been excluded from further analysis (see Float and Ship T-S ana
 !plot_date %in% c("May 24 02:30", "May 27 06:07")
 
 ```{r}
+all <- read_rds("~/GITHUB/naames_multiday/Input/bottle_data.rds") %>% 
+  filter(Cruise == "AT34", z >= 0, z <= 200) 
+ 
 bf <- read_rds("~/GITHUB/naames_multiday/Input/bottle_data.rds") %>% 
   filter(Cruise == "AT34", Station == 4, !plot_date %in% c("May 24 02:30", "May 27 06:07"), z > 0, z <= 200) 
   
@@ -56,7 +59,7 @@ chl.plot <-  bf %>%
   geom_vline(xintercept = 77, color = "red") +
   geom_line(size = 0.7) +
   geom_point(shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = "Depth, m", y = expression(paste("Chl ", italic("a"), ", ug L"^"-1")), colour = "", fill = "Date") +
+  labs(x = "Depth (m)", y = expression(paste("Chl ", italic("a"), " (ug L"^"-1", ")")), colour = "", fill = "Date") +
   expand_limits(x = 200) +
   scale_x_reverse() +
   coord_flip() +
@@ -75,6 +78,17 @@ chl.plot <-  bf %>%
 
 ```
 
+```{r}
+bf %>% 
+  mutate(dh = ifelse(z <= 75, "ez", "mz")) %>% 
+  drop_na(chl) %>% 
+  filter( CampCN %in% c(53, 67)) %>% 
+  group_by(dh) %>% do(broom::tidy(t.test(chl ~ CampCN, data = .)))
+  
+```
+
+
+
 ### Phyto Cells
 
 ```{r phyto plot, echo = FALSE, warning = FALSE, message = FALSE}
@@ -86,7 +100,7 @@ phyto.plot <-  phyto %>%
   geom_vline(xintercept = 77, color = "red") +
   geom_line(size = 0.7) +
   geom_point(shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = "", y = expression(paste("Phytoplankton, cells L"^"-1")), color = "", fill = "Date") +
+  labs(x = "", y = expression(paste("Phytoplankton (cells L"^-1, ")")), color = "", fill = "Date") +
   expand_limits(x = 200) +
   scale_x_reverse() +
   coord_flip() +
@@ -104,6 +118,15 @@ phyto.plot <-  phyto %>%
         legend.spacing.y = unit(0, "pt"))
 ```
 
+```{r}
+phyto %>% 
+  mutate(dh = ifelse(depth <= 75, "ez", "mz")) %>% 
+  drop_na(phyto) %>% 
+  filter( plot_date %in% c("May 24 06:10", "May 27 14:56")) %>% 
+  group_by(dh) %>% do(broom::tidy(t.test(phyto ~ plot_date, data = .)))
+  
+```
+
 ### NPP
 
 ```{r npp plot, echo = FALSE, warning = FALSE, message = FALSE}
@@ -112,7 +135,7 @@ npp.plot <-  npp %>%
   ggplot(aes(x = z, y = npp, color = plot_date, fill = plot_date, group = plot_date)) +
   geom_vline(xintercept = 77, color = "red") +
   geom_line(size = 2) +
-  labs(x = "", y = expression(paste("Modeled NPP, µmol C L"^-1, " d"^-1)), colour = "Date") +
+  labs(x = "", y = expression(paste("Modeled NPP (µmol C L"^-1, " d"^-1, ")")), colour = "Date") +
   expand_limits(x = 200) +
   scale_x_reverse() +
   coord_flip() +
@@ -131,6 +154,15 @@ npp.plot <-  npp %>%
 
 ```
 
+```{r}
+npp %>% 
+  mutate(dh = ifelse(z <= 75, "ez", "mz")) %>% 
+  drop_na(npp) %>% 
+  filter( plot_date %in% c("May 24", "May 27")) %>% 
+  group_by(dh) %>% do(broom::tidy(t.test(npp ~ plot_date, data = .)))
+  
+```
+
 ### N
 
 ```{r n plot, echo = FALSE, warning = FALSE, message = FALSE}
@@ -141,7 +173,7 @@ n.plot <-  bf %>%
   geom_vline(xintercept = 77, color = "red") +
   geom_line(size = 0.7) +
   geom_point(shape = 21, size = 6,  color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = "Depth, m", y = expression(paste("N + N, µmol N L"^"-1")), colour = "", fill = "Date") +
+  labs(x = "Depth (m)", y = expression(paste("N + N (µmol N L"^-1, ")")), colour = "", fill = "Date") +
   scale_x_reverse() +
   coord_flip() +
   scale_fill_viridis_d() +
@@ -159,6 +191,14 @@ n.plot <-  bf %>%
 
 ```
 
+```{r}
+bf %>% 
+  mutate(dh = ifelse(z <= 75, "ez", "mz")) %>% 
+  drop_na(n) %>% 
+  filter( CampCN %in% c(52, 61)) %>% 
+  group_by(dh) %>% do(broom::tidy(t.test(n ~ CampCN, data = .)))
+  
+```
 
 ### DOC
 
@@ -170,7 +210,7 @@ doc.plot <- bf %>%
   geom_vline(xintercept = 77, color = "red") +
   geom_line(size = 0.7) +
   geom_point(shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = "", y = expression(paste("DOC, µmol C L"^"-1")), colour = "", fill = "Date") +
+  labs(x = "", y = expression(paste("DOC (µmol C L"^-1, ")")), colour = "", fill = "Date") +
   scale_x_reverse() +
   coord_flip() +
   scale_y_continuous(limits = c(50.2, 55)) +
@@ -189,6 +229,15 @@ doc.plot <- bf %>%
 
 ```
 
+```{r}
+bf %>% 
+  mutate(dh = ifelse(z <= 75, "ez", "mz")) %>% 
+  drop_na(doc) %>% 
+  filter( CampCN %in% c(52, 61)) %>% 
+  group_by(dh) %>% do(broom::tidy(t.test(doc ~ CampCN, data = .)))
+  
+```
+
 ### TDAA
 
 ```{r tdaa plot, echo = FALSE, warning = FALSE, message = FALSE}
@@ -199,7 +248,7 @@ tdaa.plot <- bf %>%
   geom_vline(xintercept = 77, color = "red") +
   geom_line(size = 0.7) +
   geom_point(shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = "", y = expression(paste("TDAA, µmol C L"^-1)), colour = "", fill = "Date") +
+  labs(x = "", y = expression(paste("TDAA (µmol C L"^-1, ")")), colour = "", fill = "Date") +
   scale_x_reverse() +
   coord_flip() +
   scale_fill_viridis_d() +
@@ -221,6 +270,14 @@ tdaa.plot <- bf %>%
 
 ```
 
+```{r}
+bf %>% 
+  mutate(dh = ifelse(z <= 75, "ez", "mz")) %>% 
+  drop_na(tdaa) %>% 
+  filter( CampCN %in% c(52, 61)) %>% 
+  group_by(dh) %>% do(broom::tidy(t.test(tdaa ~ CampCN, data = .)))
+  
+```
 
 ### AOU
 
@@ -231,7 +288,7 @@ aou.plot <-  ctd %>%
   # geom_ribbon(aes(ymin = aou - sd_aou, ymax = aou + sd_aou), alpha = 0.5) +
   geom_vline(xintercept = 77, color = "red") +
   geom_line(size = 0.7) +
-  labs(x = "", y = expression(paste("AOU, µmol O"[2]," L"^"-1")), colour = "Date", fill = "") +
+  labs(x = "", y = expression(paste("AOU (µmol O"[2]," L"^-1, ")")), colour = "Date", fill = "") +
   scale_x_reverse() +
   coord_flip() +
   scale_fill_viridis_d() +
@@ -249,6 +306,15 @@ aou.plot <-  ctd %>%
 
 ```
 
+```{r}
+ctd %>% 
+  mutate(dh = ifelse(z <= 75, "ez", "mz")) %>% 
+  drop_na(aou) %>% 
+  filter( plot_date %in% c("May 24 04:11", "May 27 20:16")) %>% 
+  group_by(dh) %>% do(broom::tidy(t.test(aou ~ plot_date, data = .)))
+  
+```
+
 ### BactA
 
 ```{r bactC plot, echo = FALSE, warning = FALSE, message = FALSE}
@@ -259,7 +325,7 @@ ba.plot <-  bf %>%
   geom_vline(xintercept = 77, color = "red") +
   geom_line(size = 0.7) +
   geom_point(shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = "Depth, m", y = expression(paste("Bacterioplankton, cells L"^"-1")), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Date") +
+  labs(x = "Depth, m", y = expression(paste("BA (cells L"^-1, ")")), colour = "", linetype = "Eddy Location", shape = "Eddy Location", fill = "Date") +
   scale_x_reverse() +
   coord_flip() +
   scale_fill_viridis_d() +
@@ -277,6 +343,15 @@ ba.plot <-  bf %>%
 
 ```
 
+```{r}
+bf %>% 
+  mutate(dh = ifelse(z <= 75, "ez", "mz")) %>% 
+  drop_na(ba) %>% 
+  filter( CampCN %in% c(52, 61)) %>% 
+  group_by(dh) %>% do(broom::tidy(t.test(ba ~ CampCN, data = .)))
+  
+```
+
 ### Leu
 
 ```{r bp plot, echo = FALSE, warning = FALSE, message = FALSE}
@@ -287,7 +362,7 @@ leu.plot <-  bf %>%
   geom_vline(xintercept = 77, color = "red") +
   geom_line(size = 0.7) +
   geom_point(shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
-  labs(x = "", y = expression(paste("BP, nmol C L"^"-1","d"^-1)), colour = "", fill = "Date") +
+  labs(x = "", y = expression(paste("BP (nmol C L"^-1,"d"^-1, ")")), colour = "", fill = "Date") +
   scale_x_reverse() +
   coord_flip() +
   scale_fill_viridis_d() +
@@ -304,6 +379,42 @@ leu.plot <-  bf %>%
         legend.spacing.y = unit(0, "pt"))
 
 ```
+
+```{r}
+bf %>% 
+  mutate(dh = ifelse(z <= 75, "ez", "mz")) %>% 
+  drop_na(bp) %>% 
+  filter( CampCN %in% c(52, 61)) %>% 
+  group_by(dh) %>% do(broom::tidy(t.test(bp ~ CampCN, data = .)))
+  
+```
+
+```{r bp plot2, echo=FALSE, fig.height=6, fig.width=8, message=FALSE, warning=FALSE}
+all %>% 
+  drop_na(bp) %>% 
+  ggplot(aes(x = z, y = bp, color = as_factor(Station), fill = as_factor(Station), group = interaction(plot_date, CampCN))) +
+  geom_errorbar(aes(x = z, ymin = bp - sd_bp, ymax = bp + sd_bp), width = 5) +
+  geom_line(size = 0.7) +
+  geom_point(shape = 21, size = 6, color = "black", stroke = 1, alpha = 0.7) + 
+  labs(x = "", y = expression(paste("BP (nmol C L"^-1, "d"^-1, ")")), fill = "Station", color = "Station") +
+  scale_x_reverse() +
+  coord_flip() +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  guides(color = F, linetype = F, shape = F) +
+  theme_linedraw(base_size = 20) +
+  theme(panel.spacing.x = unit(1, "cm"),
+        axis.text.x = element_text(angle = 0),
+        legend.title = element_text(size = 14),
+        legend.key.size = unit(0.4, "cm"),
+        legend.position = c(0.8, 0.25),
+        legend.text = element_text(size = 12),
+        legend.background = element_rect(size = 0.2, linetype = "solid", color = "black"),
+        legend.spacing.y = unit(0, "pt"))
+
+```
+
+
 
 ## Combine Plots
 

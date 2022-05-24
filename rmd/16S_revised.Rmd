@@ -27,7 +27,10 @@ floats <- read_rds("~/GITHUB/naames_multiday/Output/processed_floats.rds")
 
 floats %>% select(float:lon, ezd) %>% distinct() %>% drop_na(ezd) %>% 
   group_by(Cruise, Station) %>% 
-  summarize(max_ezd = max(ezd))
+  # summarize(max_ezd = max(ezd), 
+  #           min_ezd = min(ezd)) 
+  filter(Cruise == "AT34", Station == 4) %>% summary()
+ 
   
 ```
 Euphotic zone for N2S4 = 75 m, for N3 is < 75 m (don't know for station 3.5, but likely similar to station 3 and 4)
@@ -36,15 +39,18 @@ Euphotic zone for N2S4 = 75 m, for N3 is < 75 m (don't know for station 3.5, but
 
 count.tab <- read.table("~/GITHUB/naames_multiday/Input/16s/HetV1OTU.txt", header = T, row.names = 1, check.names = F) 
 
-tax.tab <- as.matrix(read.table("~/GITHUB/naames_multiday/Input/16s/HetV1TUtax.txt", header = T, row.names = 1, check.names = F, na.strings = "", sep = "\t"))
+
+tax.tab <- as.matrix(read.table("~/GITHUB/naames_multiday/Input/16s/HetV1TUtax.txt", header = T, row.names = 1, check.names = F, na.strings = "", sep = "\t")) 
+
+# tax.tab2 <- as.matrix(read.table("~/GITHUB/naames_multiday/Input/16s/HetV1TUtax_NO_RICKETTS.txt", header = T, row.names = 1, check.names = F, na.strings = "", sep = "\t")) 
 
 sample.tab <- read_rds("~/GITHUB/naames_multiday/Input/bottle_data.rds") %>% 
   drop_na(DNA_ID) %>% 
   filter(Cruise == "AT34" & Station == 4 | Cruise == "AT38" & Station %in% c(3, 3.5, 4, 6))   %>% 
     filter(!plot_date %in% c("May 24 02:30", "May 27 06:07", "Sep 14 15:33", "Sep 15 03:04", "Sep 15 15:20", "Sep 16 03:04", "Sep 16 04:50", "Sep 16 07:26", "Sep 8 03:08", "Sep 8 03:08",  "Sep 8 15:30", "Sep 11 03:07"), z <= 200) %>% #FILTER OUT CASTS THAT HAVE DIFFERENT T-S PROPERTIES IN UPPER MESO
-  mutate(dh = ifelse(Cruise == "AT34" & z < 100, "Euphotic", "Upper Mesopelagic"),
+  mutate(dh = ifelse(Cruise == "AT34" & z < 100, "Euphotic", "Upper mesopelagic"),
          dh = ifelse(Cruise == "AT38" & z < 75, "Euphotic", dh),
-         Cruise = ifelse(Cruise == "AT34", "NAAMES 2", "NAAMES 3"),
+         Cruise = ifelse(Cruise == "AT34", "N2S4", "NAAMES 3"),
          cruise_station = paste(Cruise, "Station", Station)) %>% 
   column_to_rownames(var = "DNA_ID") %>% 
   select(Cruise:mld, dh, everything())
@@ -79,6 +85,7 @@ We will filter out  chloroplasts and mitochondria, because we only intended to a
 sub_ps <- ps %>%
   subset_taxa(
     Family  != "mitochondria" &
+    # Family  != "Mitochondria" &
     Order   != "Chloroplast")
 ```
 
@@ -130,24 +137,24 @@ We can also subset the N2 and the N2S4 data here
 
 ```{r}
 s4n3 <- ps_min %>% 
-  subset_samples(Cruise == "NAAMES 3" & z %in% c(5, 25, 100, 150, 200) | Cruise == "NAAMES 2" )
+  subset_samples(Cruise == "NAAMES 3" & z %in% c(5, 25, 100, 150, 200) | Cruise == "N2S4" )
 ```
 
 
 ```{r}
 s4 <- ps_min %>% 
-  subset_samples(Cruise == "NAAMES 2" & Station == 4)
+  subset_samples(Cruise == "N2S4" & Station == 4)
 ```
 
 ```{r}
 s4_meso <- s4 %>% 
-  subset_samples(dh == "Upper Mesopelagic" )
+  subset_samples(dh == "Upper mesopelagic" )
 ```
 
 
 ```{r}
 n3 <- ps_min %>% 
-  subset_samples(Cruise == "NAAMES 3" & z %in% c(5, 25, 100, 150, 200) & !Cruise == "NAAMES 2" )
+  subset_samples(Cruise == "NAAMES 3" & z %in% c(5, 25, 100, 150, 200) & !Cruise == "N2S4" )
 ```
 
 ## Unconstrained Ordination
@@ -183,32 +190,22 @@ NMDS plots attempt to show ordinal distances between samples as accurately as po
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
 
-nmds.plot <- plot_ordination(s4n3, nmds,  title = "NAAMES 2 Station 4 & NAAMES 3") +
+nmds.plot <- plot_ordination(s4n3, nmds) +
   geom_point(aes(fill = as_factor(Station), shape = Cruise), alpha = 0.7, size = 4) +
-  stat_ellipse(aes(group = interaction(Cruise, dh)), color = "firebrick", level = 0.95, type = "t", size = 0.7) +
+  stat_ellipse(aes(group = interaction(Cruise, dh), color = as_factor(dh)), level = 0.95, type = "t", size = 0.7) +
   scale_shape_manual(values = c(4, 21)) +
+  scale_color_manual(values = c("firebrick", "dodgerblue")) +
   scale_fill_viridis_d(end = 0.7) +
   theme_linedraw(base_size = 16) +
-  guides( shape = guide_legend(title = "Cruise"), color = F, fill = guide_legend(title = "Station", override.aes = list(shape = 21))) 
+  guides( shape = guide_legend(title = "Cruise"), color = guide_legend(title = "Depth horizon"), fill = guide_legend(title = "Station", override.aes = list(shape = 21))) 
 #removing one of the plotting layers (there are points within points)
 nmds.plot$layers <- nmds.plot$layers[-1]
 ```
-```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
 
-nmds.plot2 <- plot_ordination(s4n3, nmds,  title = "NAAMES 2 Station 4 & NAAMES 3") +
-  geom_point(aes(fill = as_factor(dh), shape = Cruise), alpha = 0.7, size = 4) +
-  stat_ellipse(aes(group = interaction(Cruise, dh)), color = "firebrick", level = 0.95, type = "t", size = 0.7) +
-  scale_shape_manual(values = c(4, 21)) +
-  scale_fill_viridis_d(end = 0.7) +
-  theme_linedraw(base_size = 16) +
-  guides( shape = guide_legend(title = "Cruise"), color = F, fill = guide_legend(title = "Depth Horizon", override.aes = list(shape = 21))) 
-#removing one of the plotting layers (there are points within points)
-nmds.plot2$layers <- nmds.plot2$layers[-1]
-```
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 8, fig.width = 10, fig.align = "center"}
 
-nmds_s4.plot <- plot_ordination(s4, nmds_s4,  title = "NAAMES 2 Station 4") +
+nmds_s4.plot <- plot_ordination(s4, nmds_s4) +
   geom_point(aes(fill = plot_date, shape = dh), alpha = 0.7, size = 4) +
   stat_ellipse(aes(group = plot_date, color = plot_date), level = 0.95,  type = "t") +
   scale_shape_manual(values = c(21, 22)) +
@@ -216,7 +213,7 @@ nmds_s4.plot <- plot_ordination(s4, nmds_s4,  title = "NAAMES 2 Station 4") +
   scale_fill_viridis_d(end = 0.7) +
     scale_color_viridis_d(end = 0.7) +
   theme_linedraw(base_size = 16) +
-  guides( shape = guide_legend(title = "Depth Horizon"), color = F,  linetype = guide_legend(title = ""), fill = guide_legend(title = "", override.aes = list(shape = 21))) 
+  guides( shape = guide_legend(title = "Depth horizon"), color = F,  linetype = guide_legend(title = ""), fill = guide_legend(title = "", override.aes = list(shape = 21))) 
 #removing one of the plotting layers (there are points within points)
 nmds_s4.plot$layers <- nmds_s4.plot$layers[-1]
 
@@ -224,7 +221,7 @@ nmds_s4.plot$layers <- nmds_s4.plot$layers[-1]
 
 
 ```{r fig.height=8, fig.width=20}
-nmds.plot2 + nmds.plot +  nmds_s4.plot +
+nmds.plot +  nmds_s4.plot +
   plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 22),
         plot.title = element_text(size = 18)) 
@@ -275,7 +272,7 @@ sample.tab2 <- sample.tab %>%
 
 ####
 
-subset_sample_IDs_s4n3 <-  row.names(sample.tab2)[sample.tab2$Cruise == "NAAMES 3" & sample.tab2$z %in% c(5, 25, 100, 150, 200) |  sample.tab2$Cruise == "NAAMES 2" ]
+subset_sample_IDs_s4n3 <-  row.names(sample.tab2)[sample.tab2$Cruise == "NAAMES 3" & sample.tab2$z %in% c(5, 25, 100, 150, 200) |  sample.tab2$Cruise == "N2S4" ]
 
 dist <- vegdist(t(deseq_count_tab[ , colnames(deseq_count_tab) %in% subset_sample_IDs_s4n3]), method = "bray", na.rm = T)
 
@@ -283,7 +280,7 @@ sample_info_tab_s4n3 <- sample.tab2[row.names(sample.tab2) %in% subset_sample_ID
 
 ####
 
-subset_sample_IDs_n2s4 <-  row.names(sample.tab2)[sample.tab2$Cruise == "NAAMES 2" & sample.tab2$Station == 4]
+subset_sample_IDs_n2s4 <-  row.names(sample.tab2)[sample.tab2$Cruise == "N2S4" & sample.tab2$Station == 4]
 
 dist_n2s4 <- vegdist(t(deseq_count_tab[ , colnames(deseq_count_tab) %in% subset_sample_IDs_n2s4]), method = "bray", na.rm = T)
 
@@ -291,7 +288,7 @@ sample_info_tab_n2s4 <- sample.tab2[row.names(sample.tab2) %in% subset_sample_ID
 
 ####
 
-subset_sample_IDs_n2s4_ez <-  row.names(sample.tab2)[sample.tab2$Cruise == "NAAMES 2" & sample.tab2$Station == 4 & sample.tab2$dh == "Euphotic"]
+subset_sample_IDs_n2s4_ez <-  row.names(sample.tab2)[sample.tab2$Cruise == "N2S4" & sample.tab2$Station == 4 & sample.tab2$dh == "Euphotic"]
 
 dist_n2s4_ez <- vegdist(t(deseq_count_tab[ , colnames(deseq_count_tab) %in% subset_sample_IDs_n2s4_ez]), method = "bray", na.rm = T)
 
@@ -300,7 +297,7 @@ sample_info_tab_n2s4_ez <- sample.tab2[row.names(sample.tab2) %in% subset_sample
 ####
 
 
-subset_sample_IDs_n2s4_mz <-  row.names(sample.tab2)[sample.tab2$Cruise == "NAAMES 2" & sample.tab2$Station == 4 & sample.tab2$dh == "Upper Mesopelagic"]
+subset_sample_IDs_n2s4_mz <-  row.names(sample.tab2)[sample.tab2$Cruise == "N2S4" & sample.tab2$Station == 4 & sample.tab2$dh == "Upper mesopelagic"]
 
 dist_n2s4_mz <- vegdist(t(deseq_count_tab[ , colnames(deseq_count_tab) %in% subset_sample_IDs_n2s4_mz]), method = "bray", na.rm = T)
 
@@ -377,11 +374,11 @@ alphadiv <- left_join(richness, sample.tab %>% rownames_to_column(., var = "DNA_
 ```
 
 ```{r}
-alphadiv %>% filter(Cruise == "NAAMES 2") %>% select(Chao1, Shannon, shan_eveness) %>% summary()
+alphadiv %>% filter(Cruise == "N2S4") %>% select(Chao1, Shannon, shan_eveness) %>% summary()
 ```
 
 ```{r}
-alphadiv %>% filter(Cruise == "NAAMES 2") %>% select(Chao1, Shannon, shan_eveness) %>% mutate(sd_Chao = sd(Chao1, na.rm = T), sd_Shannon = sd(Shannon, na.rm = T), sd_shan_eveness = sd(shan_eveness, na.rm = T)) %>%
+alphadiv %>% filter(Cruise == "N2S4") %>% select(Chao1, Shannon, shan_eveness) %>% mutate(sd_Chao = sd(Chao1, na.rm = T), sd_Shannon = sd(Shannon, na.rm = T), sd_shan_eveness = sd(shan_eveness, na.rm = T)) %>%
   select(contains("sd")) %>% unique()
 ```
 
@@ -399,9 +396,8 @@ alphadiv %>% filter(Cruise == "NAAMES 3", z >= 100) %>% select(Chao1, Shannon, s
 ```{r echo = FALSE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 12, fig.align = "center"}
 
 alphadiv.plot <- alphadiv %>% 
-  filter(Cruise == "NAAMES 2" | z %in% c(5, 25, 100, 150, 200)) %>% 
+  filter(Cruise == "N2S4" | z %in% c(5, 25, 100, 150, 200)) %>% 
   mutate_at(vars(z), as.factor) %>% 
-  mutate(Cruise = ifelse(Cruise == "NAAMES 2", "NAAMES 2 Station 4", Cruise)) %>% 
   ggplot(aes(x = Cruise, y = shan_eveness)) +
   geom_boxplot(width = 0.3, outlier.shape = NA) +
   facet_grid(~factor(dh), scales = "free") +
@@ -410,13 +406,12 @@ alphadiv.plot <- alphadiv %>%
   scale_fill_viridis_d(option = "viridis", direction = -1) +
   theme_linedraw(base_size = 16) +
   guides(fill = "none") +
-  labs(x = "", y =  "Shannon Evenness", fill = "Depth, m") + 
+  labs(x = "", y =  "Shannon Evenness", fill = "Depth (m)") + 
   stat_compare_means(method = "t.test") 
 
 chao.plot <- alphadiv %>% 
-   filter(Cruise == "NAAMES 2" | z %in% c(5, 25, 100, 150, 200)) %>% 
+   filter(Cruise == "N2S4" | z %in% c(5, 25, 100, 150, 200)) %>% 
   mutate_at(vars(z), as.factor) %>% 
-  mutate(Cruise = ifelse(Cruise == "NAAMES 2", "NAAMES 2 Station 4", Cruise)) %>% 
   ggplot(aes(x = Cruise, y = Chao1)) +
   geom_boxplot(width = 0.3, outlier.shape = NA) +
   facet_grid(~factor(dh), scales = "free") +
@@ -424,7 +419,7 @@ chao.plot <- alphadiv %>%
   scale_color_viridis_d(option = "viridis", direction = -1) +
   scale_fill_viridis_d(option = "viridis", direction = -1) +
   theme_linedraw(base_size = 16) +
-  labs(x = "", y =  "Chao1", fill = "Depth, m") + 
+  labs(x = "", y =  "Chao1", fill = "Depth (m)") + 
   stat_compare_means(method = "t.test") 
 
 
@@ -438,7 +433,7 @@ my_comparisons <- list(c("May 24 06:10","May 25 06:05"),c("May 24 06:10","May 26
 
 
 n2s4_alphadiv.plot <- alphadiv %>% 
-  filter(Cruise == "NAAMES 2", Station == 4) %>% 
+  filter(Cruise == "N2S4", Station == 4) %>% 
   mutate_at(vars(z), as.factor) %>% 
   ggplot(aes(x = factor(plot_date), y = shan_eveness)) +
   geom_boxplot(width = 0.3, outlier.shape = NA) +
@@ -448,11 +443,11 @@ n2s4_alphadiv.plot <- alphadiv %>%
   scale_fill_viridis_d(option = "viridis", direction = -1) +
   theme_linedraw(base_size = 16) +
   guides(fill = "none") +
-  labs(x = "", y =  "Shannon Evenness", fill = "Depth, m") + 
+  labs(x = "", y =  "Shannon Evenness", fill = "Depth (m)") + 
   stat_compare_means(comparisons = my_comparisons, method = "t.test")
 
 n2s4_chao.plot <- alphadiv %>% 
-  filter(Cruise == "NAAMES 2", Station == 4) %>% 
+  filter(Cruise == "N2S4", Station == 4) %>% 
   mutate_at(vars(z), as.factor) %>% 
   ggplot(aes(x = factor(plot_date), y = Chao1)) +
   geom_boxplot(width = 0.3, outlier.shape = NA) +
@@ -461,7 +456,7 @@ n2s4_chao.plot <- alphadiv %>%
   scale_color_viridis_d(option = "viridis", direction = -1) +
   scale_fill_viridis_d(option = "viridis", direction = -1) +
   theme_linedraw(base_size = 16) +
-  labs(x = "", y =  "Chao1", fill = "Depth, m") + 
+  labs(x = "", y =  "Chao1", fill = "Depth (m)") + 
   stat_compare_means(comparisons = my_comparisons, method = "t.test") 
 
 
@@ -562,9 +557,11 @@ data2 <- s4n3 %>%
   ungroup() 
 ```
 
+
+
 ```{r fig.height = 18, fig.width = 12}
 data2 %>% 
-  filter(Cruise == "NAAMES 2") %>% 
+  filter(Cruise == "N2S4") %>% 
   filter(ord_relabund_dh >= 0.001) %>% 
   filter(ord_normcount_dh > 0) %>% 
   select(dh, plot_date, Order,  ord_relabund_dh, ord_normcount_dh) %>% 
@@ -577,8 +574,8 @@ data2 %>%
   # geom_text(aes(label = paste(round(fam_relabund_dh * 100, 1), "%"), color = "white"), size = 4) +
   # geom_text(aes(label = formatC(fam_normcount_dh, format = "e", digits = 1), color = "black"), size = 4) +
   scale_color_manual(values = c("white" = "white", "black" = "black")) +
-  labs(x = "", y = "Order: Family", fill = expression(paste("Cells L"^-1))) +
-  facet_grid(~factor(dh, levels = c("Euphotic", "Upper Mesopelagic"))) +
+  labs(x = "", y = "Order", fill = expression(paste("BA (Cells L"^-1, ")"))) +
+  facet_grid(~factor(dh, levels = c("Euphotic", "Upper mesopelagic"))) +
   theme_linedraw(base_size = 16) +
   theme(axis.text.y = element_text(size = 12), legend.position = "top") +
    guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = "none") 
@@ -586,11 +583,12 @@ data2 %>%
 
 ```{r fig.height = 18, fig.width = 12}
 data %>% 
-  filter(Cruise == "NAAMES 2") %>% 
+  filter(Cruise == "N2S4") %>% 
   filter(fam_relabund_dh >= 0.001) %>% 
   filter(fam_normcount_dh > 0) %>% 
   select(dh, plot_date, Family, plot_tax, fam_relabund_dh, fam_normcount_dh) %>% 
   mutate(Family = ifelse(Family == "NA", "Unassigned", Family)) %>% 
+  mutate(plot_tax = ifelse(plot_tax == "Rickettsiales: SAR116_clade" , "Puniceispirillales: SAR116_clade", plot_tax)) %>% 
   filter(!Family == "Unassigned") %>% #don't know what good copy numbers would be
   distinct() %>% 
   ggplot(aes(x = plot_date, y = reorder(plot_tax, fam_relabund_dh))) +
@@ -601,7 +599,7 @@ data %>%
   # geom_text(aes(label = paste(round(fam_relabund_dh * 100, 1), "%"), color = "white"), size = 4) +
   # geom_text(aes(label = formatC(fam_normcount_dh, format = "e", digits = 1), color = "black"), size = 4) +
   scale_color_manual(values = c("white" = "white", "black" = "black")) +
-  labs(x = "", y = "Order: Family", fill = expression(paste("Cells L"^-1))) +
+  labs(x = "", y = "Order: family", fill = expression(paste("BA (Cells L"^-1, ")"))) +
   facet_grid(~factor(dh, levels = c("Euphotic", "Upper Mesopelagic"))) +
   theme_linedraw(base_size = 16) +
   theme(axis.text.y = element_text(size = 12), legend.position = "top") +
@@ -613,6 +611,7 @@ data %>%
   filter(Cruise == "NAAMES 3") %>% 
    filter(fam_relabund_dh > 0.01) %>%
   # filter(gen_relabund_dh >= 0.001) %>% 
+  mutate(plot_tax = ifelse(plot_tax == "Rickettsiales: SAR116_clade" , "Puniceispirillales: SAR116_clade", plot_tax)) %>% 
   select(dh, Station, plot_date, Family, fam_relabund_dh, Genus, gen_relabund_dh) %>% 
   mutate_at(vars(Station), as.character) %>% 
   distinct() %>% 
@@ -654,7 +653,8 @@ simper <- vegan::simper(OTUs_scaled, sample_info_tab_n2s4_mz$plot_date, permutat
 ```{r}
 simper_res <- summary(simper)
 
-simper_tax <- simper_res[[2]] %>% filter(p < 0.05) %>% 
+simper_tax <- simper_res[[2]] %>% 
+  filter(p <= 0.05) %>%
   # rownames_to_column(var = "tax") %>% 
   # select(tax, p) %>% 
   cbind(., as(tax_table(tax.tab)[row.names(.), ], "matrix"))
@@ -671,11 +671,12 @@ bugs <- simper_tax %>%
   
 
 s4_meso_bugs <- data %>% 
-  filter(Cruise == "NAAMES 2") %>% 
-  filter(dh == "Upper Mesopelagic") %>% 
+  filter(Cruise == "N2S4") %>% 
+  filter(dh == "Upper mesopelagic") %>% 
   mutate(bug = paste(Phylum, Class, Order, Family, Genus, sep = ": ")) %>% 
   filter(bug %in% c(bugs$bug))
 ```
+
 
 taxa that showd >= 1 fold change in cell abundance
 
@@ -689,30 +690,49 @@ pruned <- s4_meso_bugs %>%
   arrange(Kingdom, Phylum, Class, Order, Family, plot_tax, Date) %>% 
   mutate(relabund_change = ((dplyr::last(fam_relabund_dh) - dplyr::first(fam_relabund_dh))/dplyr::first(fam_relabund_dh) ) * 100,
            fold_change = (dplyr::last(fam_normcount_dh) - dplyr::first(fam_normcount_dh))/dplyr::first(fam_normcount_dh)) %>% 
+  filter(fold_change >= 1 & fam_relabund_dh > 0.01)
+```
+
+```{r}
+tables2 <- s4_meso_bugs %>% 
+  filter(!Date == "2016-05-25") %>% 
+   mutate(Order = ifelse(plot_tax == "Rickettsiales: SAR116_clade" , "Puniceispirillales", Order),
+         plot_tax = ifelse(plot_tax == "Rickettsiales: SAR116_clade" , "Puniceispirillales: SAR116_clade", plot_tax)
+          ) %>% 
+  select(Date, Kingdom:plot_tax, fam_relabund_dh, fam_normcount_dh, -Genus) %>% 
+  distinct() %>% 
+  group_by(Kingdom, Phylum, Class, Order, Family,  plot_tax) %>% 
+  arrange(Kingdom, Phylum, Class, Order, Family, plot_tax, Date) %>% 
+  mutate(relabund_change = ((dplyr::last(fam_relabund_dh) - dplyr::first(fam_relabund_dh))/dplyr::first(fam_relabund_dh) ) * 100,
+           fold_change = (dplyr::last(fam_normcount_dh) - dplyr::first(fam_normcount_dh))/dplyr::first(fam_normcount_dh)) %>% 
   filter(fold_change >= 1)
 ```
+
 
 ```{r fig.height=12, fig.width= 26 , message=FALSE, warning=FALSE}
 mesobug.data <- s4_meso_bugs %>% 
   filter(plot_tax %in% c(pruned$plot_tax) )
 
+unique(mesobug.data$Family)
+
 mesobugs.plot <- mesobug.data %>% 
+  mutate(plot_tax = ifelse(plot_tax == "Rickettsiales: SAR116_clade" , "Puniceispirillales: SAR116_clade", plot_tax)) %>% 
   ggplot(aes(x = datetime, y = fam_relabund_dh * 100)) +
   facet_wrap(~plot_tax, dir = "v", scales = "free_y", ncol = 3) +
   geom_line(size = 0.7) +
   geom_point(shape = 21, size = 4, fill = "white", color = "black", stroke = 1) + 
-  geom_errorbar(data = mesobug.data, aes(x = datetime, ymin = (fam_normcount_dh - sd_fam_normcount_dh)/10^7, ymax = (fam_normcount_dh + sd_fam_normcount_dh)/10^7), color = "#377EB8", width = 5000) +
-  geom_line(data = mesobug.data, aes(x = datetime, y = fam_normcount_dh/10^7), color = "#377EB8") +
-  geom_point(data = mesobug.data, aes(x = datetime, y = fam_normcount_dh/10^7), shape = 21, size = 4, fill = "#377EB8", color = "black", stroke = 1) + 
+  geom_errorbar(data = mesobug.data %>% mutate(plot_tax = ifelse(plot_tax == "Rickettsiales: SAR116_clade" , "Puniceispirillales: SAR116_clade", plot_tax)), aes(x = datetime, ymin = (fam_normcount_dh - sd_fam_normcount_dh)/10^7, ymax = (fam_normcount_dh + sd_fam_normcount_dh)/10^7), color = "#377EB8", width = 5000) +
+  geom_line(data = mesobug.data %>% mutate(plot_tax = ifelse(plot_tax == "Rickettsiales: SAR116_clade" , "Puniceispirillales: SAR116_clade", plot_tax)), aes(x = datetime, y = fam_normcount_dh/10^7), color = "#377EB8") +
+  geom_point(data = mesobug.data %>% mutate(plot_tax = ifelse(plot_tax == "Rickettsiales: SAR116_clade" , "Puniceispirillales: SAR116_clade", plot_tax)), aes(x = datetime, y = fam_normcount_dh/10^7), shape = 21, size = 4, fill = "#377EB8", color = "black", stroke = 1) + 
   scale_y_continuous(
     # Add a second axis and specify its features
-    sec.axis = sec_axis(~.*10^7, name = expression(paste("Cell Abundance, L"^-1)), labels = function(x) format(x, scientific = TRUE))
+    sec.axis = sec_axis(~.*10^7, name = expression(paste("BA (Cells, L"^-1, ")")), labels = function(x) format(x, scientific = TRUE))
   ) + 
-  labs(x = "", y = expression(paste("Relative Abundance, %")), colour = "", fill = "") +
-  theme_linedraw(base_size = 16) +
+  labs(x = "", y = expression(paste("Relative Abundance (%)")), colour = "", fill = "") +
+  theme_linedraw(base_size = 22) +
   theme(axis.title.y.right = element_text(color = "#377EB8"),
         axis.text.y.right = element_text(color = "#377EB8"),
-        strip.text.x = element_text(size = 16)) ; mesobugs.plot
+        strip.text.x = element_text(size = 24)) ; mesobugs.plot
 ```
 
 
@@ -721,6 +741,7 @@ mesobugs.plot <- mesobug.data %>%
 ```{r}
 write_rds(data, "~/GITHUB/naames_multiday/Output/processed_16S.rds")
 write_csv(simper_tax, "~/GITHUB/naames_multiday/Output/simper_results.csv")
+write_csv(tables2, "~/GITHUB/naames_multiday/Output/Table_S2.csv")
 ```
 
 
