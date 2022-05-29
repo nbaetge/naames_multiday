@@ -5403,7 +5403,7 @@ data %>%
   # geom_text(aes(label = formatC(fam_normcount_dh, format = "e", digits = 1), color = "black"), size = 4) +
   scale_color_manual(values = c("white" = "white", "black" = "black")) +
   labs(x = "", y = "Order: family", fill = expression(paste("BA (Cells L"^-1, ")"))) +
-  facet_grid(~factor(dh, levels = c("Euphotic", "Upper Mesopelagic"))) +
+  facet_grid(~factor(dh, levels = c("Euphotic", "Upper mesopelagic"))) +
   theme_linedraw(base_size = 16) +
   theme(axis.text.y = element_text(size = 12), legend.position = "top") +
    guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = "none") 
@@ -5430,7 +5430,7 @@ data %>%
    geom_label(aes(label = paste(round(fam_relabund_dh * 100, 1), "%")),  color = "black", fill = "white", size = 4, fontface = "bold", alpha = 0.4, label.size = NA ) +
   scale_color_manual(values = c("white" = "white", "black" = "black")) +
   labs(x = "Station", y = "Family: Genus", fill = "Relative Abundance") +
-  facet_grid(~factor(dh, levels = c("Euphotic", "Upper Mesopelagic"))) +
+  facet_grid(~factor(dh, levels = c("Euphotic", "Upper mesopelagic"))) +
   theme_linedraw(base_size = 16) +
   theme(axis.text.y = element_text(size = 12), legend.position = "top") +
    guides(fill = guide_colourbar(barheight = 2, barwidth = 20, frame.colour = "black", frame.linewidth = 2,ticks.colour = "black", ticks.linewidth = 1), color = "none") +

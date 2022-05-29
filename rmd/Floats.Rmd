@@ -501,7 +501,7 @@ map2 <- ggplot(data = map2_data, aes(x = lon, y = lat)) +
 ## Temp profiles
 
 ```{r}
-new_colors <- colors$freesurface
+new_colors <- colors$viridis
 ```
 
 
@@ -546,7 +546,7 @@ t.plot <- t_odv_data %>%
   geom_line(data = profile_points, aes(x = datetime, y = p, linetype = type, group = interaction(type, datetime)), alpha = 0.4, size = 1) +
   geom_line(data = profile_points, aes(x = datetime, y = MLD), color = "White", linetype = 1, size = 1.5 ) +
   geom_line(data = profile_points[!is.na(profile_points$ezd),], aes(x = datetime, y = ezd), color = "Red", size = 1.5 ) +
-  scale_fill_gradientn(colors = new_colors, na.value = NA, values = rescale(c(13, 15, 16)), limits = c(13,16)) +
+  scale_fill_gradientn(colors = new_colors, na.value = NA, values = rescale(c(13.7, 15.2, 15.8)), limits = c(13.7,15.8)) +
   scale_y_reverse() +
   geom_contour(aes(z = temp), binwidth = 0.1, size = 1, colour = "black", alpha = 0.6) +
   labs(y = "Depth (m)", x = "", fill = expression(paste("Temperature (˚C)")), shape = "", linetype = "") +
@@ -590,7 +590,7 @@ s.plot <- s_odv_data %>%
   geom_line(data = profile_points, aes(x = datetime, y = p, linetype = type, group = interaction(type, datetime)), alpha = 0.4, size = 1) +
   geom_line(data = profile_points, aes(x = datetime, y = MLD), color = "White", linetype = 1, size = 1.5 ) +
   geom_line(data = profile_points[!is.na(profile_points$ezd),], aes(x = datetime, y = ezd), color = "Red", size = 1.5 ) +
-  scale_fill_gradientn(colors = new_colors, na.value = NA) +
+   scale_fill_gradientn(colors = new_colors, na.value = NA, values = rescale(c(35.84, 36.1, 36.15)), limits = c(35.84,36.16)) +
   scale_y_reverse() +
   geom_contour(aes(z = s), binwidth = 0.05, colour = "black", size = 1, alpha = 0.5) +
   labs(y = "Depth (m)", x = "", fill = expression(paste("Practical Salinity")), shape = "", linetype = "") +
@@ -628,12 +628,13 @@ fl_odv_data <- mba %>%
   mutate(datetime = date_decimal(decimal_date)) 
   
 fl.plot <- fl_odv_data %>% 
+  mutate(fchl = ifelse(fchl < 0,  0, fchl)) %>% 
   ggplot(aes(x = datetime, y = p)) + 
   geom_raster(aes(fill = fchl)) +
   geom_line(data = profile_points, aes(x = datetime, y = p, linetype = type, group = interaction(type, datetime)), alpha = 0.4, size = 1) +
  geom_line(data = profile_points, aes(x = datetime, y = MLD), color = "White", linetype = 1, size = 1.5 ) +
   geom_line(data = profile_points[!is.na(profile_points$ezd),], aes(x = datetime, y = ezd), color = "Red", size = 1.5 ) +
-  scale_fill_gradientn(colors = new_colors, na.value = NA) +
+    scale_fill_gradientn(colors = new_colors, na.value = NA, values = rescale(c(0.6, 1, 2.2)), limits = c(0,3)) +
   scale_y_reverse() +
   geom_contour(aes(z = fchl), binwidth = 0.5, colour = "black", size = 1, alpha = 0.5) +
   labs(y = "Depth (m)", x = "", fill = expression(paste("Chl", italic(" a"), " Fluorescence (mg m"^-3,")")), shape = "", linetype = "") +
@@ -693,14 +694,13 @@ t.plot <- t_odv_data %>%
   geom_line(data = profile_points, aes(x = datetime, y = p, linetype = type, group = interaction(type, datetime)), alpha = 0.4, size = 1) +
   geom_line(data = profile_points, aes(x = datetime, y = MLD), color = "White", linetype = 1, size = 1.5 ) +
   geom_line(data = profile_points[!is.na(profile_points$ezd),], aes(x = datetime, y = ezd), color = "Red", size = 1.5 ) +
-  scale_fill_gradientn(colors = new_colors, na.value = NA, values = rescale(c(1, 8, 18)), limits = c(1,18)) +
+  scale_fill_gradientn(colors = new_colors, na.value = NA, values = rescale(c(3.8, 5, 10)), limits = c(3.2, 12)) +
   scale_y_reverse() +
   geom_contour(aes(z = temp), binwidth = 0.1, colour = "black", alpha = 0.2) +
   labs(y = "Depth (m)", x = "", fill = expression(paste("Temperature (˚C)")), shape = "", linetype = "") +
   guides(fill = guide_colourbar(direction = "horizontal", barheight = 2, barwidth = 20, order = 2)) +
   theme_classic2(18) +
   theme(legend.position = "top") 
-
 ```
 
 
@@ -736,13 +736,13 @@ s.plot <- s_odv_data %>%
   geom_line(data = profile_points, aes(x = datetime, y = p, linetype = type, group = interaction(type, datetime)), alpha = 0.4, size = 1) +
    geom_line(data = profile_points, aes(x = datetime, y = MLD), color = "White", linetype = 1, size = 1.5 ) +
   geom_line(data = profile_points[!is.na(profile_points$ezd),], aes(x = datetime, y = ezd), color = "Red", size = 1.5 ) +
-  scale_fill_gradientn(colors = new_colors, na.value = NA) +
+  scale_fill_gradientn(colors = new_colors, na.value = NA, values = rescale(c(34.4, 34.8, 34.88)), limits = c(34.35, 34.9)) +
   scale_y_reverse() +
   geom_contour(aes(z = s), binwidth = 0.05, colour = "black", alpha = 0.2) +
   labs(y = "Depth (m)", x = "", fill = expression(paste("Salinity (ppt)")), shape = "", linetype = "") +
   guides(fill = guide_colourbar(direction = "horizontal", barheight = 2, barwidth = 20, order = 2)) +
   theme_classic2(18) +
-  theme(legend.position = "top") 
+  theme(legend.position = "top") ; s.plot
 
 ```
 
@@ -775,18 +775,19 @@ fl_odv_data <- mba %>%
   mutate(datetime = date_decimal(decimal_date)) 
   
 fl.plot <- fl_odv_data %>% 
+  mutate(fchl = ifelse(fchl < 0, 0, fchl)) %>% 
   ggplot(aes(x = datetime, y = p)) + 
   geom_raster(aes(fill = fchl)) +
   geom_line(data = profile_points, aes(x = datetime, y = p, linetype = type, group = interaction(type, datetime)), alpha = 0.4, size = 1) +
    geom_line(data = profile_points, aes(x = datetime, y = MLD), color = "White", linetype = 1, size = 1.5 ) +
   geom_line(data = profile_points[!is.na(profile_points$ezd),], aes(x = datetime, y = ezd), color = "Red", size = 1.5 ) +
-  scale_fill_gradientn(colors = new_colors, na.value = NA) +
+   scale_fill_gradientn(colors = new_colors, na.value = NA, values = rescale(c(0.8, 1, 4.5)), limits = c(0, 4.56)) +
   scale_y_reverse() +
   geom_contour(aes(z = fchl), binwidth = 0.5, colour = "black", alpha = 0.2) +
   labs(y = "Depth (m)", x = "", fill = expression(paste("Chl", italic(" a"), " Fluorescence (mg m"^-3, ")")), shape = "", linetype = "") +
   guides(fill = guide_colourbar(direction = "horizontal", barheight = 2, barwidth = 20, order = 2)) +
   theme_classic2(18) +
-  theme(legend.position = "top")
+  theme(legend.position = "top") ; fl.plot
 
 ```
 

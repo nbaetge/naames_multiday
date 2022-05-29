@@ -150,6 +150,23 @@ summary(test$ezd)
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
     ##   11.19   35.66   39.42   36.71   44.60   57.42    4385
 
+``` r
+test <- floatsNmldsNezds %>% 
+  filter(Cruise == "AT34", Station == 4) %>% 
+  select(profile, MLD) %>% 
+  distinct() %>% 
+  filter(MLD < 170) %>%  #9 profiles
+  summarize(sd = sd(MLD),
+            ave = mean(MLD))
+
+summary(test$MLD)
+```
+
+    ## Warning: Unknown or uninitialised column: `MLD`.
+
+    ## Length  Class   Mode 
+    ##      0   NULL   NULL
+
 # T-S plots
 
 We’ll make T-S plots from the floats and overlay the data from the ship
@@ -233,7 +250,7 @@ s4.ts3 <- PlotSvalbard::ts_plot(s4_subset_float, temp_col = "potT", sal_col = "s
 s4.ts + s4.ts2 + s4.ts3 + plot_annotation(tag_levels = "a") 
 ```
 
-![](Floats_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+![](Floats_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
 ## Station 6
 
@@ -302,7 +319,7 @@ s6.ts3 <- PlotSvalbard::ts_plot(s6_subset_float, temp_col = "potT", sal_col = "s
 s6.ts + s6.ts2 + s6.ts3 + plot_annotation(tag_levels = "a") 
 ```
 
-![](Floats_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+![](Floats_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
 ## N3 Station 3 and 4
 
@@ -373,7 +390,7 @@ s35.ts <- PlotSvalbard::ts_plot(s35_subset, temp_col = "potT", sal_col = "s", co
 s3.ts + s35.ts + n3s4.ts + plot_annotation(tag_levels = "a") 
 ```
 
-![](Floats_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+![](Floats_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
 
 # Map
 
@@ -479,14 +496,14 @@ map2 <- ggplot(data = map2_data, aes(x = lon, y = lat)) +
 (map1 + guides(fill = "none", color = "none", linetype = "none")) + (map2 + guides(fill = "none", shape = "none")) + plot_layout(guides = "collect") + plot_annotation(tag_levels = "a") 
 ```
 
-![](Floats_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+![](Floats_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
 
 \#Station 4
 
 ## Temp profiles
 
 ``` r
-new_colors <- colors$freesurface
+new_colors <- colors$viridis
 ```
 
 ``` r
@@ -508,7 +525,7 @@ mba <- reshape2::melt(mba$xyz.est$z, varnames = c('decimal_date', 'p'), value.na
 
 ### Plot
 
-<img src="Floats_files/figure-gfm/unnamed-chunk-19-1.png" style="display: block; margin: auto;" />
+<img src="Floats_files/figure-gfm/unnamed-chunk-20-1.png" style="display: block; margin: auto;" />
 
 ## Sal profiles
 
@@ -560,7 +577,7 @@ t.plot / s.plot / fl.plot + plot_annotation(tag_levels = "a")
     ## Raster pixels are placed at uneven horizontal intervals and will be shifted. Consider using geom_tile() instead.
     ## Raster pixels are placed at uneven horizontal intervals and will be shifted. Consider using geom_tile() instead.
 
-![](Floats_files/figure-gfm/unnamed-chunk-24-1.png)<!-- -->
+![](Floats_files/figure-gfm/unnamed-chunk-25-1.png)<!-- -->
 
 # Station 6
 
@@ -607,6 +624,8 @@ mba <- reshape2::melt(mba$xyz.est$z, varnames = c('decimal_date', 'p'), value.na
 
 ### Plot
 
+<img src="Floats_files/figure-gfm/unnamed-chunk-29-1.png" style="display: block; margin: auto;" />
+
 ## Fluorescence profiles
 
 ``` r
@@ -627,6 +646,8 @@ mba <- reshape2::melt(mba$xyz.est$z, varnames = c('decimal_date', 'p'), value.na
 
 ### Plot
 
+<img src="Floats_files/figure-gfm/unnamed-chunk-31-1.png" style="display: block; margin: auto;" />
+
 ``` r
 t.plot / s.plot / fl.plot + plot_annotation(tag_levels = "a") 
 ```
@@ -635,7 +656,7 @@ t.plot / s.plot / fl.plot + plot_annotation(tag_levels = "a")
     ## Raster pixels are placed at uneven horizontal intervals and will be shifted. Consider using geom_tile() instead.
     ## Raster pixels are placed at uneven horizontal intervals and will be shifted. Consider using geom_tile() instead.
 
-![](Floats_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
+![](Floats_files/figure-gfm/unnamed-chunk-32-1.png)<!-- -->
 
 # Save data
 
